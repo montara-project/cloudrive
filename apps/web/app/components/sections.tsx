@@ -824,9 +824,34 @@ export function CtaSection() {
 /* ================= Footer ================= */
 
 const footerColumns = [
-  { heading: "Product", links: ["Features", "Pricing", "Integrations", "Changelog", "Status"] },
-  { heading: "Company", links: ["About", "Blog", "Careers", "Contact"] },
-  { heading: "Legal", links: ["Privacy", "Terms", "DPA", "Security"] },
+  {
+    heading: "Product",
+    links: [
+      { label: "Features", href: "/#features" },
+      { label: "Pricing", href: "/#pricing" },
+      { label: "Integrations", href: "/#integrations" },
+      { label: "Changelog", href: "/#" },
+      { label: "Status", href: "/#" },
+    ],
+  },
+  {
+    heading: "Company",
+    links: [
+      { label: "About", href: "/#" },
+      { label: "Blog", href: "/#" },
+      { label: "Careers", href: "/#" },
+      { label: "Contact", href: "/contact" },
+    ],
+  },
+  {
+    heading: "Legal",
+    links: [
+      { label: "Privacy", href: "/privacy" },
+      { label: "Terms", href: "/terms" },
+      { label: "DPA", href: "/#" },
+      { label: "Security", href: "/#" },
+    ],
+  },
 ];
 
 export function Footer() {
@@ -844,13 +869,13 @@ export function Footer() {
             <nav key={heading} aria-label={heading}>
               <p className="text-sm font-bold text-foreground">{heading}</p>
               <ul className="mt-4 space-y-2.5" role="list">
-                {links.map((link) => (
-                  <li key={link}>
+                {links.map(({ label, href }) => (
+                  <li key={label}>
                     <a
-                      href="#top"
+                      href={href}
                       className="text-sm text-muted-foreground transition-colors duration-200 hover:text-primary"
                     >
-                      {link}
+                      {label}
                     </a>
                   </li>
                 ))}

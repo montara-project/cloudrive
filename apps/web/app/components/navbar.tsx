@@ -4,11 +4,11 @@ import { useState } from "react";
 import { ArrowRightIcon, CloudriveLogo, CloseIcon, MenuIcon } from "./icons";
 
 const links = [
-  { href: "#features", label: "Features" },
-  { href: "#how-it-works", label: "How it works" },
-  { href: "#integrations", label: "Integrations" },
-  { href: "#pricing", label: "Pricing" },
-  { href: "#faq", label: "FAQ" },
+  { href: "/#features", label: "Features" },
+  { href: "/#how-it-works", label: "How it works" },
+  { href: "/#integrations", label: "Integrations" },
+  { href: "/#pricing", label: "Pricing" },
+  { href: "/#faq", label: "FAQ" },
 ];
 
 export function Navbar() {
@@ -20,7 +20,7 @@ export function Navbar() {
         aria-label="Main navigation"
         className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6"
       >
-        <a href="#top" aria-label="Cloudrive home" className="rounded-md">
+        <a href="/" aria-label="Cloudrive home" className="rounded-md">
           <CloudriveLogo />
         </a>
 
@@ -39,7 +39,7 @@ export function Navbar() {
 
         <div className="hidden md:block">
           <a
-            href="#waitlist"
+            href="/#waitlist"
             className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 active:translate-y-0"
           >
             Get early access
@@ -75,7 +75,7 @@ export function Navbar() {
             ))}
             <li className="pt-2 pb-1">
               <a
-                href="#waitlist"
+                href="/#waitlist"
                 onClick={() => setOpen(false)}
                 className="flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-colors duration-200 hover:bg-blue-700"
               >

@@ -167,6 +167,16 @@ export function ZapIcon(props: IconProps) {
   );
 }
 
+export function SparklesIcon(props: IconProps) {
+  return (
+    <StrokeIcon {...props}>
+      <path d="M9.9 3.6 11.4 8a1 1 0 0 0 .6.6l4.4 1.5a1 1 0 0 1 0 1.9L12 13.4a1 1 0 0 0-.6.6l-1.5 4.4a1 1 0 0 1-1.9 0L6.5 14a1 1 0 0 0-.6-.6L1.5 11.9a1 1 0 0 1 0-1.9L6 8.5a1 1 0 0 0 .6-.6l1.4-4.3a1 1 0 0 1 1.9 0z" />
+      <path d="M19 14v4" />
+      <path d="M17 16h4" />
+    </StrokeIcon>
+  );
+}
+
 export function ShieldIcon(props: IconProps) {
   return (
     <StrokeIcon {...props}>
