@@ -1,4 +1,4 @@
-import { Navbar } from "./components/navbar";
+import { Navbar } from '../components/navbar'
 import {
   CtaSection,
   Faq,
@@ -11,7 +11,7 @@ import {
   Problem,
   Stats,
   Testimonials,
-} from "./components/sections";
+} from '../components/sections'
 
 export default function Home() {
   return (
@@ -31,5 +31,5 @@ export default function Home() {
       </main>
       <Footer />
     </>
-  );
+  )
 }

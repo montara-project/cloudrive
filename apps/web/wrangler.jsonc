@@ -2,25 +2,34 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "cloudrive-web",
   "compatibility_date": "2026-09-13",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
   "main": "vinext/server/fetch-handler",
   "assets": {
     "directory": "dist/client",
     "not_found_handling": "none",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
   },
   "cache": {
-    "enabled": true
+    "enabled": true,
   },
   "images": {
-    "binding": "IMAGES"
+    "binding": "IMAGES",
   },
-  "kv_namespaces": [
+  "observability": {
+    "enabled": true,
+  },
+  "upload_source_maps": true,
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
     {
-      "binding": "VINEXT_KV_CACHE",
-      "id": "<your-kv-namespace-id>"
-    }
-  ]
+      "pattern": "cloudrive.us.ci",
+      "zone_name": "cloudrive.us.ci",
+      "custom_domain": true,
+    },
+  ],
+  "vars": {
+    "NEXT_PUBLIC_API_URL": "https://api.cloudrive.us.ci",
+    "NEXT_PUBLIC_OSM_API_URL": "https://nominatim.openstreetmap.org",
+    "BETTER_AUTH_URL": "https://cloudrive.us.ci",
+  },
 }

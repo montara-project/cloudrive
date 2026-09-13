@@ -1,0 +1,58 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "unicorn",
+    "react",
+    "react-perf",
+    "jsx-a11y",
+    "promise",
+    "node",
+    "import"
+  ],
+  "jsPlugins": ["eslint-plugin-perfectionist"],
+  "rules": {
+    "perfectionist/sort-imports": [
+      "error",
+      {
+        "type": "natural",
+        "order": "asc"
+      }
+    ]
+  },
+  "categories": {
+    "correctness": "error"
+  },
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2024": true
+  },
+  "settings": {},
+  "overrides": [
+    {
+      "files": ["apps/admin-web/**", "apps/app-web/**", "apps/main-web/**"],
+      "plugins": ["typescript", "unicorn", "react", "react-perf", "jsx-a11y", "promise", "import"],
+      "env": {
+        "browser": true,
+        "es2024": true
+      }
+    },
+    {
+      "files": ["apps/server/**"],
+      "env": {
+        "node": true,
+        "es2024": true
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.vinext/**",
+    "**/.next/**",
+    "**/coverage/**",
+    "**/*.d.ts"
+  ]
+}

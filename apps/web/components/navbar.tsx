@@ -1,18 +1,19 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { ArrowRightIcon, CloudriveLogo, CloseIcon, MenuIcon } from "./icons";
+import { useState } from 'react'
+
+import { ArrowRightIcon, CloudriveLogo, CloseIcon, MenuIcon } from './icons'
 
 const links = [
-  { href: "#features", label: "Features" },
-  { href: "#how-it-works", label: "How it works" },
-  { href: "#integrations", label: "Integrations" },
-  { href: "#pricing", label: "Pricing" },
-  { href: "#faq", label: "FAQ" },
-];
+  { href: '/#features', label: 'Features' },
+  { href: '/#how-it-works', label: 'How it works' },
+  { href: '/#integrations', label: 'Integrations' },
+  { href: '/#pricing', label: 'Pricing' },
+  { href: '/#faq', label: 'FAQ' },
+]
 
 export function Navbar() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false)
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/85 backdrop-blur-md">
@@ -20,7 +21,7 @@ export function Navbar() {
         aria-label="Main navigation"
         className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6"
       >
-        <a href="#top" aria-label="Cloudrive home" className="rounded-md">
+        <a href="/" aria-label="Cloudrive home" className="rounded-md">
           <CloudriveLogo />
         </a>
 
@@ -39,7 +40,7 @@ export function Navbar() {
 
         <div className="hidden md:block">
           <a
-            href="#waitlist"
+            href="/#waitlist"
             className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 active:translate-y-0"
           >
             Get early access
@@ -52,7 +53,7 @@ export function Navbar() {
           className="inline-flex size-10 items-center justify-center rounded-lg text-foreground transition-colors duration-200 hover:bg-muted md:hidden"
           aria-expanded={open}
           aria-controls="mobile-menu"
-          aria-label={open ? "Close menu" : "Open menu"}
+          aria-label={open ? 'Close menu' : 'Open menu'}
           onClick={() => setOpen((v) => !v)}
         >
           {open ? <CloseIcon className="size-5" /> : <MenuIcon className="size-5" />}
@@ -75,7 +76,7 @@ export function Navbar() {
             ))}
             <li className="pt-2 pb-1">
               <a
-                href="#waitlist"
+                href="/#waitlist"
                 onClick={() => setOpen(false)}
                 className="flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-colors duration-200 hover:bg-blue-700"
               >
@@ -87,5 +88,5 @@ export function Navbar() {
         </div>
       )}
     </header>
-  );
+  )
 }
