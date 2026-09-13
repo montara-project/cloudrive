@@ -1,0 +1,10 @@
+{
+  "name": "@cloudrive/server",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "go run .",
+    "build": "go build -o bin/server .",
+    "start": "bin/server"
+  }
+}

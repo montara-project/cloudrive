@@ -1,0 +1,29 @@
+# Node / pnpm
+node_modules/
+.pnpm-store/
+
+# vinext / Next.js
+.next/
+next-env.d.ts
+.vinext/
+
+# Build output
+dist/
+bin/
+
+# Cloudflare
+.wrangler/
+
+# Go
+apps/server/bin/
+apps/server/server
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Misc
+.DS_Store
+*.log
+coverage/
