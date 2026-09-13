@@ -40,7 +40,7 @@ export function Navbar() {
         <div className="hidden md:block">
           <a
             href="#waitlist"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors duration-200 hover:bg-blue-700"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 active:translate-y-0"
           >
             Get early access
             <ArrowRightIcon className="size-4" />

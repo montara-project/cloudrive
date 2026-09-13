@@ -55,6 +55,38 @@ a {
   background-size: 24px 24px;
 }
 
+.bg-dotgrid-dark {
+  background-image: radial-gradient(circle, rgb(255 255 255 / 0.07) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+}
+
+::selection {
+  background-color: var(--color-primary);
+  color: #fff;
+}
+
+/* Gentle float for decorative hero chips — motion-safe users only */
+@media (prefers-reduced-motion: no-preference) {
+  .float-slow {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .float-slower {
+    animation: float 7.5s ease-in-out 1.2s infinite;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
 /* Scroll-reveal: only applies when JS is available (html.js) and motion is allowed.
    Without JS — or with prefers-reduced-motion — content renders fully visible. */
 @media (prefers-reduced-motion: no-preference) {

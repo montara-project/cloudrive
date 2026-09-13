@@ -6,21 +6,28 @@ import {
   CheckIcon,
   ChevronDownIcon,
   CloudriveLogo,
+  DocFileIcon,
   DropboxMark,
   GlobeIcon,
   GoogleDriveMark,
   HistoryIcon,
   ICloudMark,
+  ImageFileIcon,
   LayersIcon,
   LockIcon,
   OneDriveMark,
+  PdfFileIcon,
   PlugIcon,
+  QuoteIcon,
   S3Mark,
   SearchIcon,
   SharePointMark,
+  SheetFileIcon,
   SyncIcon,
   UsersIcon,
+  VideoFileIcon,
   WebdavMark,
+  ZipFileIcon,
   ZapIcon,
 } from "./icons";
 
@@ -91,18 +98,21 @@ export function Hero() {
             <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <a
                 href="#waitlist"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-7 py-3.5 text-sm font-semibold text-primary-foreground transition-colors duration-200 hover:bg-blue-700 sm:w-auto"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-7 py-3.5 text-sm font-semibold text-primary-foreground shadow-[0_4px_0_0_#1e40af] transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 active:translate-y-0 active:shadow-none sm:w-auto"
               >
                 Get early access
                 <ArrowRightIcon className="size-4" />
               </a>
               <a
                 href="#how-it-works"
-                className="inline-flex w-full items-center justify-center rounded-xl border border-border bg-card px-7 py-3.5 text-sm font-semibold text-foreground transition-colors duration-200 hover:bg-muted sm:w-auto"
+                className="inline-flex w-full items-center justify-center rounded-xl border border-border bg-card px-7 py-3.5 text-sm font-semibold text-foreground transition-all duration-200 hover:-translate-y-0.5 hover:bg-muted active:translate-y-0 sm:w-auto"
               >
                 See how it works
               </a>
             </div>
+            <p className="mt-4 text-xs font-medium text-muted-foreground">
+              Free during beta · No credit card required
+            </p>
           </Reveal>
         </div>
 
@@ -128,86 +138,156 @@ const sources = [
 ];
 
 const mockFiles = [
-  { name: "Q3-Roadmap.pdf", source: "Google Drive", size: "2.4 MB", when: "Edited 2h ago", Mark: GoogleDriveMark },
-  { name: "Q4-metrics.xlsx", source: "Google Drive", size: "88 KB", when: "Edited 1h ago", Mark: GoogleDriveMark },
-  { name: "brand-assets-2026.zip", source: "Dropbox", size: "184 MB", when: "Added yesterday", Mark: DropboxMark },
-  { name: "drone-flyover-4k.mov", source: "OneDrive", size: "1.2 GB", when: "Added 3d ago", Mark: OneDriveMark },
-  { name: "contracts/MSA-acme.pdf", source: "Box", size: "640 KB", when: "Added last week", Mark: BoxMark },
-  { name: "team-offsite.jpg", source: "iCloud", size: "3.8 MB", when: "Added 5d ago", Mark: ICloudMark },
+  { name: "Q3-Roadmap.pdf", source: "Google Drive", size: "2.4 MB", when: "Edited 2h ago", FileIcon: PdfFileIcon },
+  { name: "Q4-metrics.xlsx", source: "Google Drive", size: "88 KB", when: "Edited 1h ago", FileIcon: SheetFileIcon },
+  { name: "brand-assets-2026.zip", source: "Dropbox", size: "184 MB", when: "Added yesterday", FileIcon: ZipFileIcon },
+  { name: "drone-flyover-4k.mov", source: "OneDrive", size: "1.2 GB", when: "Added 3d ago", FileIcon: VideoFileIcon },
+  { name: "contracts/MSA-acme.pdf", source: "Box", size: "640 KB", when: "Added last week", FileIcon: DocFileIcon },
+  { name: "team-offsite.jpg", source: "iCloud", size: "3.8 MB", when: "Added 5d ago", FileIcon: ImageFileIcon },
+];
+
+const driveNav = [
+  { label: "All files", active: true },
+  { label: "Shared", active: false },
+  { label: "Starred", active: false },
+];
+
+const floatChips = [
+  {
+    className: "-left-24 top-20 float-slow",
+    Mark: GoogleDriveMark,
+    title: "Google Drive",
+    note: "42,318 files",
+    dot: "bg-emerald-500",
+  },
+  {
+    className: "-right-20 top-48 float-slower",
+    Mark: DropboxMark,
+    title: "Dropbox",
+    note: "Two-way sync",
+    dot: "bg-primary",
+  },
+  {
+    className: "-left-14 bottom-14 float-slower",
+    Mark: OneDriveMark,
+    title: "OneDrive",
+    note: "8,211 files",
+    dot: "bg-sky-500",
+  },
 ];
 
 function DriveMockup() {
   return (
-    <div className="relative mx-auto max-w-4xl rounded-3xl border border-border bg-muted p-3 sm:p-5">
-      <div className="overflow-hidden rounded-2xl border border-border bg-card text-left">
-        <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-          <div className="flex gap-1.5" aria-hidden="true">
-            <span className="size-2.5 rounded-full bg-[#F87171]" />
-            <span className="size-2.5 rounded-full bg-[#FBBF24]" />
-            <span className="size-2.5 rounded-full bg-[#34D399]" />
-          </div>
-          <p className="flex-1 truncate text-center text-xs font-semibold text-muted-foreground">
-            cloudrive — All files
-          </p>
-          <span className="hidden items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-muted-foreground sm:inline-flex">
-            <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
-            All sources synced
-          </span>
-        </div>
-
-        <div className="grid sm:grid-cols-[190px_1fr]">
-          <aside className="hidden border-r border-border p-4 sm:block">
-            <p className="px-2 text-[11px] font-bold tracking-widest text-muted-foreground uppercase">
-              Sources
+    <div className="relative mx-auto max-w-4xl">
+      {floatChips.map(({ className, Mark, title, note, dot }) => (
+        <div
+          key={title}
+          aria-hidden="true"
+          className={`absolute z-10 hidden items-center gap-2.5 rounded-xl border border-border bg-card px-3.5 py-2.5 xl:flex ${className}`}
+        >
+          <Mark className="size-5 shrink-0" />
+          <div className="text-left">
+            <p className="text-xs font-bold text-foreground">{title}</p>
+            <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <span className={`size-1.5 rounded-full ${dot}`} />
+              {note}
             </p>
-            <ul className="mt-2 space-y-1">
-              {sources.map(({ name, files, Mark }) => (
-                <li
-                  key={name}
-                  className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-xs font-medium text-foreground"
-                >
-                  <Mark className="size-4 shrink-0" />
-                  <span className="flex-1 truncate">{name}</span>
-                  <span className="text-[11px] text-muted-foreground">{files}</span>
-                </li>
-              ))}
-            </ul>
-          </aside>
-
-          <div className="p-4">
-            <div className="flex h-10 items-center gap-2.5 rounded-xl border border-border bg-muted px-3.5 text-sm text-muted-foreground">
-              <SearchIcon className="size-4 shrink-0" />
-              <span className="flex-1 truncate">Search every cloud at once…</span>
-              <kbd className="hidden rounded-md border border-border bg-card px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground sm:block">
-                ⌘K
-              </kbd>
-            </div>
-
-            <ul className="mt-3 divide-y divide-border">
-              {mockFiles.map(({ name, source, size, when, Mark }) => (
-                <li
-                  key={name}
-                  className="flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors duration-150 hover:bg-muted"
-                >
-                  <Mark className="size-4 shrink-0" />
-                  <span className="flex-1 truncate text-sm font-medium text-foreground">{name}</span>
-                  <span className="hidden rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground md:inline">
-                    {source}
-                  </span>
-                  <span className="hidden w-16 text-right text-xs text-muted-foreground sm:block">
-                    {size}
-                  </span>
-                  <span className="hidden w-28 text-right text-xs text-muted-foreground lg:block">
-                    {when}
-                  </span>
-                </li>
-              ))}
-            </ul>
           </div>
         </div>
+      ))}
 
-        <div className="border-t border-border px-4 py-2.5 text-[11px] font-medium text-muted-foreground">
-          4 sources connected · 218,934 files centered
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 translate-x-3 translate-y-3 rounded-3xl bg-accent/25 sm:translate-x-4 sm:translate-y-4"
+      />
+      <div className="relative overflow-hidden rounded-3xl border border-border bg-muted p-3 sm:p-5">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card text-left">
+          <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+            <div className="flex gap-1.5" aria-hidden="true">
+              <span className="size-2.5 rounded-full bg-[#F87171]" />
+              <span className="size-2.5 rounded-full bg-[#FBBF24]" />
+              <span className="size-2.5 rounded-full bg-[#34D399]" />
+            </div>
+            <p className="flex-1 truncate text-center text-xs font-semibold text-muted-foreground">
+              cloudrive — All files
+            </p>
+            <span className="hidden items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-muted-foreground sm:inline-flex">
+              <span className="size-1.5 rounded-full bg-emerald-500 motion-safe:animate-pulse" aria-hidden="true" />
+              All sources synced
+            </span>
+          </div>
+
+          <div className="grid sm:grid-cols-[190px_1fr]">
+            <aside className="hidden border-r border-border p-4 sm:block">
+              <p className="px-2 text-[11px] font-bold tracking-widest text-muted-foreground uppercase">
+                Sources
+              </p>
+              <ul className="mt-2 space-y-1">
+                {sources.map(({ name, files, Mark }) => (
+                  <li
+                    key={name}
+                    className="flex items-center gap-2.5 rounded-lg px-2 py-2 text-xs font-medium text-foreground"
+                  >
+                    <Mark className="size-4 shrink-0" />
+                    <span className="flex-1 truncate">{name}</span>
+                    <span className="text-[11px] text-muted-foreground">{files}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-4 px-2 text-[11px] font-bold tracking-widest text-muted-foreground uppercase">
+                Drive
+              </p>
+              <ul className="mt-2 space-y-1">
+                {driveNav.map(({ label, active }) => (
+                  <li
+                    key={label}
+                    className={`rounded-lg px-2 py-1.5 text-xs font-semibold ${
+                      active
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {label}
+                  </li>
+                ))}
+              </ul>
+            </aside>
+
+            <div className="p-4">
+              <div className="flex h-10 items-center gap-2.5 rounded-xl border border-border bg-muted px-3.5 text-sm text-muted-foreground">
+                <SearchIcon className="size-4 shrink-0" />
+                <span className="flex-1 truncate">Search every cloud at once…</span>
+                <kbd className="hidden rounded-md border border-border bg-card px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground sm:block">
+                  ⌘K
+                </kbd>
+              </div>
+
+              <ul className="mt-3 divide-y divide-border">
+                {mockFiles.map(({ name, source, size, when, FileIcon }) => (
+                  <li
+                    key={name}
+                    className="flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors duration-150 hover:bg-muted"
+                  >
+                    <FileIcon className="size-5 shrink-0" />
+                    <span className="flex-1 truncate text-sm font-medium text-foreground">{name}</span>
+                    <span className="hidden rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground md:inline">
+                      {source}
+                    </span>
+                    <span className="hidden w-16 text-right text-xs text-muted-foreground sm:block">
+                      {size}
+                    </span>
+                    <span className="hidden w-28 text-right text-xs text-muted-foreground lg:block">
+                      {when}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-t border-border px-4 py-2.5 text-[11px] font-medium text-muted-foreground">
+            4 sources connected · 218,934 files centered
+          </div>
         </div>
       </div>
     </div>
@@ -264,9 +344,11 @@ export function Problem() {
         <ul className="mt-12 grid gap-5 md:grid-cols-3" role="list">
           {pains.map((pain, i) => (
             <Reveal key={pain.title} delayMs={i * 80}>
-              <li className="h-full rounded-2xl border border-border bg-background p-6">
-                <p className="text-sm font-bold text-accent">0{i + 1}</p>
-                <h3 className="mt-2 text-lg font-bold text-foreground">{pain.title}</h3>
+              <li className="h-full rounded-2xl border border-border bg-background p-6 transition-all duration-200 hover:-translate-y-1 hover:border-accent/50">
+                <span className="flex size-9 items-center justify-center rounded-lg bg-accent/15 text-sm font-extrabold text-accent">
+                  0{i + 1}
+                </span>
+                <h3 className="mt-4 text-lg font-bold text-foreground">{pain.title}</h3>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">{pain.body}</p>
               </li>
             </Reveal>
@@ -282,31 +364,55 @@ export function Problem() {
 const features = [
   {
     Icon: SearchIcon,
+    tone: {
+      tile: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
+      card: "hover:border-primary/40",
+    },
     title: "Universal search",
     body: "One search bar across every connected cloud. Filter by source, type, owner, or date — results in milliseconds.",
   },
   {
     Icon: SyncIcon,
+    tone: {
+      tile: "bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white",
+      card: "hover:border-emerald-500/40",
+    },
     title: "Live two-way sync",
     body: "Edits flow both directions in real time. Change a file in Dropbox and it's updated in Cloudrive — and back — instantly.",
   },
   {
     Icon: LayersIcon,
+    tone: {
+      tile: "bg-accent/15 text-accent group-hover:bg-accent group-hover:text-accent-foreground",
+      card: "hover:border-accent/50",
+    },
     title: "Zero-copy architecture",
     body: "Cloudrive indexes and links; it never duplicates. Your files stay in place, your storage bills stay the same.",
   },
   {
     Icon: UsersIcon,
+    tone: {
+      tile: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
+      card: "hover:border-primary/40",
+    },
     title: "One permissions model",
     body: "Share once, honoring each source's native rules. Audit who can see what from a single console.",
   },
   {
     Icon: HistoryIcon,
+    tone: {
+      tile: "bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white",
+      card: "hover:border-emerald-500/40",
+    },
     title: "Unified version timeline",
     body: "Every revision from every provider on one timeline. Restore any version of any file in two clicks.",
   },
   {
     Icon: LockIcon,
+    tone: {
+      tile: "bg-accent/15 text-accent group-hover:bg-accent group-hover:text-accent-foreground",
+      card: "hover:border-accent/50",
+    },
     title: "End-to-end encryption",
     body: "AES-256 at rest, TLS 1.3 in transit, and per-workspace keys. OAuth only — we never see your passwords.",
   },
@@ -322,10 +428,14 @@ export function Features() {
           lede="Cloudrive sits on top of the providers you already use and gives them a single, coherent interface."
         />
         <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" role="list">
-          {features.map(({ Icon, title, body }, i) => (
+          {features.map(({ Icon, tone, title, body }, i) => (
             <Reveal key={title} delayMs={(i % 3) * 80}>
-              <li className="group h-full rounded-2xl border border-border bg-card p-6 transition-colors duration-200 hover:border-primary/40">
-                <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors duration-200 group-hover:bg-primary group-hover:text-primary-foreground">
+              <li
+                className={`group h-full rounded-2xl border border-border bg-card p-6 transition-all duration-200 hover:-translate-y-1 ${tone.card}`}
+              >
+                <span
+                  className={`flex size-11 items-center justify-center rounded-xl transition-colors duration-200 ${tone.tile}`}
+                >
                   <Icon className="size-5" />
                 </span>
                 <h3 className="mt-4 text-lg font-bold text-foreground">{title}</h3>
@@ -444,11 +554,15 @@ export function Stats() {
   return (
     <section className="bg-primary" aria-label="Cloudrive by the numbers">
       <div className={`${container} py-16 sm:py-20`}>
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-10 text-center lg:grid-cols-4">
+        <dl className="grid grid-cols-2 gap-y-10 text-center lg:grid-cols-4">
           {stats.map(({ value, label }, i) => (
-            <Reveal key={label} delayMs={i * 80}>
+            <Reveal
+              key={label}
+              delayMs={i * 80}
+              className="px-4 lg:border-blue-300/40 lg:border-l lg:first:border-l-0"
+            >
               <div>
-                <dd className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+                <dd className="text-4xl font-extrabold tracking-tight text-white tabular-nums sm:text-5xl">
                   {value}
                 </dd>
                 <dt className="mt-2 text-sm font-semibold text-blue-200">{label}</dt>
@@ -501,8 +615,9 @@ export function Testimonials() {
         <ul className="mt-12 grid gap-5 md:grid-cols-3" role="list">
           {testimonials.map(({ quote, name, role, initials, tone }, i) => (
             <Reveal key={name} delayMs={i * 80}>
-              <li className="flex h-full flex-col rounded-2xl border border-border bg-background p-6">
-                <p className="flex-1 text-sm leading-7 text-foreground">
+              <li className="flex h-full flex-col rounded-2xl border border-border bg-background p-6 transition-all duration-200 hover:-translate-y-1 hover:border-primary/40">
+                <QuoteIcon className="size-6 text-accent" />
+                <p className="mt-4 flex-1 text-sm leading-7 text-foreground">
                   &ldquo;{quote}&rdquo;
                 </p>
                 <div className="mt-6 flex items-center gap-3">
@@ -583,10 +698,10 @@ export function Pricing() {
           {plans.map(({ name, price, period, description, features, cta, highlighted }, i) => (
             <Reveal key={name} delayMs={i * 80} className="h-full">
               <div
-                className={`relative flex h-full flex-col rounded-2xl border p-7 ${
+                className={`relative flex h-full flex-col rounded-2xl border p-7 transition-all duration-200 ${
                   highlighted
-                    ? "border-2 border-primary bg-card"
-                    : "border-border bg-card"
+                    ? "border-2 border-primary bg-card shadow-[10px_10px_0_0_#fde68a] lg:-translate-y-2"
+                    : "border-border bg-card hover:-translate-y-1 hover:border-primary/40"
                 }`}
               >
                 {highlighted && (
@@ -614,10 +729,10 @@ export function Pricing() {
                 </ul>
                 <a
                   href="#waitlist"
-                  className={`mt-8 inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold transition-colors duration-200 ${
+                  className={`mt-8 inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold transition-all duration-200 ${
                     highlighted
-                      ? "bg-primary text-primary-foreground hover:bg-blue-700"
-                      : "border border-border bg-background text-foreground hover:bg-muted"
+                      ? "bg-primary text-primary-foreground shadow-[0_4px_0_0_#1e40af] hover:-translate-y-0.5 hover:bg-blue-700 active:translate-y-0 active:shadow-none"
+                      : "border border-border bg-background text-foreground hover:-translate-y-0.5 hover:bg-muted active:translate-y-0"
                   }`}
                 >
                   {cta}
@@ -683,7 +798,7 @@ export function Faq() {
 
 export function CtaSection() {
   return (
-    <section id="waitlist" className="scroll-mt-16 bg-foreground">
+    <section id="waitlist" className="bg-dotgrid-dark scroll-mt-16 bg-foreground">
       <div className={`${container} py-20 text-center sm:py-28`}>
         <Reveal className="mx-auto max-w-2xl">
           <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-xs font-semibold text-blue-200">

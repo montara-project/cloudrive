@@ -175,6 +175,93 @@ export function ShieldIcon(props: IconProps) {
   );
 }
 
+export function QuoteIcon(props: IconProps) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M11 7H7a4 4 0 0 0-4 4v6h6v-6H6a2 2 0 0 1 2-2h3V7zm10 0h-4a4 4 0 0 0-4 4v6h6v-6h-3a2 2 0 0 1 2-2h3V7z" />
+    </svg>
+  );
+}
+
+/* ---------- File-type glyphs (flat, colored) ---------- */
+
+function PageGlyph({ color, children, ...props }: IconProps & { color: string }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" {...props}>
+      <path
+        d="M6 3.5h8L19 8.5v11a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19.5v-14A1.5 1.5 0 0 1 6.5 4z"
+        fill={color}
+        fillOpacity="0.18"
+      />
+      <path
+        d="M6 3.5h8L19 8.5v11a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19.5v-14A1.5 1.5 0 0 1 6.5 4z"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path d="M13.5 3.8V9h5.2" stroke={color} strokeWidth="1.8" strokeLinejoin="round" />
+      {children}
+    </svg>
+  );
+}
+
+export function DocFileIcon(props: IconProps) {
+  return (
+    <PageGlyph color="#3B82F6" {...props}>
+      <path d="M8.5 13h7M8.5 16.5h7" stroke="#3B82F6" strokeWidth="1.6" strokeLinecap="round" />
+    </PageGlyph>
+  );
+}
+
+export function SheetFileIcon(props: IconProps) {
+  return (
+    <PageGlyph color="#22C55E" {...props}>
+      <path
+        d="M8.5 12.5h7v5h-7zM8.5 15h7M11.9 12.5v5"
+        stroke="#22C55E"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </PageGlyph>
+  );
+}
+
+export function PdfFileIcon(props: IconProps) {
+  return (
+    <PageGlyph color="#EF4444" {...props}>
+      <text x="12" y="17.2" textAnchor="middle" fontSize="6" fontWeight="700" fill="#EF4444">
+        PDF
+      </text>
+    </PageGlyph>
+  );
+}
+
+export function ZipFileIcon(props: IconProps) {
+  return (
+    <PageGlyph color="#F59E0B" {...props}>
+      <path d="M12 10.5v6" stroke="#F59E0B" strokeWidth="1.6" strokeLinecap="round" strokeDasharray="2 1.6" />
+      <path d="M12 16.5v1.6" stroke="#F59E0B" strokeWidth="1.6" strokeLinecap="round" />
+    </PageGlyph>
+  );
+}
+
+export function VideoFileIcon(props: IconProps) {
+  return (
+    <PageGlyph color="#8B5CF6" {...props}>
+      <path d="M10.5 12.2v4.6l4-2.3z" fill="#8B5CF6" />
+    </PageGlyph>
+  );
+}
+
+export function ImageFileIcon(props: IconProps) {
+  return (
+    <PageGlyph color="#EC4899" {...props}>
+      <circle cx="10" cy="13" r="1.2" fill="#EC4899" />
+      <path d="m8.5 17 2.5-2.6 2 2 1.6-1.8 1.9 2.4" stroke="#EC4899" strokeWidth="1.5" strokeLinejoin="round" />
+    </PageGlyph>
+  );
+}
+
 /* ---------- Provider marks (flat, simplified) ---------- */
 
 export function GoogleDriveMark(props: IconProps) {
