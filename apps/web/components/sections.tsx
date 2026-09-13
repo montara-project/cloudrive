@@ -1,5 +1,5 @@
-import { Reveal } from "./reveal";
-import { WaitlistForm } from "./waitlist-form";
+'use client'
+
 import {
   ArrowRightIcon,
   BoxMark,
@@ -27,32 +27,34 @@ import {
   UsersIcon,
   VideoFileIcon,
   WebdavMark,
-  ZipFileIcon,
   ZapIcon,
-} from "./icons";
+  ZipFileIcon,
+} from './icons'
+import { Reveal } from './reveal'
+import { WaitlistForm } from './waitlist-form'
 
-const container = "mx-auto w-full max-w-6xl px-6";
+const container = 'mx-auto w-full max-w-6xl px-6'
 
 function SectionHeading({
   eyebrow,
   title,
   lede,
-  align = "center",
+  align = 'center',
 }: {
-  eyebrow: string;
-  title: string;
-  lede?: string;
-  align?: "center" | "left";
+  eyebrow: string
+  title: string
+  lede?: string
+  align?: 'center' | 'left'
 }) {
   return (
-    <Reveal className={align === "center" ? "mx-auto max-w-2xl text-center" : "max-w-2xl"}>
+    <Reveal className={align === 'center' ? 'mx-auto max-w-2xl text-center' : 'max-w-2xl'}>
       <p className="text-sm font-bold tracking-widest text-primary uppercase">{eyebrow}</p>
       <h2 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
         {title}
       </h2>
       {lede && <p className="mt-4 text-lg leading-8 text-muted-foreground">{lede}</p>}
     </Reveal>
-  );
+  )
 }
 
 /* ================= Hero ================= */
@@ -71,7 +73,7 @@ export function Hero() {
 
           <Reveal delayMs={80}>
             <h1 className="mt-6 text-4xl font-extrabold tracking-tight text-foreground sm:text-6xl sm:leading-[1.08]">
-              All your clouds.{" "}
+              All your clouds.{' '}
               <span className="relative whitespace-nowrap text-primary">
                 One drive.
                 <svg
@@ -80,7 +82,13 @@ export function Hero() {
                   className="absolute -bottom-2 left-0 w-full text-accent"
                   preserveAspectRatio="none"
                 >
-                  <path d="M3 9c50-5.5 140-6.5 214-2" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+                  <path
+                    d="M3 9c50-5.5 140-6.5 214-2"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="5"
+                    strokeLinecap="round"
+                  />
                 </svg>
               </span>
             </h1>
@@ -125,56 +133,92 @@ export function Hero() {
         </Reveal>
       </div>
     </section>
-  );
+  )
 }
 
 /* ================= Product mockup (pure JSX/SVG, flat) ================= */
 
 const sources = [
-  { name: "Google Drive", files: "42,318", Mark: GoogleDriveMark },
-  { name: "Dropbox", files: "12,904", Mark: DropboxMark },
-  { name: "OneDrive", files: "8,211", Mark: OneDriveMark },
-  { name: "S3 · assets", files: "155,501", Mark: S3Mark },
-];
+  { name: 'Google Drive', files: '42,318', Mark: GoogleDriveMark },
+  { name: 'Dropbox', files: '12,904', Mark: DropboxMark },
+  { name: 'OneDrive', files: '8,211', Mark: OneDriveMark },
+  { name: 'S3 · assets', files: '155,501', Mark: S3Mark },
+]
 
 const mockFiles = [
-  { name: "Q3-Roadmap.pdf", source: "Google Drive", size: "2.4 MB", when: "Edited 2h ago", FileIcon: PdfFileIcon },
-  { name: "Q4-metrics.xlsx", source: "Google Drive", size: "88 KB", when: "Edited 1h ago", FileIcon: SheetFileIcon },
-  { name: "brand-assets-2026.zip", source: "Dropbox", size: "184 MB", when: "Added yesterday", FileIcon: ZipFileIcon },
-  { name: "drone-flyover-4k.mov", source: "OneDrive", size: "1.2 GB", when: "Added 3d ago", FileIcon: VideoFileIcon },
-  { name: "contracts/MSA-acme.pdf", source: "Box", size: "640 KB", when: "Added last week", FileIcon: DocFileIcon },
-  { name: "team-offsite.jpg", source: "iCloud", size: "3.8 MB", when: "Added 5d ago", FileIcon: ImageFileIcon },
-];
+  {
+    name: 'Q3-Roadmap.pdf',
+    source: 'Google Drive',
+    size: '2.4 MB',
+    when: 'Edited 2h ago',
+    FileIcon: PdfFileIcon,
+  },
+  {
+    name: 'Q4-metrics.xlsx',
+    source: 'Google Drive',
+    size: '88 KB',
+    when: 'Edited 1h ago',
+    FileIcon: SheetFileIcon,
+  },
+  {
+    name: 'brand-assets-2026.zip',
+    source: 'Dropbox',
+    size: '184 MB',
+    when: 'Added yesterday',
+    FileIcon: ZipFileIcon,
+  },
+  {
+    name: 'drone-flyover-4k.mov',
+    source: 'OneDrive',
+    size: '1.2 GB',
+    when: 'Added 3d ago',
+    FileIcon: VideoFileIcon,
+  },
+  {
+    name: 'contracts/MSA-acme.pdf',
+    source: 'Box',
+    size: '640 KB',
+    when: 'Added last week',
+    FileIcon: DocFileIcon,
+  },
+  {
+    name: 'team-offsite.jpg',
+    source: 'iCloud',
+    size: '3.8 MB',
+    when: 'Added 5d ago',
+    FileIcon: ImageFileIcon,
+  },
+]
 
 const driveNav = [
-  { label: "All files", active: true },
-  { label: "Shared", active: false },
-  { label: "Starred", active: false },
-];
+  { label: 'All files', active: true },
+  { label: 'Shared', active: false },
+  { label: 'Starred', active: false },
+]
 
 const floatChips = [
   {
-    className: "-left-24 top-20 float-slow",
+    className: '-left-24 top-20 float-slow',
     Mark: GoogleDriveMark,
-    title: "Google Drive",
-    note: "42,318 files",
-    dot: "bg-emerald-500",
+    title: 'Google Drive',
+    note: '42,318 files',
+    dot: 'bg-emerald-500',
   },
   {
-    className: "-right-20 top-48 float-slower",
+    className: '-right-20 top-48 float-slower',
     Mark: DropboxMark,
-    title: "Dropbox",
-    note: "Two-way sync",
-    dot: "bg-primary",
+    title: 'Dropbox',
+    note: 'Two-way sync',
+    dot: 'bg-primary',
   },
   {
-    className: "-left-14 bottom-14 float-slower",
+    className: '-left-14 bottom-14 float-slower',
     Mark: OneDriveMark,
-    title: "OneDrive",
-    note: "8,211 files",
-    dot: "bg-sky-500",
+    title: 'OneDrive',
+    note: '8,211 files',
+    dot: 'bg-sky-500',
   },
-];
+]
 
 function DriveMockup() {
   return (
@@ -212,7 +256,10 @@ function DriveMockup() {
               cloudrive — All files
             </p>
             <span className="hidden items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-muted-foreground sm:inline-flex">
-              <span className="size-1.5 rounded-full bg-emerald-500 motion-safe:animate-pulse" aria-hidden="true" />
+              <span
+                className="size-1.5 rounded-full bg-emerald-500 motion-safe:animate-pulse"
+                aria-hidden="true"
+              />
               All sources synced
             </span>
           </div>
@@ -242,9 +289,7 @@ function DriveMockup() {
                   <li
                     key={label}
                     className={`rounded-lg px-2 py-1.5 text-xs font-semibold ${
-                      active
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground"
+                      active ? 'bg-primary/10 text-primary' : 'text-muted-foreground'
                     }`}
                   >
                     {label}
@@ -269,7 +314,9 @@ function DriveMockup() {
                     className="flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors duration-150 hover:bg-muted"
                   >
                     <FileIcon className="size-5 shrink-0" />
-                    <span className="flex-1 truncate text-sm font-medium text-foreground">{name}</span>
+                    <span className="flex-1 truncate text-sm font-medium text-foreground">
+                      {name}
+                    </span>
                     <span className="hidden rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground md:inline">
                       {source}
                     </span>
@@ -291,12 +338,12 @@ function DriveMockup() {
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 /* ================= Trust strip ================= */
 
-const trustedBy = ["Nimbus Labs", "Pixelbay", "Quantify", "Hexaform", "Dataship"];
+const trustedBy = ['Nimbus Labs', 'Pixelbay', 'Quantify', 'Hexaform', 'Dataship']
 
 function TrustStrip() {
   return (
@@ -312,25 +359,25 @@ function TrustStrip() {
         ))}
       </ul>
     </div>
-  );
+  )
 }
 
 /* ================= Problem ================= */
 
 const pains = [
   {
-    title: "Six tabs to find one file",
-    body: "Drive for docs, Dropbox for assets, S3 for archives. Search means searching the same thing six times.",
+    title: 'Six tabs to find one file',
+    body: 'Drive for docs, Dropbox for assets, S3 for archives. Search means searching the same thing six times.',
   },
   {
-    title: "Duplicates everywhere",
-    body: "The same deck downloaded, re-uploaded, and forked across clouds until nobody knows which copy is current.",
+    title: 'Duplicates everywhere',
+    body: 'The same deck downloaded, re-uploaded, and forked across clouds until nobody knows which copy is current.',
   },
   {
-    title: "Permissions in chaos",
-    body: "Every provider has its own sharing model, so access audits turn into archaeology across five admin consoles.",
+    title: 'Permissions in chaos',
+    body: 'Every provider has its own sharing model, so access audits turn into archaeology across five admin consoles.',
   },
-];
+]
 
 export function Problem() {
   return (
@@ -341,7 +388,7 @@ export function Problem() {
           title="Your files live in six places. Your work lives in none of them."
           lede="Cloud storage solved storing files. It created a new problem: your team's knowledge is scattered across disconnected services that don't talk to each other."
         />
-        <ul className="mt-12 grid gap-5 md:grid-cols-3" role="list">
+        <ul className="mt-12 grid gap-5 md:grid-cols-3" >
           {pains.map((pain, i) => (
             <Reveal key={pain.title} delayMs={i * 80}>
               <li className="h-full rounded-2xl border border-border bg-background p-6 transition-all duration-200 hover:-translate-y-1 hover:border-accent/50">
@@ -356,7 +403,7 @@ export function Problem() {
         </ul>
       </div>
     </section>
-  );
+  )
 }
 
 /* ================= Features ================= */
@@ -365,58 +412,58 @@ const features = [
   {
     Icon: SearchIcon,
     tone: {
-      tile: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
-      card: "hover:border-primary/40",
+      tile: 'bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground',
+      card: 'hover:border-primary/40',
     },
-    title: "Universal search",
-    body: "One search bar across every connected cloud. Filter by source, type, owner, or date — results in milliseconds.",
+    title: 'Universal search',
+    body: 'One search bar across every connected cloud. Filter by source, type, owner, or date — results in milliseconds.',
   },
   {
     Icon: SyncIcon,
     tone: {
-      tile: "bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white",
-      card: "hover:border-emerald-500/40",
+      tile: 'bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white',
+      card: 'hover:border-emerald-500/40',
     },
-    title: "Live two-way sync",
+    title: 'Live two-way sync',
     body: "Edits flow both directions in real time. Change a file in Dropbox and it's updated in Cloudrive — and back — instantly.",
   },
   {
     Icon: LayersIcon,
     tone: {
-      tile: "bg-accent/15 text-accent group-hover:bg-accent group-hover:text-accent-foreground",
-      card: "hover:border-accent/50",
+      tile: 'bg-accent/15 text-accent group-hover:bg-accent group-hover:text-accent-foreground',
+      card: 'hover:border-accent/50',
     },
-    title: "Zero-copy architecture",
-    body: "Cloudrive indexes and links; it never duplicates. Your files stay in place, your storage bills stay the same.",
+    title: 'Zero-copy architecture',
+    body: 'Cloudrive indexes and links; it never duplicates. Your files stay in place, your storage bills stay the same.',
   },
   {
     Icon: UsersIcon,
     tone: {
-      tile: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
-      card: "hover:border-primary/40",
+      tile: 'bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground',
+      card: 'hover:border-primary/40',
     },
-    title: "One permissions model",
+    title: 'One permissions model',
     body: "Share once, honoring each source's native rules. Audit who can see what from a single console.",
   },
   {
     Icon: HistoryIcon,
     tone: {
-      tile: "bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white",
-      card: "hover:border-emerald-500/40",
+      tile: 'bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white',
+      card: 'hover:border-emerald-500/40',
     },
-    title: "Unified version timeline",
-    body: "Every revision from every provider on one timeline. Restore any version of any file in two clicks.",
+    title: 'Unified version timeline',
+    body: 'Every revision from every provider on one timeline. Restore any version of any file in two clicks.',
   },
   {
     Icon: LockIcon,
     tone: {
-      tile: "bg-accent/15 text-accent group-hover:bg-accent group-hover:text-accent-foreground",
-      card: "hover:border-accent/50",
+      tile: 'bg-accent/15 text-accent group-hover:bg-accent group-hover:text-accent-foreground',
+      card: 'hover:border-accent/50',
     },
-    title: "End-to-end encryption",
-    body: "AES-256 at rest, TLS 1.3 in transit, and per-workspace keys. OAuth only — we never see your passwords.",
+    title: 'End-to-end encryption',
+    body: 'AES-256 at rest, TLS 1.3 in transit, and per-workspace keys. OAuth only — we never see your passwords.',
   },
-];
+]
 
 export function Features() {
   return (
@@ -427,7 +474,7 @@ export function Features() {
           title="Everything your clouds do, in one place"
           lede="Cloudrive sits on top of the providers you already use and gives them a single, coherent interface."
         />
-        <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" role="list">
+        <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" >
           {features.map(({ Icon, tone, title, body }, i) => (
             <Reveal key={title} delayMs={(i % 3) * 80}>
               <li
@@ -446,35 +493,32 @@ export function Features() {
         </ul>
       </div>
     </section>
-  );
+  )
 }
 
 /* ================= How it works ================= */
 
 const steps = [
   {
-    title: "Connect your accounts",
-    body: "Authorize each provider with OAuth in about two minutes. No migration, no uploads, nothing moves.",
+    title: 'Connect your accounts',
+    body: 'Authorize each provider with OAuth in about two minutes. No migration, no uploads, nothing moves.',
   },
   {
-    title: "Cloudrive centers everything",
-    body: "We index every file, folder, and permission into one unified drive with a single search index.",
+    title: 'Cloudrive centers everything',
+    body: 'We index every file, folder, and permission into one unified drive with a single search index.',
   },
   {
-    title: "Work from one drive",
-    body: "Open, search, share, and edit everything — on web, desktop, and mobile — while files stay at the source.",
+    title: 'Work from one drive',
+    body: 'Open, search, share, and edit everything — on web, desktop, and mobile — while files stay at the source.',
   },
-];
+]
 
 export function HowItWorks() {
   return (
     <section id="how-it-works" className="scroll-mt-16 bg-card">
       <div className={`${container} py-20 sm:py-24`}>
-        <SectionHeading
-          eyebrow="How it works"
-          title="Centered in minutes, not weekends"
-        />
-        <ol className="mt-12 grid gap-5 md:grid-cols-3" role="list">
+        <SectionHeading eyebrow="How it works" title="Centered in minutes, not weekends" />
+        <ol className="mt-12 grid gap-5 md:grid-cols-3" >
           {steps.map(({ title, body }, i) => (
             <Reveal key={title} delayMs={i * 100}>
               <li className="relative h-full rounded-2xl border border-border bg-background p-6">
@@ -495,21 +539,21 @@ export function HowItWorks() {
         </ol>
       </div>
     </section>
-  );
+  )
 }
 
 /* ================= Integrations ================= */
 
 const integrations = [
-  { name: "Google Drive", Mark: GoogleDriveMark },
-  { name: "Dropbox", Mark: DropboxMark },
-  { name: "OneDrive", Mark: OneDriveMark },
-  { name: "iCloud Drive", Mark: ICloudMark },
-  { name: "Amazon S3", Mark: S3Mark },
-  { name: "Box", Mark: BoxMark },
-  { name: "SharePoint", Mark: SharePointMark },
-  { name: "WebDAV / FTP", Mark: WebdavMark },
-];
+  { name: 'Google Drive', Mark: GoogleDriveMark },
+  { name: 'Dropbox', Mark: DropboxMark },
+  { name: 'OneDrive', Mark: OneDriveMark },
+  { name: 'iCloud Drive', Mark: ICloudMark },
+  { name: 'Amazon S3', Mark: S3Mark },
+  { name: 'Box', Mark: BoxMark },
+  { name: 'SharePoint', Mark: SharePointMark },
+  { name: 'WebDAV / FTP', Mark: WebdavMark },
+]
 
 export function Integrations() {
   return (
@@ -520,7 +564,7 @@ export function Integrations() {
           title="Every major cloud, first-class"
           lede="Connect as many sources as you want. New providers ship monthly — vote on what's next."
         />
-        <ul className="mx-auto mt-12 grid max-w-4xl grid-cols-2 gap-4 sm:grid-cols-4" role="list">
+        <ul className="mx-auto mt-12 grid max-w-4xl grid-cols-2 gap-4 sm:grid-cols-4" >
           {integrations.map(({ name, Mark }, i) => (
             <Reveal key={name} delayMs={(i % 4) * 60}>
               <li className="flex h-full flex-col items-center gap-3 rounded-2xl border border-border bg-card px-4 py-6 text-center transition-colors duration-200 hover:border-primary/40">
@@ -538,17 +582,17 @@ export function Integrations() {
         </Reveal>
       </div>
     </section>
-  );
+  )
 }
 
 /* ================= Stats ================= */
 
 const stats = [
-  { value: "12+", label: "Cloud providers" },
-  { value: "2.1B", label: "Files centered" },
-  { value: "40k", label: "Teams on board" },
-  { value: "99.99%", label: "Uptime SLA" },
-];
+  { value: '12+', label: 'Cloud providers' },
+  { value: '2.1B', label: 'Files centered' },
+  { value: '40k', label: 'Teams on board' },
+  { value: '99.99%', label: 'Uptime SLA' },
+]
 
 export function Stats() {
   return (
@@ -572,7 +616,7 @@ export function Stats() {
         </dl>
       </div>
     </section>
-  );
+  )
 }
 
 /* ================= Testimonials ================= */
@@ -581,38 +625,35 @@ const testimonials = [
   {
     quote:
       "We cut our 'where is the latest file?' threads by 80%. Cloudrive is the first tab my team opens every morning.",
-    name: "Maya Krishnan",
-    role: "Head of Operations, Nimbus Labs",
-    initials: "MK",
-    tone: "bg-primary/10 text-primary",
+    name: 'Maya Krishnan',
+    role: 'Head of Operations, Nimbus Labs',
+    initials: 'MK',
+    tone: 'bg-primary/10 text-primary',
   },
   {
     quote:
-      "Pointing S3 buckets and Google Drives at one interface took ten minutes. Zero migration, zero downtime.",
-    name: "Tom Okafor",
-    role: "Platform Lead, Dataship",
-    initials: "TO",
-    tone: "bg-accent/15 text-accent",
+      'Pointing S3 buckets and Google Drives at one interface took ten minutes. Zero migration, zero downtime.',
+    name: 'Tom Okafor',
+    role: 'Platform Lead, Dataship',
+    initials: 'TO',
+    tone: 'bg-accent/15 text-accent',
   },
   {
     quote:
-      "One permissions console for five clouds ended our audit nightmares. Security signed off in a week.",
-    name: "Elena Vasquez",
-    role: "CISO, Quantify",
-    initials: "EV",
-    tone: "bg-emerald-500/10 text-emerald-700",
+      'One permissions console for five clouds ended our audit nightmares. Security signed off in a week.',
+    name: 'Elena Vasquez',
+    role: 'CISO, Quantify',
+    initials: 'EV',
+    tone: 'bg-emerald-500/10 text-emerald-700',
   },
-];
+]
 
 export function Testimonials() {
   return (
     <section className="bg-card" aria-label="What customers say">
       <div className={`${container} py-20 sm:py-24`}>
-        <SectionHeading
-          eyebrow="Testimonials"
-          title="Teams stop tab-hopping on day one"
-        />
-        <ul className="mt-12 grid gap-5 md:grid-cols-3" role="list">
+        <SectionHeading eyebrow="Testimonials" title="Teams stop tab-hopping on day one" />
+        <ul className="mt-12 grid gap-5 md:grid-cols-3" >
           {testimonials.map(({ quote, name, role, initials, tone }, i) => (
             <Reveal key={name} delayMs={i * 80}>
               <li className="flex h-full flex-col rounded-2xl border border-border bg-background p-6 transition-all duration-200 hover:-translate-y-1 hover:border-primary/40">
@@ -638,52 +679,57 @@ export function Testimonials() {
         </ul>
       </div>
     </section>
-  );
+  )
 }
 
 /* ================= Pricing ================= */
 
 const plans = [
   {
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    description: "For personal cloud-hopping.",
-    features: ["3 connected sources", "10 GB unified cache", "Universal search", "Community support"],
-    cta: "Start for free",
+    name: 'Free',
+    price: '$0',
+    period: 'forever',
+    description: 'For personal cloud-hopping.',
+    features: [
+      '3 connected sources',
+      '10 GB unified cache',
+      'Universal search',
+      'Community support',
+    ],
+    cta: 'Start for free',
     highlighted: false,
   },
   {
-    name: "Pro",
-    price: "$12",
-    period: "per month",
-    description: "For professionals who live in their files.",
+    name: 'Pro',
+    price: '$12',
+    period: 'per month',
+    description: 'For professionals who live in their files.',
     features: [
-      "Unlimited sources",
-      "2 TB unified cache",
-      "Version timeline + restore",
-      "Priority sync queue",
-      "Desktop & mobile apps",
+      'Unlimited sources',
+      '2 TB unified cache',
+      'Version timeline + restore',
+      'Priority sync queue',
+      'Desktop & mobile apps',
     ],
-    cta: "Get early access",
+    cta: 'Get early access',
     highlighted: true,
   },
   {
-    name: "Team",
-    price: "$29",
-    period: "per user / month",
-    description: "For teams that share everything.",
+    name: 'Team',
+    price: '$29',
+    period: 'per user / month',
+    description: 'For teams that share everything.',
     features: [
-      "Everything in Pro",
-      "SSO / SAML + SCIM",
-      "Admin & audit console",
-      "Shared team drive",
-      "API access",
+      'Everything in Pro',
+      'SSO / SAML + SCIM',
+      'Admin & audit console',
+      'Shared team drive',
+      'API access',
     ],
-    cta: "Talk to sales",
+    cta: 'Talk to sales',
     highlighted: false,
   },
-];
+]
 
 export function Pricing() {
   return (
@@ -700,8 +746,8 @@ export function Pricing() {
               <div
                 className={`relative flex h-full flex-col rounded-2xl border p-7 transition-all duration-200 ${
                   highlighted
-                    ? "border-2 border-primary bg-card shadow-[10px_10px_0_0_#fde68a] lg:-translate-y-2"
-                    : "border-border bg-card hover:-translate-y-1 hover:border-primary/40"
+                    ? 'border-2 border-primary bg-card shadow-[10px_10px_0_0_#fde68a] lg:-translate-y-2'
+                    : 'border-border bg-card hover:-translate-y-1 hover:border-primary/40'
                 }`}
               >
                 {highlighted && (
@@ -719,7 +765,7 @@ export function Pricing() {
                   <span className="text-sm text-muted-foreground">{period}</span>
                 </p>
                 <p className="mt-2 text-sm text-muted-foreground">{description}</p>
-                <ul className="mt-6 flex-1 space-y-3" role="list">
+                <ul className="mt-6 flex-1 space-y-3" >
                   {features.map((feature) => (
                     <li key={feature} className="flex items-start gap-2.5 text-sm text-foreground">
                       <CheckIcon className="mt-0.5 size-4 shrink-0 text-primary" />
@@ -731,8 +777,8 @@ export function Pricing() {
                   href="#waitlist"
                   className={`mt-8 inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold transition-all duration-200 ${
                     highlighted
-                      ? "bg-primary text-primary-foreground shadow-[0_4px_0_0_#1e40af] hover:-translate-y-0.5 hover:bg-blue-700 active:translate-y-0 active:shadow-none"
-                      : "border border-border bg-background text-foreground hover:-translate-y-0.5 hover:bg-muted active:translate-y-0"
+                      ? 'bg-primary text-primary-foreground shadow-[0_4px_0_0_#1e40af] hover:-translate-y-0.5 hover:bg-blue-700 active:translate-y-0 active:shadow-none'
+                      : 'border border-border bg-background text-foreground hover:-translate-y-0.5 hover:bg-muted active:translate-y-0'
                   }`}
                 >
                   {cta}
@@ -743,33 +789,33 @@ export function Pricing() {
         </div>
       </div>
     </section>
-  );
+  )
 }
 
 /* ================= FAQ ================= */
 
 const faqs = [
   {
-    q: "Does Cloudrive copy or move my files?",
+    q: 'Does Cloudrive copy or move my files?',
     a: "No. Cloudrive is zero-copy: we index metadata and stream content on demand through the provider's own API. Your files never leave their original location, and deleting a source disconnects it cleanly.",
   },
   {
-    q: "How is this different from just mounting multiple drives?",
-    a: "Mounting gives you multiple windows into multiple silos. Cloudrive gives you one namespace, one search index, one permissions console, and one version timeline — across all sources at once.",
+    q: 'How is this different from just mounting multiple drives?',
+    a: 'Mounting gives you multiple windows into multiple silos. Cloudrive gives you one namespace, one search index, one permissions console, and one version timeline — across all sources at once.',
   },
   {
-    q: "Is my data secure?",
-    a: "We use OAuth (never passwords), encrypt everything with AES-256 at rest and TLS 1.3 in transit, and support per-workspace keys. Cloudrive is SOC 2 Type II audited during beta.",
+    q: 'Is my data secure?',
+    a: 'We use OAuth (never passwords), encrypt everything with AES-256 at rest and TLS 1.3 in transit, and support per-workspace keys. Cloudrive is SOC 2 Type II audited during beta.',
   },
   {
-    q: "What happens if I disconnect a provider?",
-    a: "The source disappears from your unified drive, but nothing is deleted from the provider itself. Indexes are removed from our systems within 24 hours.",
+    q: 'What happens if I disconnect a provider?',
+    a: 'The source disappears from your unified drive, but nothing is deleted from the provider itself. Indexes are removed from our systems within 24 hours.',
   },
   {
-    q: "Can I self-host Cloudrive?",
-    a: "A self-hosted distribution for Team plans is on the roadmap. During beta, Cloudrive runs fully managed on our infrastructure.",
+    q: 'Can I self-host Cloudrive?',
+    a: 'A self-hosted distribution for Team plans is on the roadmap. During beta, Cloudrive runs fully managed on our infrastructure.',
   },
-];
+]
 
 export function Faq() {
   return (
@@ -791,7 +837,7 @@ export function Faq() {
         </div>
       </div>
     </section>
-  );
+  )
 }
 
 /* ================= Final CTA ================= */
@@ -806,8 +852,7 @@ export function CtaSection() {
             Beta invites roll out weekly
           </p>
           <h2 className="mt-6 text-3xl font-extrabold tracking-tight text-white sm:text-5xl sm:leading-[1.1]">
-            Stop tab-hopping.{" "}
-            <span className="text-amber-400">Start centering.</span>
+            Stop tab-hopping. <span className="text-amber-400">Start centering.</span>
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-lg leading-8 text-slate-300">
             Join the waitlist and be first to connect every cloud you use to a single drive.
@@ -818,41 +863,41 @@ export function CtaSection() {
         </Reveal>
       </div>
     </section>
-  );
+  )
 }
 
 /* ================= Footer ================= */
 
 const footerColumns = [
   {
-    heading: "Product",
+    heading: 'Product',
     links: [
-      { label: "Features", href: "/#features" },
-      { label: "Pricing", href: "/#pricing" },
-      { label: "Integrations", href: "/#integrations" },
-      { label: "Changelog", href: "/#" },
-      { label: "Status", href: "/#" },
+      { label: 'Features', href: '/#features' },
+      { label: 'Pricing', href: '/#pricing' },
+      { label: 'Integrations', href: '/#integrations' },
+      { label: 'Changelog', href: '/#' },
+      { label: 'Status', href: '/#' },
     ],
   },
   {
-    heading: "Company",
+    heading: 'Company',
     links: [
-      { label: "About", href: "/#" },
-      { label: "Blog", href: "/#" },
-      { label: "Careers", href: "/#" },
-      { label: "Contact", href: "/contact" },
+      { label: 'About', href: '/#' },
+      { label: 'Blog', href: '/#' },
+      { label: 'Careers', href: '/#' },
+      { label: 'Contact', href: '/contact' },
     ],
   },
   {
-    heading: "Legal",
+    heading: 'Legal',
     links: [
-      { label: "Privacy", href: "/privacy" },
-      { label: "Terms", href: "/terms" },
-      { label: "DPA", href: "/#" },
-      { label: "Security", href: "/#" },
+      { label: 'Privacy', href: '/privacy' },
+      { label: 'Terms', href: '/terms' },
+      { label: 'DPA', href: '/#' },
+      { label: 'Security', href: '/#' },
     ],
   },
-];
+]
 
 export function Footer() {
   return (
@@ -868,7 +913,7 @@ export function Footer() {
           {footerColumns.map(({ heading, links }) => (
             <nav key={heading} aria-label={heading}>
               <p className="text-sm font-bold text-foreground">{heading}</p>
-              <ul className="mt-4 space-y-2.5" role="list">
+              <ul className="mt-4 space-y-2.5" >
                 {links.map(({ label, href }) => (
                   <li key={label}>
                     <a
@@ -894,5 +939,5 @@ export function Footer() {
         </div>
       </div>
     </footer>
-  );
+  )
 }

@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: 'en-US'
+early_access: false
+reviews:
+  profile: 'chill'
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: true
+  review_status: true
+  review_details: false
+  collapse_walkthrough: false
+  path_filters:
+    - '!**/*.xml'
+    - '!**/__generated__/**'
+    - '!**/generated/**'
+    - '!**/.output/**'
+    - '!**/*.json'
+    - '!**/*.svg'
+    - '!**/*.png'
+    - '!**/*.jpg'
+    - '!**/*.gif'
+    - '!**/*.lock'
+  path_instructions:
+    - path: '**/*.{ts,tsx}'
+      instructions: 'Review the Typescript code for conformity with best practices in Hono.js, TypeORM, and Typescript. Highlight any deviations.'
+  auto_review:
+    enabled: true
+    ignore_title_keywords:
+      - 'WIP'
+      - 'DO NOT MERGE'
+      - 'DRAFT'
+      - 'version packages'
+    drafts: false
+    base_branches:
+      - 'dev'
+      - 'main'
+      - 'release/.*'
+      - 'feat/.*'
+chat:
+  auto_reply: true

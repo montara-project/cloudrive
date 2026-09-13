@@ -1,29 +1,40 @@
-# Node / pnpm
+# Dependencies
 node_modules/
-.pnpm-store/
+vendor/
 
-# vinext / Next.js
+# Builds
 .next/
-next-env.d.ts
-.vinext/
-
-# Build output
+.out/
 dist/
-bin/
+build/
+*.tsbuildinfo
+.next-types/
 
-# Cloudflare
+# Cloudflare / Workers
 .wrangler/
+.dev.vars*
+!.dev.vars.example
 
 # Go
 apps/server/bin/
-apps/server/server
+*.exe
 
 # Env
 .env
 .env.*
 !.env.example
 
-# Misc
+# Editor / OS
 .DS_Store
+.idea/
+.vscode/launch.json
+*.swp
+
+# Logs
 *.log
-coverage/
+npm-debug.log*
+pnpm-debug.log*
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
+.omc/

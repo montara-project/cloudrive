@@ -1,18 +1,19 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { ArrowRightIcon, CloudriveLogo, CloseIcon, MenuIcon } from "./icons";
+import { useState } from 'react'
+
+import { ArrowRightIcon, CloudriveLogo, CloseIcon, MenuIcon } from './icons'
 
 const links = [
-  { href: "/#features", label: "Features" },
-  { href: "/#how-it-works", label: "How it works" },
-  { href: "/#integrations", label: "Integrations" },
-  { href: "/#pricing", label: "Pricing" },
-  { href: "/#faq", label: "FAQ" },
-];
+  { href: '/#features', label: 'Features' },
+  { href: '/#how-it-works', label: 'How it works' },
+  { href: '/#integrations', label: 'Integrations' },
+  { href: '/#pricing', label: 'Pricing' },
+  { href: '/#faq', label: 'FAQ' },
+]
 
 export function Navbar() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false)
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/85 backdrop-blur-md">
@@ -52,7 +53,7 @@ export function Navbar() {
           className="inline-flex size-10 items-center justify-center rounded-lg text-foreground transition-colors duration-200 hover:bg-muted md:hidden"
           aria-expanded={open}
           aria-controls="mobile-menu"
-          aria-label={open ? "Close menu" : "Open menu"}
+          aria-label={open ? 'Close menu' : 'Open menu'}
           onClick={() => setOpen((v) => !v)}
         >
           {open ? <CloseIcon className="size-5" /> : <MenuIcon className="size-5" />}
@@ -87,5 +88,5 @@ export function Navbar() {
         </div>
       )}
     </header>
-  );
+  )
 }

@@ -2,10 +2,6 @@
   "name": "cloudrive",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@11.10.0",
-  "engines": {
-    "node": ">=22"
-  },
   "scripts": {
     "dev": "pnpm -r --parallel run dev",
     "build": "pnpm -r run build",
@@ -15,5 +11,15 @@
     "build:server": "pnpm --filter @cloudrive/server build",
     "start:web": "pnpm --filter @cloudrive/web start",
     "deploy:web": "pnpm --filter @cloudrive/web deploy"
+  },
+  "devDependencies": {
+    "eslint-plugin-perfectionist": "^5.11.0",
+    "oxfmt": "^0.66.0",
+    "oxlint": "^1.81.0",
+    "typescript": "^5.9.2"
+  },
+  "packageManager": "pnpm@11.10.0",
+  "engines": {
+    "node": ">=24.0"
   }
 }

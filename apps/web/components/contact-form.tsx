@@ -1,64 +1,68 @@
-"use client";
+'use client'
 
-import { useId, useState } from "react";
-import { CheckIcon } from "./icons";
+import { useId, useState } from 'react'
+
+import { CheckIcon } from './icons'
 
 const API_URL =
-  (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL) || "http://localhost:8080";
+  (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) || 'http://localhost:8080'
 
-const topics = ["General support", "Billing", "Sales", "Security", "Other"];
+const topics = ['General support', 'Billing', 'Sales', 'Security', 'Other']
 
 type Status =
-  | { state: "idle" }
-  | { state: "loading" }
-  | { state: "success"; ticket: string; email: string }
-  | { state: "error"; message: string };
+  | { state: 'idle' }
+  | { state: 'loading' }
+  | { state: 'success'; ticket: string; email: string }
+  | { state: 'error'; message: string }
 
 const inputClass =
-  "w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-slate-400 focus:outline-2 focus:outline-offset-0 focus:outline-ring";
+  'w-full rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground placeholder:text-slate-400 focus:outline-2 focus:outline-offset-0 focus:outline-ring'
 
 export function ContactForm() {
-  const id = useId();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [topic, setTopic] = useState(topics[0]);
-  const [message, setMessage] = useState("");
-  const [status, setStatus] = useState<Status>({ state: "idle" });
+  const id = useId()
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [topic, setTopic] = useState(topics[0])
+  const [message, setMessage] = useState('')
+  const [status, setStatus] = useState<Status>({ state: 'idle' })
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+    event.preventDefault()
     if (name.trim().length < 2) {
-      setStatus({ state: "error", message: "Please enter your name." });
-      return;
+      setStatus({ state: 'error', message: 'Please enter your name.' })
+      return
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setStatus({ state: "error", message: "Please enter a valid email address." });
-      return;
+      setStatus({ state: 'error', message: 'Please enter a valid email address.' })
+      return
     }
     if (message.trim().length < 10) {
-      setStatus({ state: "error", message: "Please tell us a little more (at least 10 characters)." });
-      return;
+      setStatus({
+        state: 'error',
+        message: 'Please tell us a little more (at least 10 characters).',
+      })
+      return
     }
 
-    setStatus({ state: "loading" });
+    setStatus({ state: 'loading' })
     try {
       const res = await fetch(`${API_URL}/api/v1/contact`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, topic, message }),
-      });
-      const data = (await res.json()) as { ok: boolean; ticket?: string };
+      })
+      const data = (await res.json()) as { ok: boolean; ticket?: string }
       if (!res.ok || !data.ok) {
-        setStatus({ state: "error", message: "Something went wrong. Please try again." });
-        return;
+        setStatus({ state: 'error', message: 'Something went wrong. Please try again.' })
+        return
       }
-      setStatus({ state: "success", ticket: data.ticket ?? "", email: email.trim() });
+      setStatus({ state: 'success', ticket: data.ticket ?? '', email: email.trim() })
     } catch {
-      setStatus({ state: "error", message: "Could not reach the server. Please try again." });
+      setStatus({ state: 'error', message: 'Could not reach the server. Please try again.' })
     }
   }
 
-  if (status.state === "success") {
+  if (status.state === 'success') {
     return (
       <div
         className="flex items-start gap-3 rounded-2xl border border-border bg-card p-6"
@@ -70,19 +74,22 @@ export function ContactForm() {
         <div>
           <p className="font-bold text-foreground">Message sent — ticket {status.ticket}</p>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            Thanks, {name.trim().split(" ")[0]}! We&apos;ll reply to{" "}
+            Thanks, {name.trim().split(' ')[0]}! We&apos;ll reply to{' '}
             <strong className="text-foreground">{status.email}</strong> within one business day.
           </p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-5">
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
-          <label htmlFor={`${id}-name`} className="mb-1.5 block text-sm font-semibold text-foreground">
+          <label
+            htmlFor={`${id}-name`}
+            className="mb-1.5 block text-sm font-semibold text-foreground"
+          >
             Name
           </label>
           <input
@@ -93,14 +100,17 @@ export function ContactForm() {
             placeholder="Maya Krishnan"
             value={name}
             onChange={(e) => {
-              setName(e.target.value);
-              if (status.state === "error") setStatus({ state: "idle" });
+              setName(e.target.value)
+              if (status.state === 'error') setStatus({ state: 'idle' })
             }}
             className={inputClass}
           />
         </div>
         <div>
-          <label htmlFor={`${id}-email`} className="mb-1.5 block text-sm font-semibold text-foreground">
+          <label
+            htmlFor={`${id}-email`}
+            className="mb-1.5 block text-sm font-semibold text-foreground"
+          >
             Work email
           </label>
           <input
@@ -111,18 +121,21 @@ export function ContactForm() {
             placeholder="you@company.com"
             value={email}
             onChange={(e) => {
-              setEmail(e.target.value);
-              if (status.state === "error") setStatus({ state: "idle" });
+              setEmail(e.target.value)
+              if (status.state === 'error') setStatus({ state: 'idle' })
             }}
-            aria-invalid={status.state === "error"}
-            aria-describedby={status.state === "error" ? `${id}-error` : undefined}
+            aria-invalid={status.state === 'error'}
+            aria-describedby={status.state === 'error' ? `${id}-error` : undefined}
             className={inputClass}
           />
         </div>
       </div>
 
       <div>
-        <label htmlFor={`${id}-topic`} className="mb-1.5 block text-sm font-semibold text-foreground">
+        <label
+          htmlFor={`${id}-topic`}
+          className="mb-1.5 block text-sm font-semibold text-foreground"
+        >
           Topic
         </label>
         <select
@@ -141,7 +154,10 @@ export function ContactForm() {
       </div>
 
       <div>
-        <label htmlFor={`${id}-message`} className="mb-1.5 block text-sm font-semibold text-foreground">
+        <label
+          htmlFor={`${id}-message`}
+          className="mb-1.5 block text-sm font-semibold text-foreground"
+        >
           Message
         </label>
         <textarea
@@ -151,8 +167,8 @@ export function ContactForm() {
           placeholder="Tell us what's up — the more detail, the faster we can help."
           value={message}
           onChange={(e) => {
-            setMessage(e.target.value);
-            if (status.state === "error") setStatus({ state: "idle" });
+            setMessage(e.target.value)
+            if (status.state === 'error') setStatus({ state: 'idle' })
           }}
           className={`${inputClass} resize-y`}
         />
@@ -161,13 +177,13 @@ export function ContactForm() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <button
           type="submit"
-          disabled={status.state === "loading"}
+          disabled={status.state === 'loading'}
           className="inline-flex items-center justify-center rounded-xl bg-primary px-7 py-3 text-sm font-semibold text-primary-foreground shadow-[0_4px_0_0_#1e40af] transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {status.state === "loading" ? "Sending…" : "Send message"}
+          {status.state === 'loading' ? 'Sending…' : 'Send message'}
         </button>
         <div aria-live="polite" className="min-h-5 text-sm">
-          {status.state === "error" && (
+          {status.state === 'error' && (
             <p id={`${id}-error`} className="font-medium text-destructive" role="alert">
               {status.message}
             </p>
@@ -175,5 +191,5 @@ export function ContactForm() {
         </div>
       </div>
     </form>
-  );
+  )
 }
