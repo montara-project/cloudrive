@@ -4,7 +4,7 @@ name: Build and Push Image to ECR
 on:
   push:
     tags:
-      - "*"
+      - '*'
 
 permissions:
   contents: read

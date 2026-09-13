@@ -138,7 +138,7 @@ export default function ContactPage() {
 
         <section aria-label="Contact channels" className="bg-card">
           <div className={`${container} py-14`}>
-            <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4" >
+            <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {channels.map(({ Icon, title, email, note, tile, hoverBorder }, i) => (
                 <Reveal key={email} delayMs={i * 70}>
                   <li
