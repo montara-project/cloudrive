@@ -388,7 +388,7 @@ export function Problem() {
           title="Your files live in six places. Your work lives in none of them."
           lede="Cloud storage solved storing files. It created a new problem: your team's knowledge is scattered across disconnected services that don't talk to each other."
         />
-        <ul className="mt-12 grid gap-5 md:grid-cols-3" >
+        <ul className="mt-12 grid gap-5 md:grid-cols-3">
           {pains.map((pain, i) => (
             <Reveal key={pain.title} delayMs={i * 80}>
               <li className="h-full rounded-2xl border border-border bg-background p-6 transition-all duration-200 hover:-translate-y-1 hover:border-accent/50">
@@ -474,7 +474,7 @@ export function Features() {
           title="Everything your clouds do, in one place"
           lede="Cloudrive sits on top of the providers you already use and gives them a single, coherent interface."
         />
-        <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" >
+        <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {features.map(({ Icon, tone, title, body }, i) => (
             <Reveal key={title} delayMs={(i % 3) * 80}>
               <li
@@ -518,7 +518,7 @@ export function HowItWorks() {
     <section id="how-it-works" className="scroll-mt-16 bg-card">
       <div className={`${container} py-20 sm:py-24`}>
         <SectionHeading eyebrow="How it works" title="Centered in minutes, not weekends" />
-        <ol className="mt-12 grid gap-5 md:grid-cols-3" >
+        <ol className="mt-12 grid gap-5 md:grid-cols-3">
           {steps.map(({ title, body }, i) => (
             <Reveal key={title} delayMs={i * 100}>
               <li className="relative h-full rounded-2xl border border-border bg-background p-6">
@@ -564,7 +564,7 @@ export function Integrations() {
           title="Every major cloud, first-class"
           lede="Connect as many sources as you want. New providers ship monthly — vote on what's next."
         />
-        <ul className="mx-auto mt-12 grid max-w-4xl grid-cols-2 gap-4 sm:grid-cols-4" >
+        <ul className="mx-auto mt-12 grid max-w-4xl grid-cols-2 gap-4 sm:grid-cols-4">
           {integrations.map(({ name, Mark }, i) => (
             <Reveal key={name} delayMs={(i % 4) * 60}>
               <li className="flex h-full flex-col items-center gap-3 rounded-2xl border border-border bg-card px-4 py-6 text-center transition-colors duration-200 hover:border-primary/40">
@@ -653,7 +653,7 @@ export function Testimonials() {
     <section className="bg-card" aria-label="What customers say">
       <div className={`${container} py-20 sm:py-24`}>
         <SectionHeading eyebrow="Testimonials" title="Teams stop tab-hopping on day one" />
-        <ul className="mt-12 grid gap-5 md:grid-cols-3" >
+        <ul className="mt-12 grid gap-5 md:grid-cols-3">
           {testimonials.map(({ quote, name, role, initials, tone }, i) => (
             <Reveal key={name} delayMs={i * 80}>
               <li className="flex h-full flex-col rounded-2xl border border-border bg-background p-6 transition-all duration-200 hover:-translate-y-1 hover:border-primary/40">
@@ -765,7 +765,7 @@ export function Pricing() {
                   <span className="text-sm text-muted-foreground">{period}</span>
                 </p>
                 <p className="mt-2 text-sm text-muted-foreground">{description}</p>
-                <ul className="mt-6 flex-1 space-y-3" >
+                <ul className="mt-6 flex-1 space-y-3">
                   {features.map((feature) => (
                     <li key={feature} className="flex items-start gap-2.5 text-sm text-foreground">
                       <CheckIcon className="mt-0.5 size-4 shrink-0 text-primary" />
@@ -913,7 +913,7 @@ export function Footer() {
           {footerColumns.map(({ heading, links }) => (
             <nav key={heading} aria-label={heading}>
               <p className="text-sm font-bold text-foreground">{heading}</p>
-              <ul className="mt-4 space-y-2.5" >
+              <ul className="mt-4 space-y-2.5">
                 {links.map(({ label, href }) => (
                   <li key={label}>
                     <a

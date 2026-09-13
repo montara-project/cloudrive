@@ -23,10 +23,7 @@ const container = 'mx-auto w-full max-w-6xl px-6'
 function Block({ block }: { block: LegalBlock }) {
   if (block.kind === 'list') {
     return (
-      <ul
-        className="list-disc space-y-2 pl-5 text-base leading-[1.75] text-muted-foreground marker:text-primary"
-        
-      >
+      <ul className="list-disc space-y-2 pl-5 text-base leading-[1.75] text-muted-foreground marker:text-primary">
         {block.items.map((item) => (
           <li key={item}>{item}</li>
         ))}
@@ -78,10 +75,7 @@ export function LegalPage({
           <div className={`${container} py-14 sm:py-16`}>
             <Reveal className="max-w-3xl">
               <nav aria-label="Breadcrumb">
-                <ol
-                  className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-muted-foreground"
-                  
-                >
+                <ol className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-muted-foreground">
                   <li>
                     <a href="/" className="transition-colors duration-150 hover:text-primary">
                       Home
