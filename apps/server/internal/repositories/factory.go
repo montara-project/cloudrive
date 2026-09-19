@@ -20,8 +20,15 @@ type Repositories struct {
 
 func New(db *sql.DB, cfg *config.ConfigApp, box *secretbox.SecretBox) Repositories {
 	return Repositories{
-		Provider: ProviderRepository{BaseRepository: BaseRepository{DB: db}},
-		User:     UserRepository{BaseRepository: BaseRepository{DB: db}},
+		Provider: ProviderRepository{BaseRepository: BaseRepository{
+			DB:         db,
+			TableName:  "providers",
+			SoftDelete: true,
+		}},
+		User: UserRepository{BaseRepository: BaseRepository{
+			DB:        db,
+			TableName: "users",
+		}},
 		Organization: OrganizationRepository{BaseRepository: BaseRepository{
 			DB:         db,
 			TableName:  "organizations",

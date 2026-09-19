@@ -30,18 +30,34 @@ func (r BaseRepository) debugQuery(query string) {
 	slog.Debug("query", "sql", sqlfmt.PrettyFormat(query))
 }
 
+// tableName validates the configured table name. The exec helpers build SQL
+// from TableName, so an empty value would produce an invalid query
+// (FROM "") — fail with an explicit error instead.
+func (r BaseRepository) tableName() (string, error) {
+	if r.TableName == "" {
+		return "", errtrace.New("repository table name is not configured")
+	}
+
+	return r.TableName, nil
+}
+
 func (r BaseRepository) countExec(exc Executor) (int64, error) {
+	tableName, err := r.tableName()
+	if err != nil {
+		return 0, err
+	}
+
 	query := fmt.Sprintf(`
 		SELECT COUNT(*)
 		FROM "%s";
-	`, r.TableName)
+	`, tableName)
 
 	if r.SoftDelete {
 		query = fmt.Sprintf(`
 		SELECT COUNT(*)
 		FROM "%s"
 		WHERE "deleted_at" IS NULL;
-		`, r.TableName)
+		`, tableName)
 	}
 
 	r.debugQuery(query)
@@ -63,10 +79,15 @@ func (r BaseRepository) countExec(exc Executor) (int64, error) {
 }
 
 func (r BaseRepository) deleteExec(exc Executor, id uuid.UUID) error {
+	tableName, err := r.tableName()
+	if err != nil {
+		return err
+	}
+
 	query := fmt.Sprintf(`
 		DELETE FROM "%s"
 		WHERE "id" = $1;
-	`, r.TableName)
+	`, tableName)
 
 	r.debugQuery(query)
 
@@ -93,11 +114,16 @@ func (r BaseRepository) deleteExec(exc Executor, id uuid.UUID) error {
 }
 
 func (r BaseRepository) softDeleteExec(exc Executor, id uuid.UUID) error {
+	tableName, err := r.tableName()
+	if err != nil {
+		return err
+	}
+
 	query := fmt.Sprintf(`
 		UPDATE "%s"
 		SET "deleted_at" = now()
 		WHERE "id" = $1;
-	`, r.TableName)
+	`, tableName)
 
 	r.debugQuery(query)
 
@@ -124,11 +150,16 @@ func (r BaseRepository) softDeleteExec(exc Executor, id uuid.UUID) error {
 }
 
 func (r BaseRepository) restoreExec(exc Executor, id uuid.UUID) error {
+	tableName, err := r.tableName()
+	if err != nil {
+		return err
+	}
+
 	query := fmt.Sprintf(`
 		UPDATE "%s"
 		SET "deleted_at" = NULL
 		WHERE "id" = $1;
-	`, r.TableName)
+	`, tableName)
 
 	r.debugQuery(query)
 
