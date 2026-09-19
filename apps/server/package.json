@@ -3,8 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "go run .",
-    "build": "go build -o bin/server .",
-    "start": "bin/server"
+    "dev": "make run",
+		"build": "make build/api && make build/migrate",
+		"build:api": "make build/api",
+		"build:migrate": "make build/migrate",
+		"install": "go mod tidy",
+		"test": "go test ./...",
+		"release": "chmod +x ./scripts/release.sh && ./scripts/release.sh"
   }
 }

@@ -1,17 +1,21 @@
-module github.com/masb0ymas/cloudrive/server
+module cloudrive/server
 
-go 1.25.5
+go 1.26
 
 require github.com/gofiber/fiber/v3 v3.5.0
 
 require (
+	braces.dev/errtrace v0.4.0
 	github.com/andybalholm/brotli v1.2.2 // indirect
 	github.com/gofiber/schema v1.8.3 // indirect
 	github.com/gofiber/utils/v2 v2.4.1 // indirect
+	github.com/golang-migrate/migrate/v4 v4.20.1
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/klauspost/compress v1.19.2 // indirect
+	github.com/lib/pq v1.12.3
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
+	github.com/maxrichie5/go-sqlfmt v0.0.0-20241025195225-e353be92414a
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/tinylib/msgp v1.6.4 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
