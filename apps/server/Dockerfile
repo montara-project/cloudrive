@@ -14,7 +14,7 @@ RUN go mod download
 
 COPY . .
 
-RUN cp .env.production .env
+RUN cp .env.example .env
 
 # Build the application
 RUN make build/api

@@ -62,27 +62,27 @@ db/migrations/new:
 ## db/migrations/up: apply all up database migrations
 .PHONY: db/migrations/up
 db/migrations/up:
-	@go run ./cmd/migrate --db-dsn=$(DB_DSN) --app-pwd=$(APP_DEFAULT_PASS) up
+	@go run ./cmd/migrate --db-dsn=$(DB_DSN) up
 
 ## db/migrations/up/seed: apply all up database migrations and run seeders
 .PHONY: db/migrations/up/seed
 db/migrations/up/seed:
-	@go run ./cmd/migrate --db-dsn=$(DB_DSN) --app-pwd=$(APP_DEFAULT_PASS) --seed=dev up
+	@go run ./cmd/migrate --db-dsn=$(DB_DSN) --seed=dev up
 
 ## db/migrations/down: apply all down database migrations
 .PHONY: db/migrations/down
 db/migrations/down:
-	@go run ./cmd/migrate --db-dsn=$(DB_DSN) --app-pwd=$(APP_DEFAULT_PASS) down
+	@go run ./cmd/migrate --db-dsn=$(DB_DSN) down
 
 ## db/migrations/refresh: apply all refresh database migrations
 .PHONY: db/migrations/refresh
 db/migrations/refresh:
-	@go run ./cmd/migrate --db-dsn=$(DB_DSN) --app-pwd=$(APP_DEFAULT_PASS) refresh
+	@go run ./cmd/migrate --db-dsn=$(DB_DSN) refresh
 
 ## db/migrations/refresh/seed: apply all refresh database migrations and run seeders
 .PHONY: db/migrations/refresh/seed
 db/migrations/refresh/seed:
-	@go run ./cmd/migrate --db-dsn=$(DB_DSN) --app-pwd=$(APP_DEFAULT_PASS) --seed=dev refresh
+	@go run ./cmd/migrate --db-dsn=$(DB_DSN) --seed=dev refresh
 
 # ==================================================================================== #
 # BUILD
@@ -106,12 +106,12 @@ build/migrate:
 # RELEASE
 # ==================================================================================== #
 
-## release: bump version and create a release tag (auto-detect from commits)
+## release: bump version and create a release tag (auto-detect from commits); extras: make release ARGS="--type=minor --no-push"
 .PHONY: release
 release:
-	@bash scripts/release.sh
+	@bash scripts/release.sh $(ARGS)
 
 ## release/dry-run: preview the next version bump without creating a tag
 .PHONY: release/dry-run
 release/dry-run:
-	@bash scripts/release.sh --dry-run
+	@bash scripts/release.sh --dry-run $(ARGS)
