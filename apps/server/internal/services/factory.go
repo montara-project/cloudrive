@@ -1,3 +1,5 @@
 package services
 
-type Services struct{}
+type Services struct {
+	Email EmailService
+}

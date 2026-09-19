@@ -11,15 +11,16 @@ type Config struct {
 }
 
 type ConfigApp struct {
-	Env            string
-	Debug          bool
-	Port           int
-	MachineID      uint16
-	Name           string
-	Secret         string
-	ClientURL      string
-	ServerURL      string
-	TrustedProxies []string
+	Env                string
+	Debug              bool
+	Port               int
+	MachineID          uint16
+	Name               string
+	Secret             string
+	ClientURL          string
+	ServerURL          string
+	CORSAllowedOrigins string
+	TrustedProxies     []string
 }
 
 type ConfigDB struct {
