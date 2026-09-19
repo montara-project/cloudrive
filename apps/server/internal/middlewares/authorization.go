@@ -3,8 +3,11 @@ package middlewares
 import (
 	"time"
 
+	"cloudrive/server/internal/lib"
+
 	"github.com/Authula/authula/util"
 	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
 )
 
 const SessionCookieName = "authula.session_token"
@@ -27,6 +30,14 @@ func (m Middlewares) Authorization() fiber.Handler {
 		if session.ExpiresAt.Before(time.Now().UTC()) {
 			return unauthorizedBySession(c)
 		}
+
+		// Authula user IDs are UUID strings; expose the parsed id to handlers
+		// through fiber locals.
+		uid, err := uuid.Parse(session.UserID)
+		if err != nil {
+			return unauthorizedBySession(c)
+		}
+		lib.ContextSetUID(c, uid)
 
 		return c.Next()
 	}

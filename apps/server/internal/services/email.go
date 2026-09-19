@@ -12,7 +12,8 @@ import (
 )
 
 type EmailService struct {
-	Config config.ConfigResend
+	AppName string
+	Config  config.ConfigResend
 }
 
 type SendEmailParams struct {
@@ -32,7 +33,7 @@ func (s EmailService) SendEmail(value SendEmailParams) (string, error) {
 	}
 
 	params := &resend.SendEmailRequest{
-		From:    fmt.Sprintf("GoFi <%s>", s.Config.FromEmail),
+		From:    fmt.Sprintf("%s <%s>", s.AppName, s.Config.FromEmail),
 		To:      []string{value.To},
 		Html:    htmlStr,
 		Subject: value.Subject,

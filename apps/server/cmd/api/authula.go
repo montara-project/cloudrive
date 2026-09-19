@@ -9,6 +9,7 @@ import (
 	"cloudrive/server/internal/config"
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/middlewares"
+	appmodels "cloudrive/server/internal/models"
 	"cloudrive/server/internal/services"
 
 	authula "github.com/Authula/authula"
@@ -24,6 +25,7 @@ import (
 	oauth2plugin "github.com/Authula/authula/plugins/oauth2"
 	oauth2plugintypes "github.com/Authula/authula/plugins/oauth2/types"
 	sessionplugin "github.com/Authula/authula/plugins/session"
+	"github.com/google/uuid"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 )
@@ -81,6 +83,8 @@ func newAuthula(application *app.Application, authulaDB *bun.DB) *authula.Auth {
 	hooks := &authulamodels.CoreServiceHooksConfig{
 		Users: &authulamodels.ServiceHooks[authulamodels.User]{},
 	}
+	hooks.Users.RegisterAfterCreate(syncUserToApp(application))
+	hooks.Users.RegisterAfterUpdate(syncUserToApp(application))
 
 	loggerLevel := "info"
 	if cfg.App.Debug {
@@ -117,6 +121,7 @@ func newAuthula(application *app.Application, authulaDB *bun.DB) *authula.Auth {
 		}),
 		authulaconfig.WithSecurity(authulamodels.SecurityConfig{
 			TrustedOrigins: []string{cfg.App.CORSAllowedOrigins},
+			TrustedProxies: cfg.App.TrustedProxies,
 			CORS: authulamodels.CORSConfig{
 				AllowCredentials: true,
 				AllowedOrigins:   []string{cfg.App.CORSAllowedOrigins},
@@ -152,7 +157,13 @@ func newAuthula(application *app.Application, authulaDB *bun.DB) *authula.Auth {
 			ExpiresIn:                      15 * time.Minute,
 			SendMagicLinkVerificationEmail: sendMagicLinkEmail(application),
 		}),
-		oauth2plugin.New(oauth2plugintypes.OAuth2PluginConfig{
+	}
+
+	// Google OAuth is opt-in: Authula aborts startup when a provider is
+	// registered with missing credentials, so only enable it once both the
+	// client id and secret are configured.
+	if cfg.Google.ClientID != "" && cfg.Google.ClientSecret != "" {
+		plugins = append(plugins, oauth2plugin.New(oauth2plugintypes.OAuth2PluginConfig{
 			Enabled: true,
 			Providers: map[string]oauth2plugintypes.ProviderConfig{
 				"google": {
@@ -163,7 +174,9 @@ func newAuthula(application *app.Application, authulaDB *bun.DB) *authula.Auth {
 					Scopes:       []string{"openid", "email", "profile"},
 				},
 			},
-		}),
+		}))
+	} else {
+		application.Logger.Warn("google oauth2 disabled: set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable it")
 	}
 
 	return authula.New(&authula.AuthConfig{
@@ -255,6 +268,28 @@ func sendMagicLinkEmail(application *app.Application) func(magiclinkplugintypes.
 		}); err != nil {
 			application.Logger.Error("failed to send magic link email", "error", err, "email", params.Email)
 		}
+		return nil
+	}
+}
+
+// syncUserToApp mirrors an Authula user into the application's users table.
+// The upsert makes it idempotent and self-heals rows that predate the hook.
+// A failure is logged, not returned: the account already exists in Authula,
+// and aborting the auth flow over a mirror write would break sign-up.
+func syncUserToApp(application *app.Application) authulamodels.ServiceHook[authulamodels.User] {
+	return func(user *authulamodels.User) error {
+		first, last := splitName(user.Name)
+
+		if err := application.Repositories.User.Upsert(&appmodels.User{
+			ID:        uuid.MustParse(user.ID),
+			Email:     user.Email,
+			FirstName: first,
+			LastName:  last,
+			Image:     user.Image,
+		}); err != nil {
+			application.Logger.Error("failed to sync authula user into application users table", "error", err, "user_id", user.ID)
+		}
+
 		return nil
 	}
 }

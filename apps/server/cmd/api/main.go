@@ -31,15 +31,25 @@ func main() {
 	}
 	defer db.Close()
 
+	// Authula gets its own connection resolving to the dedicated authula
+	// schema; its core and plugin migrations run inside newAuthula.
+	authulaDB, err := newAuthulaDB(cfg)
+	if err != nil {
+		logger.Error("failed to prepare authula database", "error", err.Error())
+		os.Exit(1)
+	}
+	defer authulaDB.Close()
+
 	// Dependencies Injection
 	application := &app.Application{
 		Config:       cfg,
 		Logger:       logger,
 		Repositories: repositories.New(db, &cfg.App),
 		Services: services.Services{
-			Email: services.EmailService{Config: cfg.Resend},
+			Email: services.EmailService{AppName: cfg.App.Name, Config: cfg.Resend},
 		},
 	}
+	application.Auth = newAuthula(application, authulaDB)
 
 	if err := serve(application); err != nil {
 		logger.Error("failed to start server", "error", err.Error())
