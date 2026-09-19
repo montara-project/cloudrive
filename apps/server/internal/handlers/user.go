@@ -11,8 +11,7 @@ import (
 )
 
 type userHandler struct {
-	app   *app.Application
-	users repositories.UserRepository
+	app *app.Application
 }
 
 // Me returns the authenticated user's application profile. The session cookie
@@ -26,7 +25,7 @@ func (h *userHandler) Me(c fiber.Ctx) error {
 		})
 	}
 
-	user, err := h.users.Get(uid)
+	user, err := h.app.Repositories.User.Get(uid)
 	if err != nil {
 		if errors.Is(err, repositories.ErrRecordNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{

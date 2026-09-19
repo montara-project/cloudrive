@@ -262,11 +262,11 @@ func (r StorageAccountRepository) listByWorkspaceExec(exc Executor, workspaceID 
 
 	// Whitelist of allowed columns for ORDER BY to prevent SQL injection
 	allowedOrderByColumns := map[string]bool{
-		`"id"`:           true,
-		`"display_name"`: true,
-		`"status"`:       true,
-		`"created_at"`:   true,
-		`"updated_at"`:   true,
+		"id":           true,
+		"display_name": true,
+		"status":       true,
+		"created_at":   true,
+		"updated_at":   true,
 	}
 
 	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, `"created_at"`)
@@ -274,7 +274,7 @@ func (r StorageAccountRepository) listByWorkspaceExec(exc Executor, workspaceID 
 		return nil, PaginationMetadata{}, err
 	}
 
-	queryBuilder.WriteString(fmt.Sprintf(" ORDER BY %s %s", orderBy, order))
+	queryBuilder.WriteString(fmt.Sprintf(" ORDER BY %q %s", orderBy, order))
 
 	if opts.Limit > 0 {
 		queryBuilder.WriteString(fmt.Sprintf(" LIMIT $%d", argIndex))
@@ -351,6 +351,55 @@ func (r StorageAccountRepository) updateStatusExec(exc Executor, id uuid.UUID, s
 	defer cancel()
 
 	result, err := exc.ExecContext(ctx, query, status, id)
+	if err != nil {
+		return errtrace.Wrap(err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return ErrEditConflict
+	}
+
+	return nil
+}
+
+// Update changes the account's mutable columns: display name and settings.
+// Status has its own transition method; the external account identity is
+// immutable.
+func (r StorageAccountRepository) Update(id uuid.UUID, account *models.StorageAccount) error {
+	return r.updateExec(r.DB, id, account)
+}
+
+func (r StorageAccountRepository) updateExec(exc Executor, id uuid.UUID, account *models.StorageAccount) error {
+	query := `
+		UPDATE "storage_accounts"
+		SET "display_name" = $1, "settings" = $2, "updated_at" = now()
+		WHERE "id" = $3;
+	`
+
+	r.debugQuery(query)
+
+	// lib/pq encodes []byte as a bytea literal, which jsonb rejects; jsonb
+	// columns are sent as their JSON text instead.
+	var settings any
+	if len(account.Settings) > 0 {
+		settings = string(account.Settings)
+	}
+
+	args := []any{
+		account.DisplayName,
+		settings,
+		id,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	result, err := exc.ExecContext(ctx, query, args...)
 	if err != nil {
 		return errtrace.Wrap(err)
 	}

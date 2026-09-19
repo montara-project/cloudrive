@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -66,9 +67,15 @@ func serve(app *app.Application) error {
 	server.Use(requestid.New())
 	server.Use(compress.New())
 
-	// CORS
+	// CORS — CORS_ALLOWED_ORIGINS is a comma-separated list; Fiber rejects the
+	// whole value as one malformed origin unless it is split first.
+	allowOrigins := strings.Split(app.Config.App.CORSAllowedOrigins, ",")
+	for i, origin := range allowOrigins {
+		allowOrigins[i] = strings.TrimSpace(origin)
+	}
+
 	server.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{app.Config.App.CORSAllowedOrigins},
+		AllowOrigins:     allowOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		AllowCredentials: true,

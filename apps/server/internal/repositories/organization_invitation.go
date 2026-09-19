@@ -172,12 +172,12 @@ func (r OrganizationInvitationRepository) listByOrganizationExec(exc Executor, o
 
 	// Whitelist of allowed columns for ORDER BY to prevent SQL injection
 	allowedOrderByColumns := map[string]bool{
-		`"id"`:         true,
-		`"email"`:      true,
-		`"role"`:       true,
-		`"status"`:     true,
-		`"created_at"`: true,
-		`"expires_at"`: true,
+		"id":         true,
+		"email":      true,
+		"role":       true,
+		"status":     true,
+		"created_at": true,
+		"expires_at": true,
 	}
 
 	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, `"created_at"`)
@@ -185,7 +185,7 @@ func (r OrganizationInvitationRepository) listByOrganizationExec(exc Executor, o
 		return nil, PaginationMetadata{}, err
 	}
 
-	queryBuilder.WriteString(fmt.Sprintf(" ORDER BY %s %s", orderBy, order))
+	queryBuilder.WriteString(fmt.Sprintf(" ORDER BY %q %s", orderBy, order))
 
 	if opts.Limit > 0 {
 		queryBuilder.WriteString(fmt.Sprintf(" LIMIT $%d", argIndex))

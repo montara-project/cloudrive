@@ -124,10 +124,10 @@ func (r WorkspaceMemberRepository) listByWorkspaceExec(exc Executor, workspaceID
 
 	// Whitelist of allowed columns for ORDER BY to prevent SQL injection
 	allowedOrderByColumns := map[string]bool{
-		`"id"`:         true,
-		`"role"`:       true,
-		`"created_at"`: true,
-		`"updated_at"`: true,
+		"id":         true,
+		"role":       true,
+		"created_at": true,
+		"updated_at": true,
 	}
 
 	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, `"created_at"`)
@@ -135,7 +135,7 @@ func (r WorkspaceMemberRepository) listByWorkspaceExec(exc Executor, workspaceID
 		return nil, PaginationMetadata{}, err
 	}
 
-	queryBuilder.WriteString(fmt.Sprintf(" ORDER BY %s %s", orderBy, order))
+	queryBuilder.WriteString(fmt.Sprintf(" ORDER BY %q %s", orderBy, order))
 
 	if opts.Limit > 0 {
 		queryBuilder.WriteString(fmt.Sprintf(" LIMIT $%d", argIndex))

@@ -163,11 +163,11 @@ func (r OrganizationRepository) listExec(exc Executor, opts *QueryOptions) ([]*m
 
 	// Whitelist of allowed columns for ORDER BY to prevent SQL injection
 	allowedOrderByColumns := map[string]bool{
-		`"id"`:         true,
-		`"name"`:       true,
-		`"slug"`:       true,
-		`"created_at"`: true,
-		`"updated_at"`: true,
+		"id":         true,
+		"name":       true,
+		"slug":       true,
+		"created_at": true,
+		"updated_at": true,
 	}
 
 	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, `"created_at"`)
@@ -175,7 +175,7 @@ func (r OrganizationRepository) listExec(exc Executor, opts *QueryOptions) ([]*m
 		return nil, PaginationMetadata{}, err
 	}
 
-	queryBuilder.WriteString(fmt.Sprintf(" ORDER BY %s %s", orderBy, order))
+	queryBuilder.WriteString(fmt.Sprintf(" ORDER BY %q %s", orderBy, order))
 
 	if opts.Limit > 0 {
 		queryBuilder.WriteString(fmt.Sprintf(" LIMIT $%d", argIndex))
@@ -271,6 +271,157 @@ func (r OrganizationRepository) updateExec(exc Executor, id uuid.UUID, organizat
 
 func (r OrganizationRepository) Count() (int64, error) {
 	return r.BaseRepository.countExec(r.DB)
+}
+
+// CreateWithOwner inserts an organization and its founding 'owner' membership
+// in a single transaction, so an organization can never exist without an
+// owner.
+func (r OrganizationRepository) CreateWithOwner(organization *models.Organization, ownerUserID uuid.UUID) error {
+	if organization.ID == uuid.Nil {
+		id, err := uuid.NewV7()
+		if err != nil {
+			return errtrace.Errorf("error generating id: %w", err)
+		}
+		organization.ID = id
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	tx, err := r.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return errtrace.Wrap(err)
+	}
+
+	if err := r.createExec(tx, organization); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	member := `
+		INSERT INTO "organization_members" ("organization_id", "user_id", "role")
+		VALUES ($1, $2, 'owner');
+	`
+
+	r.debugQuery(member)
+
+	if _, err := tx.ExecContext(ctx, member, organization.ID, ownerUserID); err != nil {
+		_ = tx.Rollback()
+		if pqErr, ok := err.(*pq.Error); ok {
+			if pqErr.Code == "23505" {
+				return errtrace.Wrap(ErrInsertDuplicate)
+			}
+		}
+		return errtrace.Wrap(err)
+	}
+
+	return errtrace.Wrap(tx.Commit())
+}
+
+// ListByUser returns the organizations the user belongs to, joined through
+// organization_members.
+func (r OrganizationRepository) ListByUser(userID uuid.UUID, opts *QueryOptions) ([]*models.Organization, PaginationMetadata, error) {
+	return r.listByUserExec(r.DB, userID, opts)
+}
+
+func (r OrganizationRepository) listByUserExec(exc Executor, userID uuid.UUID, opts *QueryOptions) ([]*models.Organization, PaginationMetadata, error) {
+	baseQuery := `
+		SELECT "o"."id", "o"."name", "o"."slug", "o"."logo", "o"."created_by",
+		       "o"."deleted_at", "o"."created_at", "o"."updated_at"
+		FROM "organizations" "o"
+		JOIN "organization_members" "om" ON "om"."organization_id" = "o"."id"
+		WHERE "om"."user_id" = $1 AND "o"."deleted_at" IS NULL
+	`
+
+	var args []any
+	argIndex := 2
+
+	var queryBuilder strings.Builder
+	queryBuilder.WriteString(baseQuery)
+
+	// Whitelist of allowed columns for ORDER BY to prevent SQL injection;
+	// friendly names translate to the qualified organizations columns.
+	allowedOrderByColumns := map[string]bool{
+		"id":         true,
+		"name":       true,
+		"slug":       true,
+		"created_at": true,
+		"updated_at": true,
+	}
+
+	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, `"created_at"`)
+	if err != nil {
+		return nil, PaginationMetadata{}, err
+	}
+
+	qualified := map[string]string{
+		"id":         `"o"."id"`,
+		"name":       `"o"."name"`,
+		"slug":       `"o"."slug"`,
+		"created_at": `"o"."created_at"`,
+		"updated_at": `"o"."updated_at"`,
+	}
+
+	queryBuilder.WriteString(fmt.Sprintf(" ORDER BY %s %s", qualified[orderBy], order))
+
+	if opts.Limit > 0 {
+		queryBuilder.WriteString(fmt.Sprintf(" LIMIT $%d", argIndex))
+		args = append(args, opts.Limit)
+		argIndex++
+	}
+
+	if opts.Offset > 0 {
+		queryBuilder.WriteString(fmt.Sprintf(" OFFSET $%d", argIndex))
+		args = append(args, opts.Offset)
+		argIndex++
+	}
+
+	query := queryBuilder.String()
+
+	r.debugQuery(query)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	rows, err := exc.QueryContext(ctx, query, append([]any{userID}, args...)...)
+	if err != nil {
+		return nil, PaginationMetadata{}, errtrace.Wrap(err)
+	}
+	defer rows.Close()
+
+	var organizations []*models.Organization
+	for rows.Next() {
+		organization := &models.Organization{}
+		if err := rows.Scan(
+			&organization.ID,
+			&organization.Name,
+			&organization.Slug,
+			&organization.Logo,
+			&organization.CreatedBy,
+			&organization.DeletedAt,
+			&organization.CreatedAt,
+			&organization.UpdatedAt,
+		); err != nil {
+			return nil, PaginationMetadata{}, errtrace.Errorf("error scanning row: %w", err)
+		}
+		organizations = append(organizations, organization)
+	}
+
+	countQuery := `
+		SELECT COUNT(*)
+		FROM "organizations" "o"
+		JOIN "organization_members" "om" ON "om"."organization_id" = "o"."id"
+		WHERE "om"."user_id" = $1 AND "o"."deleted_at" IS NULL;
+	`
+
+	r.debugQuery(countQuery)
+
+	var count int64
+	if err := exc.QueryRowContext(ctx, countQuery, userID).Scan(&count); err != nil {
+		return nil, PaginationMetadata{}, errtrace.Errorf("error scanning row: %w", err)
+	}
+
+	return organizations, PaginationMetadata{Total: count}, nil
 }
 
 func (r OrganizationRepository) Delete(id uuid.UUID) error {
