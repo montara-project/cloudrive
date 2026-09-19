@@ -4,11 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "make run",
-		"build": "make build/api && make build/migrate",
-		"build:api": "make build/api",
-		"build:migrate": "make build/migrate",
-		"install": "go mod tidy",
-		"test": "go test ./...",
-		"release": "chmod +x ./scripts/release.sh && ./scripts/release.sh"
+    "build": "make build/api && make build/migrate",
+    "build:api": "make build/api",
+    "build:migrate": "make build/migrate",
+    "install": "go mod tidy",
+    "test": "go test ./...",
+    "release": "chmod +x ./scripts/release.sh && ./scripts/release.sh"
   }
 }
