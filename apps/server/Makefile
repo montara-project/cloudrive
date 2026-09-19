@@ -42,7 +42,10 @@ run:
 		--s3-region=$(S3_REGION) \
 		--s3-endpoint=$(S3_ENDPOINT) \
 		--s3-token=$(S3_TOKEN) \
-		--storage-credentials-keys=$(STORAGE_CREDENTIALS_KEYS)
+		--storage-credentials-keys=$(STORAGE_CREDENTIALS_KEYS) \
+		--typesafe-api-key=$(TYPESAFE_API_KEY) \
+		--typesafe-api-url=$(TYPESAFE_API_URL) \
+		--migrate-on-boot=$(MIGRATE_ON_BOOT)
 
 # ==================================================================================== #
 # MIGRATIONS

@@ -9,6 +9,7 @@ type Config struct {
 	Google  ConfigGoogle
 	S3      ConfigS3
 	Storage ConfigStorage
+	Diag    ConfigDiag
 }
 
 type ConfigApp struct {
@@ -63,4 +64,17 @@ type ConfigS3 struct {
 // new secrets while the rest remain available for decryption during rotation.
 type ConfigStorage struct {
 	CredentialsKeys string
+}
+
+// ConfigDiag controls boot failure diagnosis (TypeSafe Jev) and first-boot
+// recovery in containers.
+type ConfigDiag struct {
+	// TypesafeAPIKey enables the Jev boot diagnosis; empty disables it and
+	// the app degrades to deterministic remediation hints.
+	TypesafeAPIKey string
+	// TypesafeAPIURL overrides the TypeSafe endpoint (self-host / tests).
+	TypesafeAPIURL string
+	// MigrateOnBoot lets the server apply SQL migrations (via the migrate
+	// binary) when boot fails on missing application tables.
+	MigrateOnBoot bool
 }

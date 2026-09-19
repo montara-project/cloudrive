@@ -61,8 +61,22 @@ func main() {
 	application.Auth = newAuthula(application, authulaDB)
 
 	if err := ensureSuperUser(application); err != nil {
-		logger.Error("failed to ensure super user", "error", err.Error())
-		os.Exit(1)
+		application.Logger.Error("failed to ensure super user", "error", err.Error())
+
+		// First boot on a fresh database (typical in containers) fails on
+		// missing application tables. Diagnose the failure and, when
+		// MIGRATE_ON_BOOT is enabled, recover by applying migrations once.
+		diagnoseBootFailure(application, err)
+
+		if recoverWithMigrations(application, err) {
+			if err := ensureSuperUser(application); err != nil {
+				application.Logger.Error("super user seeding still failing after on-boot migrations", "error", err.Error())
+				os.Exit(1)
+			}
+			application.Logger.Info("first boot recovered: migrations applied and super user seeded")
+		} else {
+			os.Exit(1)
+		}
 	}
 
 	if err := serve(application); err != nil {

@@ -57,6 +57,11 @@ func parseFlag(cfg *config.Config) {
 	// (32-byte keys); the first entry encrypts new secrets.
 	flag.StringVar(&cfg.Storage.CredentialsKeys, "storage-credentials-keys", "", "Provider credential encryption keys (key_id:base64(32-byte key), comma-separated)")
 
+	// Boot diagnostics (TypeSafe Jev) and container first-run recovery.
+	flag.StringVar(&cfg.Diag.TypesafeAPIKey, "typesafe-api-key", "", "TypeSafe API key enabling Jev boot failure diagnosis (optional)")
+	flag.StringVar(&cfg.Diag.TypesafeAPIURL, "typesafe-api-url", "", "TypeSafe API base URL override (optional)")
+	flag.BoolVar(&cfg.Diag.MigrateOnBoot, "migrate-on-boot", false, "Apply SQL migrations automatically when boot fails on missing application tables (container first-run)")
+
 	flag.Parse()
 
 	uint16Max := uint(1<<16 - 1)
