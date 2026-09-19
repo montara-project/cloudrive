@@ -26,6 +26,8 @@ run:
 		--app-secret=$(APP_SECRET) \
 		--client-url=$(CLIENT_URL) \
 		--server-url=$(SERVER_URL) \
+		--cors-allowed-origins=$(CORS_ALLOWED_ORIGINS) \
+		--super-user=$(SUPER_USER) \
 		--db-dsn=$(DB_DSN) \
 		--db-max-open-conns=$(DB_MAX_OPEN_CONNS) \
 		--db-max-idle-conns=$(DB_MAX_IDLE_CONNS) \
@@ -39,7 +41,8 @@ run:
 		--s3-client-secret=$(S3_CLIENT_SECRET) \
 		--s3-region=$(S3_REGION) \
 		--s3-endpoint=$(S3_ENDPOINT) \
-		--s3-token=$(S3_TOKEN)
+		--s3-token=$(S3_TOKEN) \
+		--storage-credentials-keys=$(STORAGE_CREDENTIALS_KEYS)
 
 # ==================================================================================== #
 # MIGRATIONS

@@ -15,6 +15,7 @@ type User struct {
 	FirstName string    `db:"first_name" json:"first_name"`
 	LastName  *string   `db:"last_name" json:"last_name,omitempty"`
 	Image     *string   `db:"image" json:"image,omitempty"`
+	Role      string    `db:"role" json:"role"`
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }

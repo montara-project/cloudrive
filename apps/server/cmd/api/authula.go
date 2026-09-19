@@ -286,12 +286,23 @@ func syncUserToApp(application *app.Application) authulamodels.ServiceHook[authu
 			FirstName: first,
 			LastName:  last,
 			Image:     user.Image,
+			Role:      roleFromMetadata(user.Metadata),
 		}); err != nil {
 			application.Logger.Error("failed to sync authula user into application users table", "error", err, "user_id", user.ID)
 		}
 
 		return nil
 	}
+}
+
+// roleFromMetadata reads the role marker stored on Authula user metadata,
+// defaulting to "user" for accounts without one.
+func roleFromMetadata(metadata map[string]any) string {
+	if role, ok := metadata["role"].(string); ok && role != "" {
+		return role
+	}
+
+	return "user"
 }
 
 // splitName splits Authula's single display name into the application's

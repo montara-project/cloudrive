@@ -12,6 +12,7 @@ import (
 func parseFlag(cfg *config.Config) {
 	var machineID uint
 	var trustedProxies string
+	var superUser string
 
 	// App
 	flag.UintVar(&machineID, "machine-id", 0, "Machine ID")
@@ -26,6 +27,9 @@ func parseFlag(cfg *config.Config) {
 	// comma-separated CIDRs/IPs of reverse proxies whose X-Forwarded-For may be
 	// trusted. Leave empty when the app is exposed directly.
 	flag.StringVar(&trustedProxies, "trusted-proxies", "", "Trusted proxy IPs/CIDRs (comma-separated)")
+
+	// Default admin account seeded at startup, in email:password form.
+	flag.StringVar(&superUser, "super-user", "", "Default admin user (email:password, optional)")
 
 	// Database
 	flag.StringVar(&cfg.DB.DSN, "db-dsn", "", "Database DSN")
@@ -49,6 +53,10 @@ func parseFlag(cfg *config.Config) {
 	flag.StringVar(&cfg.S3.Endpoint, "s3-endpoint", "", "S3 endpoint")
 	flag.StringVar(&cfg.S3.Token, "s3-token", "", "S3 token")
 
+	// Storage provider credential vault: comma-separated key_id:base64 entries
+	// (32-byte keys); the first entry encrypts new secrets.
+	flag.StringVar(&cfg.Storage.CredentialsKeys, "storage-credentials-keys", "", "Provider credential encryption keys (key_id:base64(32-byte key), comma-separated)")
+
 	flag.Parse()
 
 	uint16Max := uint(1<<16 - 1)
@@ -65,6 +73,21 @@ func parseFlag(cfg *config.Config) {
 				cfg.App.TrustedProxies = append(cfg.App.TrustedProxies, trimmed)
 			}
 		}
+	}
+
+	// strings.Cut splits on the first colon only, so the password itself may
+	// contain colons; the email may not.
+	if superUser != "" {
+		email, password, found := strings.Cut(superUser, ":")
+		if !found || strings.TrimSpace(email) == "" || password == "" {
+			log.Fatal("flag super-user must be in email:password format")
+		}
+
+		if len(password) < 8 {
+			log.Fatal("flag super-user password must be at least 8 characters")
+		}
+
+		cfg.App.SuperUser = config.ConfigSuperUser{Email: email, Password: password}
 	}
 
 	validateFlag(cfg)
@@ -105,5 +128,11 @@ func validateFlag(cfg *config.Config) {
 
 	if cfg.Resend.DebugToEmail == "" {
 		log.Fatal("flag resend-debug-to-email must be provided")
+	}
+
+	// Fail closed: without encryption keys the server must not start, or
+	// provider credentials could end up stored in plaintext.
+	if cfg.Storage.CredentialsKeys == "" {
+		log.Fatal("flag storage-credentials-keys must be provided (see STORAGE_CREDENTIALS_KEYS in .env.example)")
 	}
 }

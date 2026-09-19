@@ -22,7 +22,7 @@ func (r UserRepository) Get(id uuid.UUID) (*models.User, error) {
 
 func (r UserRepository) getExec(exc Executor, id uuid.UUID) (*models.User, error) {
 	query := `
-		SELECT "id", "email", "first_name", "last_name", "image", "created_at", "updated_at"
+		SELECT "id", "email", "first_name", "last_name", "image", "role", "created_at", "updated_at"
 		FROM "users"
 		WHERE "id" = $1;
 	`
@@ -39,6 +39,7 @@ func (r UserRepository) getExec(exc Executor, id uuid.UUID) (*models.User, error
 		&user.FirstName,
 		&user.LastName,
 		&user.Image,
+		&user.Role,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -60,7 +61,7 @@ func (r UserRepository) GetByEmail(email string) (*models.User, error) {
 
 func (r UserRepository) getByEmailExec(exc Executor, email string) (*models.User, error) {
 	query := `
-		SELECT "id", "email", "first_name", "last_name", "image", "created_at", "updated_at"
+		SELECT "id", "email", "first_name", "last_name", "image", "role", "created_at", "updated_at"
 		FROM "users"
 		WHERE "email" = $1;
 	`
@@ -77,6 +78,7 @@ func (r UserRepository) getByEmailExec(exc Executor, email string) (*models.User
 		&user.FirstName,
 		&user.LastName,
 		&user.Image,
+		&user.Role,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -102,13 +104,14 @@ func (r UserRepository) Upsert(user *models.User) error {
 
 func (r UserRepository) upsertExec(exc Executor, user *models.User) error {
 	query := `
-		INSERT INTO "users" ("id", "email", "first_name", "last_name", "image")
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO "users" ("id", "email", "first_name", "last_name", "image", "role")
+		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT ("id") DO UPDATE
 		SET "email" = EXCLUDED."email",
 			"first_name" = EXCLUDED."first_name",
 			"last_name" = EXCLUDED."last_name",
 			"image" = EXCLUDED."image",
+			"role" = EXCLUDED."role",
 			"updated_at" = now()
 		RETURNING "created_at", "updated_at";
 	`
@@ -121,6 +124,7 @@ func (r UserRepository) upsertExec(exc Executor, user *models.User) error {
 		user.FirstName,
 		user.LastName,
 		user.Image,
+		user.Role,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

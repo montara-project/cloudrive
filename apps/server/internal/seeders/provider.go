@@ -20,16 +20,28 @@ func (s ProviderSeeder) Name() string {
 func (s ProviderSeeder) Seed() {
 	providers := []*models.Provider{
 		{
-			ID:   uuid.Must(uuid.NewV7()),
-			Name: "Google Drive",
+			ID:           uuid.Must(uuid.NewV7()),
+			Slug:         "google_drive",
+			Name:         "Google Drive",
+			Protocol:     "oauth2_cloud",
+			AuthType:     "oauth2",
+			Capabilities: []byte(`{"versioning": true, "trash": true, "native_search": true}`),
 		},
 		{
-			ID:   uuid.Must(uuid.NewV7()),
-			Name: "OneDrive",
+			ID:           uuid.Must(uuid.NewV7()),
+			Slug:         "onedrive",
+			Name:         "OneDrive",
+			Protocol:     "oauth2_cloud",
+			AuthType:     "oauth2",
+			Capabilities: []byte(`{"versioning": true, "trash": true}`),
 		},
 		{
-			ID:   uuid.Must(uuid.NewV7()),
-			Name: "Dropbox",
+			ID:           uuid.Must(uuid.NewV7()),
+			Slug:         "dropbox",
+			Name:         "Dropbox",
+			Protocol:     "oauth2_cloud",
+			AuthType:     "oauth2",
+			Capabilities: []byte(`{"versioning": true, "trash": true}`),
 		},
 	}
 
