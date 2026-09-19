@@ -16,10 +16,13 @@ import (
 	authulaconfig "github.com/Authula/authula/config"
 	"github.com/Authula/authula/events"
 	authulamodels "github.com/Authula/authula/models"
+	bearerplugin "github.com/Authula/authula/plugins/bearer"
 	emailplugin "github.com/Authula/authula/plugins/email"
 	emailpasswordplugin "github.com/Authula/authula/plugins/email-password"
 	emailpasswordplugintypes "github.com/Authula/authula/plugins/email-password/types"
 	emailplugintypes "github.com/Authula/authula/plugins/email/types"
+	jwtplugin "github.com/Authula/authula/plugins/jwt"
+	jwtplugintypes "github.com/Authula/authula/plugins/jwt/types"
 	magiclinkplugin "github.com/Authula/authula/plugins/magic-link"
 	magiclinkplugintypes "github.com/Authula/authula/plugins/magic-link/types"
 	oauth2plugin "github.com/Authula/authula/plugins/oauth2"
@@ -137,6 +140,16 @@ func newAuthula(application *app.Application, authulaDB *bun.DB) *authula.Auth {
 
 	plugins := []authulamodels.Plugin{
 		sessionplugin.New(sessionplugin.SessionPluginConfig{Enabled: true}),
+		// JWT mints short-lived access tokens (with refresh tokens) after
+		// successful sign-ins; bearer validates those tokens from an
+		// Authorization: Bearer header so external, non-browser clients can
+		// call the API without a session cookie.
+		jwtplugin.New(jwtplugintypes.JWTPluginConfig{
+			Enabled:          true,
+			ExpiresIn:        15 * time.Minute,
+			RefreshExpiresIn: 7 * 24 * time.Hour,
+		}),
+		bearerplugin.New(bearerplugin.BearerPluginConfig{Enabled: true}),
 		emailplugin.New(emailplugintypes.EmailPluginConfig{
 			Enabled:     true,
 			Provider:    emailplugintypes.ProviderResend,
@@ -190,6 +203,11 @@ func newAuthula(application *app.Application, authulaDB *bun.DB) *authula.Auth {
 // routeMappings protects Authula's own routes. Auth endpoints that establish
 // identity run anonymously (session.auth.optional); everything that touches
 // an existing account requires a valid session (session.auth).
+//
+// Sign-in routes additionally carry jwt.respond_json, which replaces the JSON
+// body with the minted token pair ({"access_token","refresh_token",
+// "token_type"}) so external clients can obtain bearer credentials; the
+// session cookie is still delivered alongside it.
 func routeMappings() []authulamodels.RouteMapping {
 	return []authulamodels.RouteMapping{
 		{
@@ -198,12 +216,17 @@ func routeMappings() []authulamodels.RouteMapping {
 		},
 		{
 			Paths: []string{
-				"POST:/email-password/sign-up",
 				"POST:/email-password/sign-in",
+				"POST:/magic-link/exchange",
+			},
+			Plugins: []string{"session.auth.optional", "jwt.respond_json"},
+		},
+		{
+			Paths: []string{
+				"POST:/email-password/sign-up",
 				"GET:/email-password/verify-email",
 				"POST:/magic-link/sign-in",
 				"GET:/magic-link/verify",
-				"POST:/magic-link/exchange",
 				"GET:/oauth2/authorize/google",
 				"GET:/oauth2/callback/google",
 			},
