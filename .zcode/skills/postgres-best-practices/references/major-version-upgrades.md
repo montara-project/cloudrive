@@ -1,6 +1,7 @@
 # Major Version Upgrades Reference
 
 ## Contents
+
 - Upgrade methods overview
 - pg_upgrade (in-place)
 - Logical replication (minimal downtime)
@@ -10,12 +11,12 @@
 
 ## Upgrade Methods Overview
 
-| Method | Downtime | Complexity | Rollback | Best for |
-|--------|----------|------------|----------|----------|
-| `pg_upgrade` | Minutes to hours | Low | Restore from backup | Most upgrades, moderate database sizes |
-| `pg_upgrade --swap` (PG18+) | Minutes | Low | Restore from backup | Fastest in-place upgrade |
-| Logical replication | Seconds | High | Switch back to old primary | Large databases requiring near-zero downtime |
-| pg_dump/pg_restore | Hours to days | Low | Old cluster still running | Small databases, or when other methods fail |
+| Method                      | Downtime         | Complexity | Rollback                   | Best for                                     |
+| --------------------------- | ---------------- | ---------- | -------------------------- | -------------------------------------------- |
+| `pg_upgrade`                | Minutes to hours | Low        | Restore from backup        | Most upgrades, moderate database sizes       |
+| `pg_upgrade --swap` (PG18+) | Minutes          | Low        | Restore from backup        | Fastest in-place upgrade                     |
+| Logical replication         | Seconds          | High       | Switch back to old primary | Large databases requiring near-zero downtime |
+| pg_dump/pg_restore          | Hours to days    | Low        | Old cluster still running  | Small databases, or when other methods fail  |
 
 **Default recommendation**: `pg_upgrade` for most cases. Use logical replication only when you need near-zero downtime on a large database.
 
@@ -23,13 +24,13 @@
 
 `pg_upgrade` replaces the old cluster's data files with the new version in place, without dumping and reloading data. PG18 supports five transfer modes:
 
-| Mode | Flag | Speed | Disk usage |
-|------|------|-------|------------|
-| Copy | (default) | Moderate | 2x disk during upgrade |
-| Copy file range | `--copy-file-range` (PG18+) | Fast where supported | 2x disk during upgrade |
-| Link | `--link` | Fast | Minimal extra disk (hard links) |
-| Swap | `--swap` (PG18+) | Fastest | No extra disk (swaps data dirs) |
-| Clone | `--clone` | Fast (if filesystem supports reflinks) | Minimal extra disk |
+| Mode            | Flag                        | Speed                                  | Disk usage                      |
+| --------------- | --------------------------- | -------------------------------------- | ------------------------------- |
+| Copy            | (default)                   | Moderate                               | 2x disk during upgrade          |
+| Copy file range | `--copy-file-range` (PG18+) | Fast where supported                   | 2x disk during upgrade          |
+| Link            | `--link`                    | Fast                                   | Minimal extra disk (hard links) |
+| Swap            | `--swap` (PG18+)            | Fastest                                | No extra disk (swaps data dirs) |
+| Clone           | `--clone`                   | Fast (if filesystem supports reflinks) | Minimal extra disk              |
 
 ### Step-by-Step: pg_upgrade
 
@@ -56,6 +57,7 @@ pg_upgrade \
 ```
 
 Fix any issues reported before proceeding. Common issues:
+
 - Extensions not available in the new version
 - Custom data types with incompatible binary formats
 - `contrib` modules that need updating
@@ -176,6 +178,7 @@ pg_createsubscriber \
 ### 1. Review Release Notes
 
 Read the release notes for **every version** between your current and target version. Pay attention to:
+
 - Removed features or changed defaults
 - Extension compatibility changes
 - Authentication changes (e.g., PG18 deprecates md5)
@@ -240,6 +243,7 @@ pg_basebackup -D /tmp/upgrade_test -Fp -Xs -P
 ### 6. Plan for Replication
 
 If using streaming replication:
+
 - Standbys must be rebuilt after pg_upgrade (they can't follow a pg_upgraded primary)
 - Alternative: upgrade standbys with `pg_upgrade` too (stop all, upgrade all, restart)
 - Or use `pg_createsubscriber` (PG17+) to convert to logical replication
@@ -288,6 +292,7 @@ ORDER BY name;
 ### 5. Monitor Performance
 
 After upgrade, monitor for:
+
 - Query plan regressions (optimizer changes across versions)
 - Connection behavior changes
 - Extension behavior changes

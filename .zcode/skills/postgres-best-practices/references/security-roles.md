@@ -1,6 +1,7 @@
 # Security & Roles Reference
 
 ## Contents
+
 - Role management
 - Privilege system
 - Schema-based access control
@@ -31,17 +32,17 @@ CREATE ROLE migrator WITH LOGIN CREATEDB PASSWORD '...';
 
 ### Role Attributes
 
-| Attribute | Meaning |
-|-----------|---------|
-| `LOGIN` | Can connect to the database |
-| `SUPERUSER` | Bypasses all permission checks (dangerous) |
-| `CREATEDB` | Can create databases |
-| `CREATEROLE` | Can create/alter/drop other roles |
-| `REPLICATION` | Can initiate streaming replication |
-| `BYPASSRLS` | Bypasses Row-Level Security policies |
-| `INHERIT` | Automatically inherits privileges of member roles (default) |
-| `CONNECTION LIMIT n` | Max concurrent connections for this role |
-| `VALID UNTIL 'timestamp'` | Password expiration |
+| Attribute                 | Meaning                                                     |
+| ------------------------- | ----------------------------------------------------------- |
+| `LOGIN`                   | Can connect to the database                                 |
+| `SUPERUSER`               | Bypasses all permission checks (dangerous)                  |
+| `CREATEDB`                | Can create databases                                        |
+| `CREATEROLE`              | Can create/alter/drop other roles                           |
+| `REPLICATION`             | Can initiate streaming replication                          |
+| `BYPASSRLS`               | Bypasses Row-Level Security policies                        |
+| `INHERIT`                 | Automatically inherits privileges of member roles (default) |
+| `CONNECTION LIMIT n`      | Max concurrent connections for this role                    |
+| `VALID UNTIL 'timestamp'` | Password expiration                                         |
 
 ```sql
 -- Modify attributes
@@ -81,16 +82,16 @@ ORDER BY r.rolname, m.rolname;
 
 PostgreSQL provides system-defined roles for common privileged capabilities. PostgreSQL 13 and earlier documentation called these "default roles"; PostgreSQL 14 renamed the category to "predefined roles." Individual roles were introduced in different releases.
 
-| Role | Grants |
-|------|--------|
-| `pg_read_all_data` | SELECT on all tables, views, sequences in all schemas |
-| `pg_write_all_data` | INSERT, UPDATE, DELETE on all tables, sequences in all schemas |
-| `pg_read_all_settings` | Read all GUC settings (even superuser-only) |
-| `pg_read_all_stats` | Read all pg_stat_* views |
-| `pg_monitor` | Read monitoring views (`pg_stat_*`, `pg_locks`, etc.) |
-| `pg_signal_backend` | Send signals to other backends (cancel/terminate) |
-| `pg_checkpoint` (PG15+) | Run CHECKPOINT |
-| `pg_maintain` (PG17+) | Run VACUUM, ANALYZE, REINDEX, CLUSTER, REFRESH MATERIALIZED VIEW, and LOCK TABLE on all relations |
+| Role                    | Grants                                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------------- |
+| `pg_read_all_data`      | SELECT on all tables, views, sequences in all schemas                                             |
+| `pg_write_all_data`     | INSERT, UPDATE, DELETE on all tables, sequences in all schemas                                    |
+| `pg_read_all_settings`  | Read all GUC settings (even superuser-only)                                                       |
+| `pg_read_all_stats`     | Read all pg_stat_* views                                                                          |
+| `pg_monitor`            | Read monitoring views (`pg_stat_*`, `pg_locks`, etc.)                                             |
+| `pg_signal_backend`     | Send signals to other backends (cancel/terminate)                                                 |
+| `pg_checkpoint` (PG15+) | Run CHECKPOINT                                                                                    |
+| `pg_maintain` (PG17+)   | Run VACUUM, ANALYZE, REINDEX, CLUSTER, REFRESH MATERIALIZED VIEW, and LOCK TABLE on all relations |
 
 ```sql
 -- Give a monitoring role read access to all stats
@@ -333,17 +334,17 @@ host      all         all         0.0.0.0/0       reject
 
 ### Authentication Methods
 
-| Method | Security | Use case |
-|--------|----------|----------|
-| `scram-sha-256` | Strong | **Recommended default** — salted challenge-response |
-| `md5` | Weak | Legacy — **deprecated in PG18** (emits warnings) |
-| `cert` | Strong | Client certificate (mutual TLS) |
-| `peer` | Strong | Local connections — maps OS user to PG role |
-| `ident` | Moderate | TCP — maps OS user via ident server |
-| `gss` | Strong | Kerberos/GSSAPI |
-| `ldap` | Moderate | LDAP directory authentication |
-| `trust` | None | **Never use in production** — no password required |
-| `reject` | N/A | Explicitly deny connections |
+| Method          | Security | Use case                                            |
+| --------------- | -------- | --------------------------------------------------- |
+| `scram-sha-256` | Strong   | **Recommended default** — salted challenge-response |
+| `md5`           | Weak     | Legacy — **deprecated in PG18** (emits warnings)    |
+| `cert`          | Strong   | Client certificate (mutual TLS)                     |
+| `peer`          | Strong   | Local connections — maps OS user to PG role         |
+| `ident`         | Moderate | TCP — maps OS user via ident server                 |
+| `gss`           | Strong   | Kerberos/GSSAPI                                     |
+| `ldap`          | Moderate | LDAP directory authentication                       |
+| `trust`         | None     | **Never use in production** — no password required  |
+| `reject`        | N/A      | Explicitly deny connections                         |
 
 ### Best Practices
 

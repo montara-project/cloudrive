@@ -183,77 +183,85 @@ erDiagram
 ## 4. Spesifikasi tabel & constraint penting
 
 ### `providers` — katalog (menyempurnakan model `Provider` yang sudah ada di kode)
-| Hal | Nilai |
-|---|---|
-| Kunci | `id uuid PK DEFAULT uuidv7()` |
-| Unik | `slug` |
-| CHECK | `protocol IN (...)`, `auth_type IN (...)` |
+
+| Hal     | Nilai                                                                                                                                                              |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Kunci   | `id uuid PK DEFAULT uuidv7()`                                                                                                                                      |
+| Unik    | `slug`                                                                                                                                                             |
+| CHECK   | `protocol IN (...)`, `auth_type IN (...)`                                                                                                                          |
 | Catatan | Seeder yang ada (Google Drive, OneDrive, Dropbox) tetap valid; tabel ini akhirnya dibuat secara resmi (selama ini direferensikan kode tapi tidak pernah dimigrasi) |
 
 ### `storage_accounts` — akun provider yang terkoneksi
-| Hal | Nilai |
-|---|---|
-| Unik | `(workspace_id, provider_id, external_account_id)` — satu akun eksternal tak terhubung dua kali ke workspace yang sama |
-| FK | composite `(workspace_id, organization_id) → workspaces` CASCADE; `provider_id → providers` RESTRICT; `owner_user_id → users` RESTRICT |
-| Index | `organization_id`, `provider_id`, `owner_user_id` |
-| Soft delete | ya (`deleted_at` = disconnect; pekerja latar membersihkan node terindeks) |
+
+| Hal         | Nilai                                                                                                                                  |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Unik        | `(workspace_id, provider_id, external_account_id)` — satu akun eksternal tak terhubung dua kali ke workspace yang sama                 |
+| FK          | composite `(workspace_id, organization_id) → workspaces` CASCADE; `provider_id → providers` RESTRICT; `owner_user_id → users` RESTRICT |
+| Index       | `organization_id`, `provider_id`, `owner_user_id`                                                                                      |
+| Soft delete | ya (`deleted_at` = disconnect; pekerja latar membersihkan node terindeks)                                                              |
 
 ### `storage_account_secrets`
-| Hal | Nilai |
-|---|---|
-| Kunci | `storage_account_id PK` (1:1) |
-| FK | `→ storage_accounts` CASCADE |
-| Isi | `credentials_encrypted text` — AES-256-GCM, format `key_id:base64(nonce):base64(ciphertext)`; kunci 32-byte dari env `STORAGE_CREDENTIALS_KEYS` (`key_id:base64`, dipisah koma untuk rotasi; entri pertama aktif) |
-| Catatan | Tabel terpisah = prinsip least-privilege (query harian tak pernah menyentuh kredensial); enkripsi/dekripsi terjadi di repository — aplikasi gagal start tanpa kunci (fail-closed); `key_id` mendukung rotasi |
+
+| Hal     | Nilai                                                                                                                                                                                                             |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kunci   | `storage_account_id PK` (1:1)                                                                                                                                                                                     |
+| FK      | `→ storage_accounts` CASCADE                                                                                                                                                                                      |
+| Isi     | `credentials_encrypted text` — AES-256-GCM, format `key_id:base64(nonce):base64(ciphertext)`; kunci 32-byte dari env `STORAGE_CREDENTIALS_KEYS` (`key_id:base64`, dipisah koma untuk rotasi; entri pertama aktif) |
+| Catatan | Tabel terpisah = prinsip least-privilege (query harian tak pernah menyentuh kredensial); enkripsi/dekripsi terjadi di repository — aplikasi gagal start tanpa kunci (fail-closed); `key_id` mendukung rotasi      |
 
 ### `storage_nodes` — pohon drive terpadu
-| Hal | Nilai |
-|---|---|
-| FK | composite `(workspace_id, organization_id) → workspaces` CASCADE; `source_id → storage_accounts` CASCADE; `parent_id → storage_nodes(id)` CASCADE |
-| Unik | `(source_id, remote_id)` — NULL `remote_id` bebas (mount-root & node native) |
+
+| Hal                      | Nilai                                                                                                                                                                                   |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FK                       | composite `(workspace_id, organization_id) → workspaces` CASCADE; `source_id → storage_accounts` CASCADE; `parent_id → storage_nodes(id)` CASCADE                                       |
+| Unik                     | `(source_id, remote_id)` — NULL `remote_id` bebas (mount-root & node native)                                                                                                            |
 | Unik (nama dalam folder) | `UNIQUE (COALESCE(source_id, uuid_zero), COALESCE(parent_id, uuid_zero), lower(name))` — bentuk finalnya saat migrasi; sensitivitas huruf besar/kecil mengikuti `capabilities` provider |
-| Index | `(workspace_id, parent_id)` untuk navigasi pohon; `source_id`; `content_hash`; partial `WHERE trashed_at IS NOT NULL` |
-| Catatan | Folder = baris dengan `node_type='folder'`; tidak ada tabel `folders` terpisah. Konvensi mount-root: `source_id` terisi, `remote_id` NULL |
+| Index                    | `(workspace_id, parent_id)` untuk navigasi pohon; `source_id`; `content_hash`; partial `WHERE trashed_at IS NOT NULL`                                                                   |
+| Catatan                  | Folder = baris dengan `node_type='folder'`; tidak ada tabel `folders` terpisah. Konvensi mount-root: `source_id` terisi, `remote_id` NULL                                               |
 
 ### `storage_node_versions`
-| Hal | Nilai |
-|---|---|
-| FK | composite `(node_id, organization_id, workspace_id) → storage_nodes(id, organization_id, workspace_id)` CASCADE — butuh `UNIQUE(id, organization_id, workspace_id)` di `storage_nodes` |
-| Unik | `(node_id, source_version_id)` |
-| Index | `(node_id, modified_at DESC)` untuk timeline versi |
+
+| Hal   | Nilai                                                                                                                                                                                  |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FK    | composite `(node_id, organization_id, workspace_id) → storage_nodes(id, organization_id, workspace_id)` CASCADE — butuh `UNIQUE(id, organization_id, workspace_id)` di `storage_nodes` |
+| Unik  | `(node_id, source_version_id)`                                                                                                                                                         |
+| Index | `(node_id, modified_at DESC)` untuk timeline versi                                                                                                                                     |
 
 ### `shares`
-| Hal | Nilai |
-|---|---|
-| FK | composite `(workspace_id, organization_id)`; `node_id` CASCADE; `shared_by → users` |
-| Unik | `token` |
+
+| Hal   | Nilai                                                                                                           |
+| ----- | --------------------------------------------------------------------------------------------------------------- |
+| FK    | composite `(workspace_id, organization_id)`; `node_id` CASCADE; `shared_by → users`                             |
+| Unik  | `token`                                                                                                         |
 | Index | `node_id`, `organization_id`, partial `WHERE revoked_at IS NULL AND (expires_at IS NULL OR expires_at > now())` |
 
 ### `sync_jobs`
-| Hal | Nilai |
-|---|---|
-| FK | composite `(workspace_id, organization_id)`; `storage_account_id` CASCADE |
+
+| Hal   | Nilai                                                                                                |
+| ----- | ---------------------------------------------------------------------------------------------------- |
+| FK    | composite `(workspace_id, organization_id)`; `storage_account_id` CASCADE                            |
 | Index | `(storage_account_id, status)`; partial `WHERE status IN ('queued','running')` untuk antrean pekerja |
 
 ### `upload_sessions`
-| Hal | Nilai |
-|---|---|
-| FK | composite `(workspace_id, organization_id)`; `storage_account_id` CASCADE; `parent_node_id → storage_nodes` CASCADE |
-| Catatan | Level detail kolom paling lentur — disesuaikan saat implementasi konektor |
+
+| Hal     | Nilai                                                                                                               |
+| ------- | ------------------------------------------------------------------------------------------------------------------- |
+| FK      | composite `(workspace_id, organization_id)`; `storage_account_id` CASCADE; `parent_node_id → storage_nodes` CASCADE |
+| Catatan | Level detail kolom paling lentur — disesuaikan saat implementasi konektor                                           |
 
 ## 5. Alur utama (bagaimana tabel bekerja bersama)
 
 1. **Connect account**: pilih `providers` → OAuth/credential flow → tulis `storage_accounts`
    (status `pending_auth` → `active`) + `storage_account_secrets` → buat node mount-root di `storage_nodes`.
 2. **Sync**: buat `sync_jobs` (`full_scan`/`incremental`) → upsert `storage_nodes` di bawah mount-root
-   + `storage_node_versions`; `cursor` disimpan untuk delta berikutnya.
+   - `storage_node_versions`; `cursor` disimpan untuk delta berikutnya.
 3. **Browse/search**: baca `storage_nodes` per `(workspace_id, parent_id)`; pencarian bisa memakai
    kolom `tsvector` generated (`STORED`) atas `name` + `metadata->>'description'`.
 4. **Share**: buat baris `shares` dengan `token` acak.
 5. **Disconnect**: soft-delete `storage_accounts` → cascade menghapus node terindeks akun tersebut
    (termasuk mount-root-nya); data di provider tidak tersentuh.
 6. **Upload eksplisit**: `upload_sessions` berjalan per chunk → selesai = node baru di `storage_nodes`
-   + versi pertama di `storage_node_versions`.
+   - versi pertama di `storage_node_versions`.
 
 ## 6. Hubungan dengan yang sudah ada
 

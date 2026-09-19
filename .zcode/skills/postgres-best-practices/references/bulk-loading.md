@@ -1,6 +1,7 @@
 # Bulk Data Loading Reference
 
 ## Contents
+
 - COPY vs INSERT performance
 - COPY FROM patterns
 - Optimizing large loads
@@ -9,12 +10,12 @@
 
 ## COPY vs INSERT Performance
 
-| Method | Rows/sec (typical) | Use case |
-|--------|-------------------|----------|
-| Single-row INSERT | ~1,000-5,000 | Application writes |
-| Multi-row INSERT (VALUES) | ~10,000-50,000 | Batch inserts from code |
-| `COPY FROM` | ~100,000-500,000+ | Bulk loading from files or streams |
-| `COPY FROM` (binary) | ~200,000-1,000,000+ | Maximum throughput (binary format) |
+| Method                    | Rows/sec (typical)  | Use case                           |
+| ------------------------- | ------------------- | ---------------------------------- |
+| Single-row INSERT         | ~1,000-5,000        | Application writes                 |
+| Multi-row INSERT (VALUES) | ~10,000-50,000      | Batch inserts from code            |
+| `COPY FROM`               | ~100,000-500,000+   | Bulk loading from files or streams |
+| `COPY FROM` (binary)      | ~200,000-1,000,000+ | Maximum throughput (binary format) |
 
 `COPY` is **10-100x faster** than individual INSERTs because it bypasses per-row overhead (parsing, planning, WAL per statement).
 
@@ -61,9 +62,9 @@ with conn.cursor() as cur:
 
 ```javascript
 // Node.js (pg-copy-streams)
-const { from } = require('pg-copy-streams');
-const stream = client.query(from('COPY orders FROM STDIN WITH (FORMAT csv)'));
-fileStream.pipe(stream);
+const { from } = require('pg-copy-streams')
+const stream = client.query(from('COPY orders FROM STDIN WITH (FORMAT csv)'))
+fileStream.pipe(stream)
 ```
 
 ### COPY TO (Export)

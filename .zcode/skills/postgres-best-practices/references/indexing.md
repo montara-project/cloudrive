@@ -1,6 +1,7 @@
 # Indexing Reference
 
 ## Contents
+
 - Index types and when to use each
 - Composite index column ordering
 - Partial indexes
@@ -113,6 +114,7 @@ CREATE INDEX idx_tenant_created ON orders(tenant_id, created_at);
 The index skips to `tenant_id = 1` (equality), then range-scans `created_at` in order.
 
 **Leading column rule**: A composite index on `(a, b, c)` can serve queries on:
+
 - `a` alone
 - `a, b`
 - `a, b, c`
@@ -236,6 +238,7 @@ CREATE INDEX CONCURRENTLY idx_orders_customer ON orders(customer_id);
 ```
 
 Caveats:
+
 - Takes longer (two table scans instead of one)
 - Cannot run inside a transaction block
 - If it fails, leaves an `INVALID` index — drop and retry
@@ -296,6 +299,7 @@ HAVING count(*) > 1;
 ```
 
 Also check for indexes that are a prefix of another:
+
 - `(a)` is redundant if `(a, b)` exists
 - `(a, b)` is NOT redundant if `(a, b, c)` exists and you need index-only scans on just `(a, b)`
 

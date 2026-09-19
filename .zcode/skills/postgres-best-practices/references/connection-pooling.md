@@ -1,6 +1,7 @@
 # Connection Pooling Reference
 
 ## Contents
+
 - Why connection pooling matters
 - PgBouncer configuration
 - Pool modes
@@ -79,15 +80,15 @@ stats_period = 60
 
 ### Key Parameters
 
-| Parameter | Recommended | Purpose |
-|-----------|------------|---------|
-| `default_pool_size` | 20-50 | Server connections per user/database pair |
-| `min_pool_size` | 5 | Minimum idle server connections to keep open |
-| `max_client_conn` | 1000-10000 | Max client connections PgBouncer accepts |
-| `max_db_connections` | 50-100 | Hard cap on server connections per database |
-| `reserve_pool_size` | 5 | Extra connections for burst traffic |
-| `reserve_pool_timeout` | 3 | Seconds before using reserve pool |
-| `query_wait_timeout` | 120 | Max time a client waits for a server connection |
+| Parameter              | Recommended | Purpose                                         |
+| ---------------------- | ----------- | ----------------------------------------------- |
+| `default_pool_size`    | 20-50       | Server connections per user/database pair       |
+| `min_pool_size`        | 5           | Minimum idle server connections to keep open    |
+| `max_client_conn`      | 1000-10000  | Max client connections PgBouncer accepts        |
+| `max_db_connections`   | 50-100      | Hard cap on server connections per database     |
+| `reserve_pool_size`    | 5           | Extra connections for burst traffic             |
+| `reserve_pool_timeout` | 3           | Seconds before using reserve pool               |
+| `query_wait_timeout`   | 120         | Max time a client waits for a server connection |
 
 ### Sizing Rule of Thumb
 
@@ -112,6 +113,7 @@ Server connection is assigned when a transaction begins and returned when it com
 **Compatible with**: Standard SQL, parameterized queries, most ORMs.
 
 **NOT compatible with** (session-level features):
+
 - `SET` / `RESET` (use `SET LOCAL` inside a transaction instead)
 - `LISTEN` / `NOTIFY`
 - SQL-level `PREPARE` / `DEALLOCATE` (use protocol-level prepared statements)
@@ -142,13 +144,13 @@ Server connection released after every statement. Maximum multiplexing but **inc
 
 ### Choosing a Mode
 
-| Application pattern | Recommended mode |
-|--------------------|-----------------|
-| Web apps, APIs, serverless | Transaction |
-| Applications using LISTEN/NOTIFY | Session |
-| Applications using temp tables across transactions | Session |
-| Applications with SET session variables | Session (or refactor to `SET LOCAL`) |
-| Simple autocommit queries | Statement |
+| Application pattern                                | Recommended mode                     |
+| -------------------------------------------------- | ------------------------------------ |
+| Web apps, APIs, serverless                         | Transaction                          |
+| Applications using LISTEN/NOTIFY                   | Session                              |
+| Applications using temp tables across transactions | Session                              |
+| Applications with SET session variables            | Session (or refactor to `SET LOCAL`) |
+| Simple autocommit queries                          | Statement                            |
 
 ## Prepared Statement Handling
 
@@ -173,7 +175,7 @@ max_prepared_statements = 100  # per server connection
 
 ```javascript
 // Node.js pg: protocol-level by default
-const pool = new Pool({ ...config });
+const pool = new Pool({ ...config })
 // For explicit control:
 // statement_timeout via SET LOCAL, not SET
 ```
@@ -225,22 +227,24 @@ These commands use PgBouncer's admin protocol and fail if sent directly to Postg
 
 ### What to Watch
 
-| Metric | Healthy | Problem |
-|--------|---------|---------|
-| `cl_waiting` | 0 | > 0 = clients waiting for server connections |
-| `sv_active` | < pool_size | = pool_size = pool exhausted |
-| `sv_idle` | > 0 | 0 = no spare connections |
-| `avg_xact_time` | < 100ms | High = long transactions hogging connections |
-| `avg_wait_time` | 0 | > 0 = pool too small or transactions too long |
+| Metric          | Healthy     | Problem                                       |
+| --------------- | ----------- | --------------------------------------------- |
+| `cl_waiting`    | 0           | > 0 = clients waiting for server connections  |
+| `sv_active`     | < pool_size | = pool_size = pool exhausted                  |
+| `sv_idle`       | > 0         | 0 = no spare connections                      |
+| `avg_xact_time` | < 100ms     | High = long transactions hogging connections  |
+| `avg_wait_time` | 0           | > 0 = pool too small or transactions too long |
 
 ### Common Issues
 
 **Clients waiting (`cl_waiting > 0`)**:
+
 1. Check for long-running transactions: `SELECT * FROM pg_stat_activity WHERE state = 'idle in transaction';`
 2. Increase `default_pool_size` (but diminishing returns beyond ~4x CPU cores)
 3. Check if `query_wait_timeout` is being hit (errors in application logs)
 
 **Server connections not being returned**:
+
 1. `idle in transaction` sessions hold connections — set `idle_in_transaction_session_timeout` in PostgreSQL
 2. Application not committing/rolling back — add explicit transaction management
 
@@ -273,16 +277,16 @@ with pool.connection() as conn:
 
 ```javascript
 // Node.js (pg)
-const { Pool } = require('pg');
+const { Pool } = require('pg')
 const pool = new Pool({
-    host: 'db',
-    database: 'mydb',
-    max: 20,           // max connections in pool
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
-});
+  host: 'db',
+  database: 'mydb',
+  max: 20, // max connections in pool
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+})
 
-const result = await pool.query('SELECT ...');
+const result = await pool.query('SELECT ...')
 ```
 
 ```java

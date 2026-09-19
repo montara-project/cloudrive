@@ -1,6 +1,7 @@
 # SQL Query Patterns Reference
 
 ## Contents
+
 - Common Table Expressions (CTEs)
 - Window functions
 - Lateral joins
@@ -36,6 +37,7 @@ ORDER BY ro.order_count DESC;
 ### CTE Materialization
 
 By default the optimizer may inline CTEs. Force materialization when:
+
 - The CTE is referenced multiple times
 - You want to create an optimization fence
 
@@ -49,6 +51,7 @@ SELECT * FROM expensive_calc WHERE ...;
 ```
 
 Force inlining (default for single-use):
+
 ```sql
 WITH simple_filter AS NOT MATERIALIZED (
     SELECT * FROM large_table WHERE status = 'active'
@@ -526,9 +529,11 @@ SELECT casefold('Hello World') = casefold('HELLO WORLD');  -- true
 ## Anti-Patterns to Avoid
 
 ### SELECT * in Production Queries
+
 Use explicit column lists. `SELECT *` breaks when columns change and prevents index-only scans.
 
 ### NOT IN with NULLs
+
 `NOT IN (subquery)` returns no rows if any subquery result is NULL. Use `NOT EXISTS` instead:
 
 ```sql
@@ -541,6 +546,7 @@ WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.id);
 ```
 
 ### Implicit Casts in WHERE Clauses
+
 Casting a column prevents index use:
 
 ```sql
@@ -552,9 +558,11 @@ WHERE created_at >= '2024-01-15' AND created_at < '2024-01-16'
 ```
 
 ### ORDER BY on Unindexed Large Result Sets
+
 If you ORDER BY + LIMIT on a large table, ensure there's an index on the ORDER BY columns to avoid a full sort.
 
 ### Using OFFSET for Pagination
+
 OFFSET scans and discards rows. Use keyset pagination instead:
 
 ```sql

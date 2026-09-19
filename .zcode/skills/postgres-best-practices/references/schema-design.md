@@ -1,6 +1,7 @@
 # Schema Design Reference
 
 ## Contents
+
 - Data type best practices
 - Primary keys
 - Foreign keys and referential integrity
@@ -88,11 +89,11 @@ Use `snake_case` without quotes for all identifiers. Unquoted identifiers fold t
 
 ### Enums vs. Check Constraints vs. Lookup Tables
 
-| Approach | Pros | Cons |
-|----------|------|------|
-| `CHECK (col IN (...))` | Simple, no DDL type | Requires ALTER TABLE to add values |
-| `CREATE TYPE ... AS ENUM` | Type safety, compact storage | Cannot remove values, ALTER TYPE needed |
-| Lookup/reference table | FK enforced, can add metadata | Extra join |
+| Approach                  | Pros                          | Cons                                    |
+| ------------------------- | ----------------------------- | --------------------------------------- |
+| `CHECK (col IN (...))`    | Simple, no DDL type           | Requires ALTER TABLE to add values      |
+| `CREATE TYPE ... AS ENUM` | Type safety, compact storage  | Cannot remove values, ALTER TYPE needed |
+| Lookup/reference table    | FK enforced, can add metadata | Extra join                              |
 
 For small, stable sets (status, priority): CHECK or ENUM.
 For evolving sets or sets needing metadata: lookup table.
@@ -111,13 +112,13 @@ CREATE TABLE orders (
 
 ### ON DELETE / ON UPDATE Actions
 
-| Action | Use when |
-|--------|----------|
+| Action                | Use when                                                                                                                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `NO ACTION` (default) | Reject the update or deletion if a violation remains when the constraint is checked; the check can be deferred when the foreign key is deferrable and currently deferred |
-| `RESTRICT` | Reject the referenced operation immediately; the check cannot be deferred |
-| `CASCADE` | Child rows are meaningless without parent (e.g., order_items when order is deleted) |
-| `SET NULL` | Relationship is optional, preserve child row |
-| `SET DEFAULT` | Rare; reassign to a valid default parent |
+| `RESTRICT`            | Reject the referenced operation immediately; the check cannot be deferred                                                                                                |
+| `CASCADE`             | Child rows are meaningless without parent (e.g., order_items when order is deleted)                                                                                      |
+| `SET NULL`            | Relationship is optional, preserve child row                                                                                                                             |
+| `SET DEFAULT`         | Rare; reassign to a valid default parent                                                                                                                                 |
 
 ### Deferrable Foreign Keys
 
@@ -139,6 +140,7 @@ CREATE INDEX idx_orders_customer_id ON orders(customer_id);
 ```
 
 Without this index:
+
 - JOINs on the FK are slow (seq scan on child table)
 - DELETE on the parent table locks the child table and scans it fully
 
@@ -334,15 +336,15 @@ SET app.current_tenant = '42';
 
 ### Safe Column Operations
 
-| Operation | Safe online? | Notes |
-|-----------|-------------|-------|
-| `ADD COLUMN` (nullable, no default) | Yes | Instant metadata change |
-| `ADD COLUMN ... DEFAULT x` | Yes | Default stored in catalog, no table rewrite |
-| `DROP COLUMN` | Yes | Marks column as dropped, no rewrite |
-| `ALTER COLUMN SET NOT NULL` | Caution | Full table scan to validate (use CHECK first) |
-| `ALTER COLUMN TYPE` | No | Full table rewrite + exclusive lock |
-| `ADD CONSTRAINT ... NOT VALID` | Yes | Doesn't scan existing rows |
-| `VALIDATE CONSTRAINT` | Yes | ShareUpdateExclusiveLock (reads/writes allowed) |
+| Operation                           | Safe online? | Notes                                           |
+| ----------------------------------- | ------------ | ----------------------------------------------- |
+| `ADD COLUMN` (nullable, no default) | Yes          | Instant metadata change                         |
+| `ADD COLUMN ... DEFAULT x`          | Yes          | Default stored in catalog, no table rewrite     |
+| `DROP COLUMN`                       | Yes          | Marks column as dropped, no rewrite             |
+| `ALTER COLUMN SET NOT NULL`         | Caution      | Full table scan to validate (use CHECK first)   |
+| `ALTER COLUMN TYPE`                 | No           | Full table rewrite + exclusive lock             |
+| `ADD CONSTRAINT ... NOT VALID`      | Yes          | Doesn't scan existing rows                      |
+| `VALIDATE CONSTRAINT`               | Yes          | ShareUpdateExclusiveLock (reads/writes allowed) |
 
 ### Safe NOT NULL Pattern
 

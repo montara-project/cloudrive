@@ -1,6 +1,7 @@
 # Performance Diagnostics Reference
 
 ## Contents
+
 - Essential pg_stat views
 - Table health diagnostics
 - Index health diagnostics
@@ -12,15 +13,15 @@
 
 ## Essential pg_stat Views
 
-| View | What it tells you |
-|------|------------------|
-| `pg_stat_user_tables` | Seq scans, index scans, row counts, dead tuples, last vacuum/analyze |
-| `pg_stat_user_indexes` | Index usage counts, tuple reads |
-| `pg_stat_activity` | Currently running queries, wait events, state |
-| `pg_stat_statements` | Top queries by time, calls, rows (extension) |
-| `pg_stat_bgwriter` | Checkpoint frequency, buffer allocation |
-| `pg_stat_io` (PG16+) | I/O statistics by backend type. PG18+ adds byte-level columns and per-backend stats |
-| `pg_locks` | Current locks held and awaited |
+| View                   | What it tells you                                                                   |
+| ---------------------- | ----------------------------------------------------------------------------------- |
+| `pg_stat_user_tables`  | Seq scans, index scans, row counts, dead tuples, last vacuum/analyze                |
+| `pg_stat_user_indexes` | Index usage counts, tuple reads                                                     |
+| `pg_stat_activity`     | Currently running queries, wait events, state                                       |
+| `pg_stat_statements`   | Top queries by time, calls, rows (extension)                                        |
+| `pg_stat_bgwriter`     | Checkpoint frequency, buffer allocation                                             |
+| `pg_stat_io` (PG16+)   | I/O statistics by backend type. PG18+ adds byte-level columns and per-backend stats |
+| `pg_locks`             | Current locks held and awaited                                                      |
 
 ## Table Health Diagnostics
 
@@ -169,16 +170,19 @@ WHERE name = 'shared_buffers';
 If your hot data (frequently accessed tables + their indexes) significantly exceeds `shared_buffers`, the hit rate drops and you'll see more `shared read` in EXPLAIN output.
 
 **When to increase shared_buffers:**
+
 - Table/index cache hit rate consistently below 99%
 - `shared read` dominates `shared hit` in EXPLAIN plans for hot queries
 - Server has available RAM (check OS isn't swapping)
 
 **When NOT to increase shared_buffers:**
+
 - Low hit rate caused by full table scans (fix with indexes or query changes, not more cache)
 - Server is already memory-constrained (each connection also uses `work_mem`, `maintenance_work_mem`, etc.)
 - Hit rate is already 99%+ (adding more cache won't help)
 
 **After changing shared_buffers:**
+
 - Requires a server restart (`pg_ctl restart`)
 - Update `effective_cache_size` to roughly `shared_buffers + estimated OS page cache` (typically ~75% of total RAM)
 - Monitor hit rates for a representative period after the change
@@ -322,13 +326,13 @@ WHERE NOT bl.granted AND kl.granted;
 
 ### Lock Types Quick Reference
 
-| Lock | Acquired by | Conflicts with |
-|------|------------|----------------|
-| `AccessShareLock` | SELECT | AccessExclusiveLock |
-| `RowShareLock` | SELECT FOR UPDATE/SHARE | ExclusiveLock, AccessExclusiveLock |
-| `RowExclusiveLock` | INSERT, UPDATE, DELETE | ShareLock, ShareRowExclusiveLock, ExclusiveLock, AccessExclusiveLock |
-| `ShareLock` | CREATE INDEX (non-concurrent) | RowExclusiveLock and above |
-| `AccessExclusiveLock` | ALTER TABLE, DROP TABLE, VACUUM FULL | Everything |
+| Lock                  | Acquired by                          | Conflicts with                                                       |
+| --------------------- | ------------------------------------ | -------------------------------------------------------------------- |
+| `AccessShareLock`     | SELECT                               | AccessExclusiveLock                                                  |
+| `RowShareLock`        | SELECT FOR UPDATE/SHARE              | ExclusiveLock, AccessExclusiveLock                                   |
+| `RowExclusiveLock`    | INSERT, UPDATE, DELETE               | ShareLock, ShareRowExclusiveLock, ExclusiveLock, AccessExclusiveLock |
+| `ShareLock`           | CREATE INDEX (non-concurrent)        | RowExclusiveLock and above                                           |
+| `AccessExclusiveLock` | ALTER TABLE, DROP TABLE, VACUUM FULL | Everything                                                           |
 
 ### Advisory Locks
 
@@ -399,6 +403,7 @@ ALTER TABLE hot_table SET (
 ```
 
 **PG18 vacuum improvements:**
+
 - **Eager freezing**: Normal vacuums can freeze some pages opportunistically, reducing later freeze-only vacuum passes. Controlled by `vacuum_max_eager_freeze_failure_rate`.
 - **`autovacuum_worker_slots`**: New GUC specifying max background worker slots; `autovacuum_max_workers` is now adjustable at runtime.
 - **VACUUM/ANALYZE processes inheritance children by default**: Use `VACUUM (ONLY) tablename` for old behavior (parent table only).

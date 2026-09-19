@@ -1,6 +1,7 @@
 # Transaction Isolation Reference
 
 ## Contents
+
 - Isolation levels overview
 - READ COMMITTED (default)
 - REPEATABLE READ
@@ -13,11 +14,11 @@
 
 PostgreSQL implements three isolation levels (READ UNCOMMITTED maps to READ COMMITTED):
 
-| Level | Dirty reads | Non-repeatable reads | Phantom reads | Serialization anomalies |
-|-------|-------------|---------------------|---------------|------------------------|
-| READ COMMITTED | No | Yes | Yes | Yes |
-| REPEATABLE READ | No | No | No | Yes |
-| SERIALIZABLE | No | No | No | No |
+| Level           | Dirty reads | Non-repeatable reads | Phantom reads | Serialization anomalies |
+| --------------- | ----------- | -------------------- | ------------- | ----------------------- |
+| READ COMMITTED  | No          | Yes                  | Yes           | Yes                     |
+| REPEATABLE READ | No          | No                   | No            | Yes                     |
+| SERIALIZABLE    | No          | No                   | No            | No                      |
 
 ```sql
 -- Check current isolation level
@@ -86,12 +87,15 @@ COMMIT;
 **Fixes for lost updates in READ COMMITTED:**
 
 1. **Use atomic SQL** — avoid read-then-write patterns:
+
    ```sql
    UPDATE accounts SET balance = balance - 200 WHERE id = 1;
    ```
+
    This is safe because the UPDATE re-evaluates `balance` from the latest committed row.
 
 2. **Use SELECT FOR UPDATE** — lock the row before reading:
+
    ```sql
    BEGIN;
    SELECT balance FROM accounts WHERE id = 1 FOR UPDATE;
@@ -111,7 +115,7 @@ This means UPDATE with complex WHERE clauses can behave unexpectedly:
 ```sql
 -- Transaction A                    -- Transaction B
 BEGIN;                              BEGIN;
-UPDATE orders                       
+UPDATE orders
 SET status = 'processing'
 WHERE status = 'pending'
 AND id = 42;
@@ -233,6 +237,7 @@ READ COMMITTED is safe for individual statements but not for multi-statement rea
 ### Pitfall: Not Handling Serialization Failures
 
 REPEATABLE READ and SERIALIZABLE can throw:
+
 ```
 ERROR: could not serialize access due to concurrent update
 SQLSTATE: 40001
@@ -243,6 +248,7 @@ SQLSTATE: 40001
 ### Pitfall: Long Transactions in REPEATABLE READ/SERIALIZABLE
 
 The snapshot is held for the entire transaction. Long transactions:
+
 - Prevent VACUUM from cleaning dead rows visible to the snapshot
 - Increase the chance of serialization failures (more time for conflicts)
 - Hold SSI dependency information longer (memory overhead)
@@ -259,13 +265,13 @@ DDL statements (ALTER TABLE, CREATE INDEX) always acquire strong locks regardles
 
 ## Choosing the Right Level
 
-| Scenario | Recommended level | Why |
-|----------|------------------|-----|
-| Simple CRUD, web apps | READ COMMITTED | Default is fine; use atomic SQL for updates |
-| Balance transfers, inventory | READ COMMITTED + `SELECT FOR UPDATE` | Explicit row locking prevents lost updates |
-| Reports reading consistent data | REPEATABLE READ | Snapshot consistency across multiple queries |
-| Multi-row constraints, write skew | SERIALIZABLE | Only level that prevents all anomalies |
-| High-contention counters | READ COMMITTED + atomic UPDATE | `UPDATE x SET n = n + 1` is inherently safe |
+| Scenario                          | Recommended level                    | Why                                          |
+| --------------------------------- | ------------------------------------ | -------------------------------------------- |
+| Simple CRUD, web apps             | READ COMMITTED                       | Default is fine; use atomic SQL for updates  |
+| Balance transfers, inventory      | READ COMMITTED + `SELECT FOR UPDATE` | Explicit row locking prevents lost updates   |
+| Reports reading consistent data   | REPEATABLE READ                      | Snapshot consistency across multiple queries |
+| Multi-row constraints, write skew | SERIALIZABLE                         | Only level that prevents all anomalies       |
+| High-contention counters          | READ COMMITTED + atomic UPDATE       | `UPDATE x SET n = n + 1` is inherently safe  |
 
 **Default to READ COMMITTED** and escalate only when you identify a specific anomaly your application cannot tolerate.
 

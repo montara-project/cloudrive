@@ -11,29 +11,35 @@ Keputusan arsitektur (karena pertanyaan tidak terjawab, mengikuti scaffolding ya
 ## Perubahan
 
 ### 1. Sambungkan Authula — `cmd/api/main.go`
+
 - Setelah `connectDB`: `authulaDB, err := newAuthula(cfg)` (+ defer close koneksi underlying-nya).
 - Setelah `application` dibangun (butuh Logger/Services): `application.Auth = newAuthula(application, authulaDB)`. Migrasi Authula berjalan otomatis di sini (core + plugin tables di schema `authula`).
 
 ### 2. Mount handler — `cmd/api/routes.go`
+
 - `r.Use(authBasePath, fiberadapter.New(fiberadapter.Config{Handler: app.Auth.Handler()}))`.
 - Adapter meneruskan path apa adanya dan Authula mendaftarkan route dengan BasePath-nya sendiri, jadi mount prefix `/v1/auth` harus persis sama dengan `authBasePath`.
 
 ### 3. Middleware Authorization — `internal/middlewares/authorization.go`
+
 - Setelah sesi tervalidasi, parse `session.UserID` → `lib.ContextSetUID(c, uid)` agar handler aplikasi bisa memakai `lib.ContextGetUID`.
 - Registrasi **per-route** (bukan global, agar `/` dan `/health` tetap terbuka).
 
 ### 4. Mirror tabel users
+
 - Migrasi `migrations/000001_create_users.{up,down}.sql`: `id uuid pk`, `email unique`, `first_name`, `last_name nullable`, `image nullable`, `created_at`, `updated_at`.
 - `internal/models/user.go` + `internal/repositories/user.go` (mengikuti pola `BaseRepository` yang ada).
 - Hooks di `newAuthula`: `RegisterAfterCreate` → insert; `RegisterAfterUpdate` → update (pakai `splitName`).
 - Handler `GET /v1/me` terproteksi middleware Authorization → profil user dari repositori (demonstrasi rantai penuh: cookie sesi Authula → validasi → uid → data user aplikasi).
 
 ### 5. Polish kecil
+
 - `WithSecurity(...)`: isi `TrustedProxies: cfg.App.TrustedProxies` (sekarang kosong padahal flag-nya ada).
 - `services/email.go`: From name pakai `cfg.App.Name` (sekarang hardcode `"GoFi"`).
 - `.env.example`: tambah `APP_DEFAULT_PASS=` (dipakai target Makefile `db/migrations/*` tapi belum ada di contoh).
 
 ## Verifikasi
+
 - `go build ./...` + `go vet ./...`.
 - Jika Postgres lokal tersedia: `make db/migrations/up` lalu `make run`, smoke test: `/health` 200, `GET /v1/auth/me` 401 tanpa sesi, `POST /v1/auth/email-password/sign-up` (path validasi), alur OAuth Google tinggal diarahkan ke `SERVER_URL + /v1/auth/oauth2/authorize/google`.
 

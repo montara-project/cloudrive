@@ -1,6 +1,7 @@
 # Hot Standby & Read Replicas Reference
 
 ## Contents
+
 - Streaming replication overview
 - Hot standby configuration
 - Monitoring replication lag
@@ -16,13 +17,13 @@ Physical (streaming) replication creates an exact copy of the primary database o
 
 ### Key Differences from Logical Replication
 
-| Aspect | Physical (streaming) | Logical |
-|--------|---------------------|---------|
-| Scope | Entire cluster | Selected tables |
-| PG versions | Must match major version | Can differ |
-| Standby writable? | No (read-only) | Yes (for non-replicated tables) |
-| DDL replicated? | Yes (via WAL) | No |
-| Use case | HA, read replicas | CDC, selective sync, cross-version migration |
+| Aspect            | Physical (streaming)     | Logical                                      |
+| ----------------- | ------------------------ | -------------------------------------------- |
+| Scope             | Entire cluster           | Selected tables                              |
+| PG versions       | Must match major version | Can differ                                   |
+| Standby writable? | No (read-only)           | Yes (for non-replicated tables)              |
+| DDL replicated?   | Yes (via WAL)            | No                                           |
+| Use case          | HA, read replicas        | CDC, selective sync, cross-version migration |
 
 ## Hot Standby Configuration
 
@@ -36,6 +37,7 @@ SHOW max_replication_slots;  -- one per standby for slot-based replication
 ```
 
 Key settings (in `postgresql.conf`):
+
 - `wal_level = replica` (default)
 - `max_wal_senders = 10` (enough for all standbys)
 - `max_replication_slots = 10` (optional but recommended — prevents WAL removal before standby catches up)
@@ -43,6 +45,7 @@ Key settings (in `postgresql.conf`):
 ### On the Standby
 
 Key settings:
+
 - `hot_standby = on` (allows read queries during recovery — default)
 - `primary_conninfo = 'host=primary_host user=repl_user ...'` (connection to primary)
 - `primary_slot_name = 'standby_slot'` (optional — use a replication slot)
@@ -157,6 +160,7 @@ DETAIL: User was holding shared buffer pin for too long.
 ```
 
 **Solutions (in order of preference):**
+
 1. Keep queries on the standby short
 2. Increase `max_standby_streaming_delay` (trades lag for query stability)
 3. Enable `hot_standby_feedback` (see below)
@@ -194,13 +198,13 @@ SHOW synchronous_commit;         -- 'on', 'remote_write', 'remote_apply', etc.
 
 Synchronous commit levels:
 
-| Level | Primary waits for | Durability | Latency impact |
-|-------|-------------------|------------|----------------|
-| `on` (default with sync standbys) | Standby WAL flush | Strong | Moderate |
-| `remote_write` | Standby WAL write (not fsync) | Good | Lower |
-| `remote_apply` | Standby WAL replay | Strongest (read-your-writes on standby) | Highest |
-| `local` | Local WAL flush only | Primary only | None |
-| `off` | Nothing | Weakest | None |
+| Level                             | Primary waits for             | Durability                              | Latency impact |
+| --------------------------------- | ----------------------------- | --------------------------------------- | -------------- |
+| `on` (default with sync standbys) | Standby WAL flush             | Strong                                  | Moderate       |
+| `remote_write`                    | Standby WAL write (not fsync) | Good                                    | Lower          |
+| `remote_apply`                    | Standby WAL replay            | Strongest (read-your-writes on standby) | Highest        |
+| `local`                           | Local WAL flush only          | Primary only                            | None           |
+| `off`                             | Nothing                       | Weakest                                 | None           |
 
 ## Promoting a Standby
 
@@ -215,6 +219,7 @@ SELECT pg_promote();
 ```
 
 After promotion:
+
 - The standby stops replay and opens for writes
 - Applications must be redirected to the new primary
 - Other standbys must be reconfigured to follow the new primary

@@ -1,6 +1,7 @@
 # Backup & Restore Reference
 
 ## Contents
+
 - Backup strategy overview
 - Logical backups (pg_dump / pg_restore)
 - Physical backups (pg_basebackup)
@@ -10,12 +11,12 @@
 
 ## Backup Strategy Overview
 
-| Method | What it captures | Granularity | Speed | Use case |
-|--------|-----------------|-------------|-------|----------|
-| `pg_dump` | Logical (SQL/custom) | Per-database, per-table | Slow on large DBs | Dev snapshots, migrations, selective restore |
-| `pg_dumpall` | All databases + globals | Entire cluster | Slow | Full cluster backup including roles/tablespaces |
-| `pg_basebackup` | Physical (file copy) | Entire cluster | Fast | Production backups, PITR base, replica setup |
-| Continuous archiving | WAL segments | Incremental | Continuous | PITR — restore to any point in time |
+| Method               | What it captures        | Granularity             | Speed             | Use case                                        |
+| -------------------- | ----------------------- | ----------------------- | ----------------- | ----------------------------------------------- |
+| `pg_dump`            | Logical (SQL/custom)    | Per-database, per-table | Slow on large DBs | Dev snapshots, migrations, selective restore    |
+| `pg_dumpall`         | All databases + globals | Entire cluster          | Slow              | Full cluster backup including roles/tablespaces |
+| `pg_basebackup`      | Physical (file copy)    | Entire cluster          | Fast              | Production backups, PITR base, replica setup    |
+| Continuous archiving | WAL segments            | Incremental             | Continuous        | PITR — restore to any point in time             |
 
 **Production recommendation**: `pg_basebackup` + continuous WAL archiving for PITR capability. Supplement with periodic `pg_dump` for portable, version-independent backups.
 
@@ -23,12 +24,12 @@
 
 ### pg_dump Formats
 
-| Format | Flag | Parallel restore? | Selective restore? | Notes |
-|--------|------|-------------------|-------------------|-------|
-| Custom | `-Fc` | Yes | Yes | **Recommended default** — compressed, flexible |
-| Directory | `-Fd` | Yes | Yes | One file per table, good for large DBs |
-| Plain SQL | `-Fp` | No | No (manual editing) | Human-readable, good for version control |
-| Tar | `-Ft` | No | Yes | Compatibility option |
+| Format    | Flag  | Parallel restore? | Selective restore?  | Notes                                          |
+| --------- | ----- | ----------------- | ------------------- | ---------------------------------------------- |
+| Custom    | `-Fc` | Yes               | Yes                 | **Recommended default** — compressed, flexible |
+| Directory | `-Fd` | Yes               | Yes                 | One file per table, good for large DBs         |
+| Plain SQL | `-Fp` | No                | No (manual editing) | Human-readable, good for version control       |
+| Tar       | `-Ft` | No                | Yes                 | Compatibility option                           |
 
 ### Common pg_dump Patterns
 
@@ -169,14 +170,14 @@ pg_basebackup -D /backup/base -Fp -Xs -P --checkpoint=fast
 pg_basebackup -h primary_host -U repl_user -D /backup/base -Fp -Xs -P
 ```
 
-| Flag | Meaning |
-|------|---------|
-| `-D` | Target directory |
-| `-Fp` | Plain format (ready-to-use data directory) |
-| `-Ft` | Tar format (one tar per tablespace) |
-| `-z` | Compress (with tar format) |
-| `-Xs` | Stream WAL during backup (ensures consistency) |
-| `-P` | Show progress |
+| Flag                | Meaning                                                   |
+| ------------------- | --------------------------------------------------------- |
+| `-D`                | Target directory                                          |
+| `-Fp`               | Plain format (ready-to-use data directory)                |
+| `-Ft`               | Tar format (one tar per tablespace)                       |
+| `-z`                | Compress (with tar format)                                |
+| `-Xs`               | Stream WAL during backup (ensures consistency)            |
+| `-P`                | Show progress                                             |
 | `--checkpoint=fast` | Start backup immediately (don't wait for next checkpoint) |
 
 ### Prerequisites

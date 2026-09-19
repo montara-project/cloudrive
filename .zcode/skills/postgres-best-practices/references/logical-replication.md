@@ -1,6 +1,7 @@
 # Logical Replication & Migrations Reference
 
 ## Contents
+
 - Overview and prerequisites
 - Publisher setup
 - Subscriber setup
@@ -23,6 +24,7 @@ Logical replication streams row-level changes (INSERT, UPDATE, DELETE) from a **
 ### Prerequisites
 
 **On the publisher:**
+
 - `wal_level = logical` (requires restart if changing)
 - Sufficient `max_replication_slots` (one per subscription)
 - Sufficient `max_wal_senders` (one per subscription + headroom)
@@ -30,6 +32,7 @@ Logical replication streams row-level changes (INSERT, UPDATE, DELETE) from a **
 - The replication role needs `REPLICATION` privilege, plus `USAGE` on the schema and `SELECT` on replicated tables
 
 **On the subscriber:**
+
 - Target tables must already exist with compatible schema
 - Sufficient `max_logical_replication_workers`
 - Sufficient `max_worker_processes`
@@ -118,6 +121,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO repl_user;
 ### Decoder Plugins
 
 Postgres supports logical decoding output plugins, including:
+
 - **`pgoutput`** (default): built into Postgres, used by native logical replication
 - **`wal2json`**: an optional third-party plugin that converts WAL to JSON format for CDC integrations
 
@@ -358,13 +362,13 @@ ORDER BY s.subname, sr.srrelid::regclass::text;
 
 **State codes for `pg_subscription_rel.srsubstate`:**
 
-| Code | Meaning |
-|------|---------|
-| `i` | Initializing |
-| `d` | Copying data (initial sync) |
-| `f` | Finished table copy, waiting for sync |
-| `s` | Synced with publisher |
-| `r` | Ready (streaming) |
+| Code | Meaning                               |
+| ---- | ------------------------------------- |
+| `i`  | Initializing                          |
+| `d`  | Copying data (initial sync)           |
+| `f`  | Finished table copy, waiting for sync |
+| `s`  | Synced with publisher                 |
+| `r`  | Ready (streaming)                     |
 
 These codes describe each table's initialization state. `s` means the table synchronized during initialization; it does not prove that current replication lag is zero.
 
@@ -550,6 +554,7 @@ WHERE srsubstate != 'r';
 ```
 
 Initial sync speed depends on table size and network. For very large tables, consider:
+
 - Dump/restore the data first, then create subscription with `copy_data = false`
 - Increase `max_logical_replication_workers` if many tables need initial sync in parallel
 
