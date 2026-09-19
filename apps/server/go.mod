@@ -2,7 +2,12 @@ module cloudrive/server
 
 go 1.26.4
 
-require github.com/gofiber/fiber/v3 v3.5.0
+require (
+	github.com/gofiber/fiber/v3 v3.5.0
+	github.com/resend/resend-go/v4 v4.3.0
+	github.com/uptrace/bun v1.2.18
+	github.com/uptrace/bun/dialect/pgdialect v1.2.18
+)
 
 require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
@@ -97,7 +102,6 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
 	github.com/redis/go-redis/v9 v9.22.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	github.com/resend/resend-go/v4 v4.3.0 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/shirou/gopsutil/v4 v4.26.6 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
@@ -112,9 +116,7 @@ require (
 	github.com/tklauser/go-sysconf v0.4.0 // indirect
 	github.com/tklauser/numcpus v0.12.0 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
-	github.com/uptrace/bun v1.2.18 // indirect
 	github.com/uptrace/bun/dialect/mysqldialect v1.2.18 // indirect
-	github.com/uptrace/bun/dialect/pgdialect v1.2.18 // indirect
 	github.com/uptrace/bun/dialect/sqlitedialect v1.2.18 // indirect
 	github.com/uptrace/bun/extra/bundebug v1.2.18 // indirect
 	github.com/valyala/fastjson v1.6.10 // indirect
@@ -148,7 +150,7 @@ require (
 	github.com/gofiber/schema v1.8.3 // indirect
 	github.com/gofiber/utils/v2 v2.4.1 // indirect
 	github.com/golang-migrate/migrate/v4 v4.20.1
-	github.com/google/uuid v1.6.0 // indirect
+	github.com/google/uuid v1.6.0
 	github.com/klauspost/compress v1.19.2 // indirect
 	github.com/lib/pq v1.12.3
 	github.com/mattn/go-colorable v0.1.15 // indirect
