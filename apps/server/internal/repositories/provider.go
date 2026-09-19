@@ -51,7 +51,7 @@ func (r ProviderRepository) listExec(exc Executor, opts *QueryOptions) ([]*model
 		"updated_at": true,
 	}
 
-	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, `"created_at"`)
+	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, "created_at")
 	if err != nil {
 		return nil, PaginationMetadata{}, err
 	}

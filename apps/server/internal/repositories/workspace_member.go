@@ -130,7 +130,7 @@ func (r WorkspaceMemberRepository) listByWorkspaceExec(exc Executor, workspaceID
 		"updated_at": true,
 	}
 
-	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, `"created_at"`)
+	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, "created_at")
 	if err != nil {
 		return nil, PaginationMetadata{}, err
 	}

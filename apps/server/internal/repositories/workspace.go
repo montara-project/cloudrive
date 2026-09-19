@@ -174,7 +174,7 @@ func (r WorkspaceRepository) listByOrganizationExec(exc Executor, organizationID
 		"updated_at": true,
 	}
 
-	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, `"created_at"`)
+	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, "created_at")
 	if err != nil {
 		return nil, PaginationMetadata{}, err
 	}

@@ -30,8 +30,10 @@ type PaginationMetadata struct {
 }
 
 // buildOrderBy resolves the ORDER BY column and direction from user-supplied
-// options. OrderBy must appear in allowedColumns (quoted, table-qualified as
-// written in the query); Order is case-insensitively matched to ASC/DESC.
+// options. Both the default and the resolved OrderBy are bare column names
+// (matching allowedColumns keys); the caller owns identifier quoting and any
+// table qualification, so never pass a pre-quoted default. Order is
+// case-insensitively matched to ASC/DESC.
 func buildOrderBy(opts *QueryOptions, allowedColumns map[string]bool, defaultOrderBy string) (string, string, error) {
 	orderBy := defaultOrderBy
 	order := "DESC"

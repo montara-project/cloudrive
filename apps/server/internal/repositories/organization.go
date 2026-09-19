@@ -170,7 +170,7 @@ func (r OrganizationRepository) listExec(exc Executor, opts *QueryOptions) ([]*m
 		"updated_at": true,
 	}
 
-	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, `"created_at"`)
+	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, "created_at")
 	if err != nil {
 		return nil, PaginationMetadata{}, err
 	}
@@ -349,7 +349,7 @@ func (r OrganizationRepository) listByUserExec(exc Executor, userID uuid.UUID, o
 		"updated_at": true,
 	}
 
-	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, `"created_at"`)
+	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, "created_at")
 	if err != nil {
 		return nil, PaginationMetadata{}, err
 	}

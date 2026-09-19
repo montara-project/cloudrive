@@ -180,7 +180,7 @@ func (r OrganizationInvitationRepository) listByOrganizationExec(exc Executor, o
 		"expires_at": true,
 	}
 
-	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, `"created_at"`)
+	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, "created_at")
 	if err != nil {
 		return nil, PaginationMetadata{}, err
 	}
