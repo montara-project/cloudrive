@@ -2,7 +2,7 @@
 
 Cloudrive menyediakan endpoint API **S3-compatible**: client S3 apa pun
 (aws-cli, rclone, MinIO SDK, SDK AWS, Cyberduck, dst) dapat terhubung ke
-Cloudrive untuk meng-upload dan mengelola file. Object fisik di-*proxy* ke
+Cloudrive untuk meng-upload dan mengelola file. Object fisik di-_proxy_ ke
 **storage account** yang terhubung (mis. MinIO, AWS S3, Cloudflare R2, atau
 Google Drive) — Cloudrive menjadi gerbang tunggal dengan otorisasi,
 enkripsi kredensial, dan pemetaan bucket sendiri.
@@ -35,7 +35,7 @@ S3 Client ──SigV4──▶ S3 Gateway (listener terpisah, path-style, XML)
 1. **Hubungkan storage account** (sudah ada): `POST /v1/storage/accounts`
    dengan `provider_slug`:
    - `s3_compatible` → `credentials`: `{"endpoint", "access_key_id",
-     "secret_access_key", "bucket", "secure"}` (`secure: false` untuk MinIO
+"secret_access_key", "bucket", "secure"}` (`secure: false` untuk MinIO
      HTTP lokal; bucket bisa juga di `settings.bucket`).
    - `google_drive` → `credentials`: `{"refresh_token"}` (butuh
      `GOOGLE_CLIENT_ID/SECRET` server; folder akar via
@@ -63,14 +63,14 @@ rclone copy ./big.iso cloudrive:my-bucket/iso/
 
 ## Operasi yang didukung
 
-| Operasi                    | Status | Catatan                                        |
-| -------------------------- | ------ | ---------------------------------------------- |
-| ListBuckets                | ✅     | hanya bucket milik workspace kredensial        |
-| ListObjectsV2              | ✅     | prefix, delimiter, continuation-token, max-keys |
-| PutObject / GetObject / HeadObject / DeleteObject | ✅ | delete idempoten |
-| Multipart (initiate/upload part/complete/abort)   | ✅ | passthrough di backend S3; staging lokal di Drive |
-| Presigned GET/PUT          | ✅     | dibuat oleh client dari access key Cloudrive; verifikasi expiry di gateway |
-| CreateBucket/DeleteBucket via S3 API | ❌ | kelola lewat REST `/v1/workspaces/:wsId/s3/buckets` |
+| Operasi                                           | Status | Catatan                                                                    |
+| ------------------------------------------------- | ------ | -------------------------------------------------------------------------- |
+| ListBuckets                                       | ✅     | hanya bucket milik workspace kredensial                                    |
+| ListObjectsV2                                     | ✅     | prefix, delimiter, continuation-token, max-keys                            |
+| PutObject / GetObject / HeadObject / DeleteObject | ✅     | delete idempoten                                                           |
+| Multipart (initiate/upload part/complete/abort)   | ✅     | passthrough di backend S3; staging lokal di Drive                          |
+| Presigned GET/PUT                                 | ✅     | dibuat oleh client dari access key Cloudrive; verifikasi expiry di gateway |
+| CreateBucket/DeleteBucket via S3 API              | ❌     | kelola lewat REST `/v1/workspaces/:wsId/s3/buckets`                        |
 
 Body PUT yang memakai streaming signature (`STREAMING-AWS4-HMAC-SHA256-PAYLOAD`,
 dipakai aws-cli & minio-go) di-decode otomatis oleh gateway sebelum diteruskan
