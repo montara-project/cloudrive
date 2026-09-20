@@ -1,9 +1,8 @@
 package handlers
 
 import (
-	"encoding/json"
-
 	"cloudrive/server/internal/app"
+	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/models"
 
@@ -35,17 +34,6 @@ func (h *storageAccountHandler) authorize(c fiber.Ctx, accountID, userID uuid.UU
 	return account, nil
 }
 
-type createStorageAccountRequest struct {
-	WorkspaceID       uuid.UUID       `json:"workspace_id"`
-	ProviderID        uuid.UUID       `json:"provider_id"`
-	ProviderSlug      string          `json:"provider_slug"`
-	DisplayName       string          `json:"display_name"`
-	AccountEmail      string          `json:"account_email"`
-	ExternalAccountID string          `json:"external_account_id"`
-	Settings          json.RawMessage `json:"settings"`
-	Credentials       json.RawMessage `json:"credentials"`
-}
-
 // Connect stores a connected provider account. The credentials object (OAuth
 // tokens or access keys) is encrypted by the repository before it is written;
 // no decrypted value is ever persisted or returned by this API.
@@ -55,7 +43,7 @@ func (h *storageAccountHandler) Connect(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &createStorageAccountRequest{}
+	req := &dtos.CreateStorageAccountRequest{}
 	if err := c.Bind().Body(req); err != nil {
 		return badRequest(c, "Invalid request body")
 	}
@@ -171,12 +159,6 @@ func (h *storageAccountHandler) Get(c fiber.Ctx) error {
 	return c.JSON(account)
 }
 
-type updateStorageAccountRequest struct {
-	DisplayName string          `json:"display_name"`
-	Status      string          `json:"status"`
-	Settings    json.RawMessage `json:"settings"`
-}
-
 // Update changes the account's label, settings, or status. Requires owner or
 // admin of the organization.
 func (h *storageAccountHandler) Update(c fiber.Ctx) error {
@@ -195,7 +177,7 @@ func (h *storageAccountHandler) Update(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &updateStorageAccountRequest{}
+	req := &dtos.UpdateStorageAccountRequest{}
 	if err := c.Bind().Body(req); err != nil {
 		return badRequest(c, "Invalid request body")
 	}
@@ -220,10 +202,6 @@ func (h *storageAccountHandler) Update(c fiber.Ctx) error {
 	return c.JSON(account)
 }
 
-type updateCredentialsRequest struct {
-	Credentials json.RawMessage `json:"credentials"`
-}
-
 // Rotate replaces the stored credentials (e.g. after a token refresh). The
 // new value is encrypted by the repository.
 func (h *storageAccountHandler) Rotate(c fiber.Ctx) error {
@@ -241,7 +219,7 @@ func (h *storageAccountHandler) Rotate(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &updateCredentialsRequest{}
+	req := &dtos.UpdateCredentialsRequest{}
 	if err := c.Bind().Body(req); err != nil {
 		return badRequest(c, "Invalid request body")
 	}

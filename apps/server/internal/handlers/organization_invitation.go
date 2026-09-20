@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"cloudrive/server/internal/app"
+	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/models"
 
@@ -17,11 +18,6 @@ const invitationExpiresIn = 7 * 24 * time.Hour
 
 type organizationInvitationHandler struct {
 	app *app.Application
-}
-
-type createInvitationRequest struct {
-	Email string `json:"email"`
-	Role  string `json:"role"`
 }
 
 // Create invites an email address to join the organization. Requires owner or
@@ -41,7 +37,7 @@ func (h *organizationInvitationHandler) Create(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &createInvitationRequest{}
+	req := &dtos.CreateInvitationRequest{}
 	if err := c.Bind().Body(req); err != nil {
 		return badRequest(c, "Invalid request body")
 	}
@@ -114,10 +110,6 @@ func (h *organizationInvitationHandler) List(c fiber.Ctx) error {
 	return listResponse(c, q, metadata.Total, invitations)
 }
 
-type updateInvitationRequest struct {
-	Status string `json:"status"`
-}
-
 // UpdateStatus transitions an invitation (accepted/rejected by the invitee,
 // revoked by the organization). Requires owner or admin.
 func (h *organizationInvitationHandler) UpdateStatus(c fiber.Ctx) error {
@@ -140,7 +132,7 @@ func (h *organizationInvitationHandler) UpdateStatus(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &updateInvitationRequest{}
+	req := &dtos.UpdateInvitationRequest{}
 	if err := c.Bind().Body(req); err != nil {
 		return badRequest(c, "Invalid request body")
 	}

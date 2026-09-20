@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"cloudrive/server/internal/app"
+	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/models"
 
@@ -12,12 +13,6 @@ type organizationHandler struct {
 	app *app.Application
 }
 
-type createOrganizationRequest struct {
-	Name string `json:"name"`
-	Slug string `json:"slug"`
-	Logo string `json:"logo"`
-}
-
 // Create registers a new organization and makes the current user its owner in
 // one transaction (repositories.OrganizationRepository.CreateWithOwner).
 func (h *organizationHandler) Create(c fiber.Ctx) error {
@@ -26,7 +21,7 @@ func (h *organizationHandler) Create(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &createOrganizationRequest{}
+	req := &dtos.CreateOrganizationRequest{}
 	if err := c.Bind().Body(req); err != nil {
 		return badRequest(c, "Invalid request body")
 	}
@@ -94,11 +89,6 @@ func (h *organizationHandler) Get(c fiber.Ctx) error {
 	return c.JSON(organization)
 }
 
-type updateOrganizationRequest struct {
-	Name string `json:"name"`
-	Logo string `json:"logo"`
-}
-
 // Update changes the organization profile. Requires the owner or admin role.
 func (h *organizationHandler) Update(c fiber.Ctx) error {
 	userID, err := currentUser(c)
@@ -115,7 +105,7 @@ func (h *organizationHandler) Update(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &updateOrganizationRequest{}
+	req := &dtos.UpdateOrganizationRequest{}
 	if err := c.Bind().Body(req); err != nil {
 		return badRequest(c, "Invalid request body")
 	}

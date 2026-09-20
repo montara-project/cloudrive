@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"cloudrive/server/internal/app"
+	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/models"
 
@@ -10,12 +11,6 @@ import (
 
 type workspaceHandler struct {
 	app *app.Application
-}
-
-type createWorkspaceRequest struct {
-	Name        string `json:"name"`
-	Slug        string `json:"slug"`
-	Description string `json:"description"`
 }
 
 // Create adds a workspace to an organization. Requires owner or admin.
@@ -34,7 +29,7 @@ func (h *workspaceHandler) Create(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &createWorkspaceRequest{}
+	req := &dtos.CreateWorkspaceRequest{}
 	if err := c.Bind().Body(req); err != nil {
 		return badRequest(c, "Invalid request body")
 	}
@@ -112,11 +107,6 @@ func (h *workspaceHandler) Get(c fiber.Ctx) error {
 	return c.JSON(workspace)
 }
 
-type updateWorkspaceRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-}
-
 // Update changes the workspace profile. Requires owner or admin of the
 // organization; the slug is not updatable (it is the external identifier).
 func (h *workspaceHandler) Update(c fiber.Ctx) error {
@@ -139,7 +129,7 @@ func (h *workspaceHandler) Update(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &updateWorkspaceRequest{}
+	req := &dtos.UpdateWorkspaceRequest{}
 	if err := c.Bind().Body(req); err != nil {
 		return badRequest(c, "Invalid request body")
 	}

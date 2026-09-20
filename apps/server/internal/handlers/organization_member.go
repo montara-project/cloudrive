@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"cloudrive/server/internal/app"
+	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/models"
 
@@ -42,11 +43,6 @@ func (h *organizationMemberHandler) List(c fiber.Ctx) error {
 	return listResponse(c, q, metadata.Total, members)
 }
 
-type addOrganizationMemberRequest struct {
-	UserID uuid.UUID `json:"user_id"`
-	Role   string    `json:"role"`
-}
-
 // Add attaches an existing user to the organization. Requires owner or admin.
 func (h *organizationMemberHandler) Add(c fiber.Ctx) error {
 	userID, err := currentUser(c)
@@ -63,7 +59,7 @@ func (h *organizationMemberHandler) Add(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &addOrganizationMemberRequest{}
+	req := &dtos.AddMemberRequest{}
 	if err := c.Bind().Body(req); err != nil {
 		return badRequest(c, "Invalid request body")
 	}
@@ -93,10 +89,6 @@ func (h *organizationMemberHandler) Add(c fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(member)
 }
 
-type updateOrganizationMemberRequest struct {
-	Role string `json:"role"`
-}
-
 // UpdateRole changes a member's role. The database's single-owner guarantee
 // rejects a second owner with 409.
 func (h *organizationMemberHandler) UpdateRole(c fiber.Ctx) error {
@@ -119,7 +111,7 @@ func (h *organizationMemberHandler) UpdateRole(c fiber.Ctx) error {
 		return badRequest(c, "Invalid user id")
 	}
 
-	req := &updateOrganizationMemberRequest{}
+	req := &dtos.UpdateMemberRoleRequest{}
 	if err := c.Bind().Body(req); err != nil {
 		return badRequest(c, "Invalid request body")
 	}

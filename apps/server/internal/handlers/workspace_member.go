@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"cloudrive/server/internal/app"
+	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/models"
 
@@ -71,11 +72,6 @@ func (h *workspaceMemberHandler) List(c fiber.Ctx) error {
 	return listResponse(c, q, metadata.Total, members)
 }
 
-type addWorkspaceMemberRequest struct {
-	UserID uuid.UUID `json:"user_id"`
-	Role   string    `json:"role"`
-}
-
 // Add attaches an organization member to the workspace. The composite foreign
 // keys reject users outside the organization with 422.
 func (h *workspaceMemberHandler) Add(c fiber.Ctx) error {
@@ -94,7 +90,7 @@ func (h *workspaceMemberHandler) Add(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &addWorkspaceMemberRequest{}
+	req := &dtos.AddMemberRequest{}
 	if err := c.Bind().Body(req); err != nil {
 		return badRequest(c, "Invalid request body")
 	}
@@ -121,10 +117,6 @@ func (h *workspaceMemberHandler) Add(c fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(member)
 }
 
-type updateWorkspaceMemberRequest struct {
-	Role string `json:"role"`
-}
-
 // UpdateRole changes a workspace member's role.
 func (h *workspaceMemberHandler) UpdateRole(c fiber.Ctx) error {
 	userID, err := currentUser(c)
@@ -146,7 +138,7 @@ func (h *workspaceMemberHandler) UpdateRole(c fiber.Ctx) error {
 		return badRequest(c, "Invalid user id")
 	}
 
-	req := &updateWorkspaceMemberRequest{}
+	req := &dtos.UpdateMemberRoleRequest{}
 	if err := c.Bind().Body(req); err != nil {
 		return badRequest(c, "Invalid request body")
 	}

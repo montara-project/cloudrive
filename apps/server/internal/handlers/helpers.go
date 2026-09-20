@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"cloudrive/server/internal/app"
+	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/models"
 	"cloudrive/server/internal/repositories"
@@ -14,17 +15,8 @@ import (
 	"github.com/lib/pq"
 )
 
-// listQuery is the shared pagination/ordering binding for list endpoints.
-// Page starts at 1; limit is clamped to 100.
-type listQuery struct {
-	Page    int    `query:"page"`
-	Limit   int    `query:"limit"`
-	OrderBy string `query:"order_by"`
-	Order   string `query:"order"`
-}
-
-func pagination(c fiber.Ctx) (*repositories.QueryOptions, *listQuery, error) {
-	q := &listQuery{}
+func pagination(c fiber.Ctx) (*repositories.QueryOptions, *dtos.ListQuery, error) {
+	q := &dtos.ListQuery{}
 	if err := c.Bind().Query(q); err != nil {
 		return nil, nil, err
 	}
@@ -48,7 +40,7 @@ func pagination(c fiber.Ctx) (*repositories.QueryOptions, *listQuery, error) {
 }
 
 // listResponse wraps a page of results with pagination metadata.
-func listResponse(c fiber.Ctx, q *listQuery, total int64, data any) error {
+func listResponse(c fiber.Ctx, q *dtos.ListQuery, total int64, data any) error {
 	return c.JSON(fiber.Map{
 		"data": data,
 		"metadata": fiber.Map{

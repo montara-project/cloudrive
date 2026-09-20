@@ -5,9 +5,9 @@ import (
 	"encoding/base64"
 	"regexp"
 	"strings"
-	"time"
 
 	"cloudrive/server/internal/app"
+	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/models"
 
@@ -40,21 +40,6 @@ func (h *s3GatewayHandler) authorizeWorkspace(c fiber.Ctx, wsID, userID uuid.UUI
 
 // --- S3 credentials (SigV4 access keys) ---
 
-type createS3CredentialRequest struct {
-	Label string `json:"label"`
-}
-
-type s3CredentialResponse struct {
-	ID          uuid.UUID  `json:"id"`
-	WorkspaceID uuid.UUID  `json:"workspace_id"`
-	AccessKeyID string     `json:"access_key_id"`
-	SecretKey   string     `json:"secret_key,omitempty"` // only on creation
-	Label       *string    `json:"label,omitempty"`
-	Status      string     `json:"status"`
-	LastUsedAt  *time.Time `json:"last_used_at,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-}
-
 // CreateCredential issues a SigV4 access key for the workspace. The secret is
 // generated server-side, shown exactly once in this response, and stored
 // encrypted (AES-256-GCM) — it can never be retrieved again.
@@ -74,7 +59,7 @@ func (h *s3GatewayHandler) CreateCredential(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &createS3CredentialRequest{}
+	req := &dtos.CreateS3CredentialRequest{}
 	_ = c.Bind().Body(req) // body is optional (label only)
 
 	accessKeyID := "CR" + strings.ToUpper(randomToken(12))
@@ -95,7 +80,7 @@ func (h *s3GatewayHandler) CreateCredential(c fiber.Ctx) error {
 		return respondError(c, err)
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(s3CredentialResponse{
+	return c.Status(fiber.StatusCreated).JSON(dtos.S3CredentialResponse{
 		ID:          credential.ID,
 		WorkspaceID: credential.WorkspaceID,
 		AccessKeyID: credential.AccessKeyID,
@@ -178,12 +163,6 @@ func (h *s3GatewayHandler) RevokeCredential(c fiber.Ctx) error {
 
 // --- S3 buckets (mapping to storage accounts) ---
 
-type createS3BucketRequest struct {
-	Name             string `json:"name"`
-	StorageAccountID string `json:"storage_account_id"`
-	RootPrefix       string `json:"root_prefix"`
-}
-
 // CreateBucket maps a new S3 bucket name onto a connected storage account.
 func (h *s3GatewayHandler) CreateBucket(c fiber.Ctx) error {
 	userID, err := currentUser(c)
@@ -201,7 +180,7 @@ func (h *s3GatewayHandler) CreateBucket(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &createS3BucketRequest{}
+	req := &dtos.CreateS3BucketRequest{}
 	if err := c.Bind().Body(req); err != nil {
 		return badRequest(c, "Invalid request body")
 	}
