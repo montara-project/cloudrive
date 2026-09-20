@@ -96,10 +96,10 @@ canonical request + presigned query, payload `UNSIGNED-PAYLOAD`, dan
 ## Pengujian
 
 - Unit: vektor SigV4 AWS, decoder aws-chunked, validasi nama bucket.
-- Integrasi (`internal/s3api/gateway_test.go`): MinIO via testcontainers —
+- Integrasi (`internal/services/s3/gateway_test.go`): MinIO via testcontainers —
   end-to-end SigV4 → gateway → connector → MinIO, termasuk multipart 2 part
   dan penolakan signature/workspace asing. Jalankan dengan Docker tersedia:
 
 ```bash
-DOCKER_HOST=unix://$HOME/.orbstack/run/docker.sock go test ./internal/s3api/
+DOCKER_HOST=unix://$HOME/.orbstack/run/docker.sock go test ./internal/services/s3/
 ```

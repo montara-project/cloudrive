@@ -3,7 +3,7 @@ package main
 import (
 	"cloudrive/server/internal/app"
 	"cloudrive/server/internal/connectors"
-	"cloudrive/server/internal/s3api"
+	"cloudrive/server/internal/services/s3"
 	"errors"
 	"fmt"
 	"os"
@@ -133,8 +133,8 @@ func serve(app *app.Application) error {
 
 		gateway.Use(recover.New())
 
-		s3api.Register(gateway, &s3api.Service{
-			Repos: s3api.RepoAdapter{
+		s3.Register(gateway, &s3.Service{
+			Repos: s3.RepoAdapter{
 				DB:             app.Repositories.StorageAccount.DB,
 				S3Credentials:  app.Repositories.S3Credential,
 				S3Buckets:      app.Repositories.S3Bucket,
