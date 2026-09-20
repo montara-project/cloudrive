@@ -43,6 +43,14 @@ func (s ProviderSeeder) Seed() {
 			AuthType:     "oauth2",
 			Capabilities: []byte(`{"versioning": true, "trash": true}`),
 		},
+		{
+			ID:           uuid.Must(uuid.NewV7()),
+			Slug:         "s3_compatible",
+			Name:         "S3 Compatible",
+			Protocol:     "s3_compatible",
+			AuthType:     "access_key",
+			Capabilities: []byte(`{"versioning": false, "trash": false, "multipart": true}`),
+		},
 	}
 
 	providerRepo := repositories.ProviderRepository{

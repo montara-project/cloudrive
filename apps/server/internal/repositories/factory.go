@@ -16,6 +16,8 @@ type Repositories struct {
 	WorkspaceMember        WorkspaceMemberRepository
 	OrganizationInvitation OrganizationInvitationRepository
 	StorageAccount         StorageAccountRepository
+	S3Credential           S3CredentialRepository
+	S3Bucket               S3BucketRepository
 }
 
 func New(db *sql.DB, cfg *config.ConfigApp, box *secretbox.SecretBox) Repositories {
@@ -56,5 +58,13 @@ func New(db *sql.DB, cfg *config.ConfigApp, box *secretbox.SecretBox) Repositori
 			TableName:  "storage_accounts",
 			SoftDelete: true,
 		}, Box: box},
+		S3Credential: S3CredentialRepository{BaseRepository: BaseRepository{
+			DB:        db,
+			TableName: "s3_credentials",
+		}, Box: box},
+		S3Bucket: S3BucketRepository{BaseRepository: BaseRepository{
+			DB:        db,
+			TableName: "s3_buckets",
+		}},
 	}
 }

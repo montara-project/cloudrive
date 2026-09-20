@@ -2,6 +2,8 @@ package main
 
 import (
 	"cloudrive/server/internal/app"
+	"cloudrive/server/internal/connectors"
+	"cloudrive/server/internal/s3api"
 	"errors"
 	"fmt"
 	"os"
@@ -108,6 +110,56 @@ func serve(app *app.Application) error {
 
 	// Initial Routes
 	routes(server, app)
+
+	// S3-compatible gateway: a separate Fiber app with its own listener —
+	// different dialect (XML, path-style, SigV4) from the JSON REST API, so
+	// middlewares like CORS/limiter/compress must not apply. Disabled when
+	// S3_API_ADDR is empty.
+	if app.Config.S3.APIAddr != "" {
+		gateway := fiber.New(fiber.Config{
+			BodyLimit: 5 * 1024 * 1024 * 1024, // 5GB: object PUT streams through
+			// Body must be a stream, not a buffered copy: object PUTs are
+			// proxied to the backing store as they arrive.
+			StreamRequestBody: true,
+			// Large uploads legitimately take a long time; only idle
+			// connections are bounded.
+			ReadTimeout:  10 * time.Minute,
+			WriteTimeout: 10 * time.Minute,
+			IdleTimeout:  time.Minute,
+			ErrorHandler: func(c fiber.Ctx, err error) error {
+				return c.Status(fiber.StatusInternalServerError).SendString("InternalError")
+			},
+		})
+
+		gateway.Use(recover.New())
+
+		s3api.Register(gateway, &s3api.Service{
+			Repos: s3api.RepoAdapter{
+				DB:             app.Repositories.StorageAccount.DB,
+				S3Credentials:  app.Repositories.S3Credential,
+				S3Buckets:      app.Repositories.S3Bucket,
+				StorageAccount: app.Repositories.StorageAccount,
+			},
+			Registry: connectors.Registry{
+				GoogleClientID:     app.Config.Google.ClientID,
+				GoogleClientSecret: app.Config.Google.ClientSecret,
+				StagingDir:         app.Config.S3.StagingDir,
+			},
+		})
+
+		go func() {
+			app.Logger.Info("s3 gateway started", "addr", app.Config.S3.APIAddr)
+			if err := gateway.Listen(app.Config.S3.APIAddr); err != nil {
+				app.Logger.Error("failed to start s3 gateway", "error", err)
+			}
+		}()
+
+		defer func() {
+			if err := gateway.Shutdown(); err != nil {
+				app.Logger.Error("failed to stop s3 gateway", "error", err)
+			}
+		}()
+	}
 
 	// Create channel to listen for interrupt signals
 	c := make(chan os.Signal, 1)
