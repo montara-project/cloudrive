@@ -2,6 +2,7 @@ package s3api
 
 import (
 	"bytes"
+	"encoding/hex"
 	"io"
 	"strings"
 	"testing"
@@ -32,6 +33,11 @@ func startMinIO(t *testing.T) (string, *minio.Client) {
 		Started: true,
 	})
 	if err != nil {
+		// Docker unavailable (CI without containers, wrong DOCKER_HOST):
+		// skip rather than fail — the unit tests still cover the gateway.
+		if strings.Contains(err.Error(), "Docker provider") || strings.Contains(err.Error(), "docker") {
+			t.Skipf("docker unavailable: %v", err)
+		}
 		t.Fatalf("start minio: %v", err)
 	}
 	t.Cleanup(func() {
@@ -60,7 +66,7 @@ func startMinIO(t *testing.T) (string, *minio.Client) {
 func TestGatewayEndToEnd(t *testing.T) {
 	endpoint, mc := startMinIO(t)
 
-	backing := "backing-" + strings.ToLower(randToken(4))
+	backing := "backing-" + strings.ToLower(hex.EncodeToString(randBytes(4)))
 	ctx := t.Context()
 	if err := mc.MakeBucket(ctx, backing, minio.MakeBucketOptions{}); err != nil {
 		t.Fatalf("make backing bucket: %v", err)
@@ -99,6 +105,12 @@ func TestGatewayEndToEnd(t *testing.T) {
 		t.Fatalf("StatObject: %v", err)
 	}
 	if info.Size != int64(len(payload)) {
+		probe, _ := client.GetObject(ctx, "gateway-bucket", "docs/hello.txt", minio.GetObjectOptions{})
+		if probe != nil {
+			head, _ := io.ReadAll(io.LimitReader(probe, 120))
+			probe.Close()
+			t.Fatalf("size mismatch: got %d want %d; head=%q", info.Size, len(payload), head)
+		}
 		t.Fatalf("size mismatch: got %d want %d", info.Size, len(payload))
 	}
 

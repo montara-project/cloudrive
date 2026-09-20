@@ -111,13 +111,16 @@ func randBytes(n int) []byte {
 func startGateway(t *testing.T, repos *fakeRepos) string {
 	t.Helper()
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		BodyLimit:         5 * 1024 * 1024 * 1024, // mirror the production gateway
+		StreamRequestBody: true,
+	})
 	Register(app, &Service{
 		Repos: repos,
 		Registry: connectors.Registry{
 			StagingDir: t.TempDir(),
 		},
-		Logger: slog.New(slog.NewTextHandler(os.Stderr, nil)),
+		Logger: slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug})),
 	})
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")

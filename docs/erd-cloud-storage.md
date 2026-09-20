@@ -276,3 +276,16 @@ erDiagram
 1. **Trash terpadu**: tampilkan trash per akun, atau trash global workspace (`trashed_at` sudah menyiapkan global)?
 2. **Dedup lintas akun** via `content_hash` (hemat kuota cache) — v1 atau belakangan?
 3. **Pencarian**: full-text Postgres (`tsvector`) untuk v1, atau langsung engine terpisah (Meilisearch/Typesense)?
+
+## 8. Implementasi terkait: S3-compatible gateway (migrasi 000005)
+
+Cloudrive juga mengekspos dirinya sebagai **S3-compatible server** (bukan hanya
+klien provider). Tabel pendukung sudah dimigrasi pada `000005_create_s3_gateway_schema`:
+
+- `s3_credentials` — access key SigV4 yang diterbitkan Cloudrive per workspace
+  (secret terenkripsi via SecretBox, sama seperti `storage_account_secrets`).
+- `s3_buckets` — pemetaan nama bucket (namespace global) → `storage_accounts` +
+  `root_prefix`. Bucket bukan data baru: hanya jalur ke akun yang sudah terhubung.
+
+Desain lengkap (alur, operasi yang didukung, contoh aws-cli/rclone) ada di
+`docs/s3-gateway.md`.

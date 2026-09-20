@@ -290,8 +290,14 @@ func (h *handler) objectOps(c fiber.Ctx, credential *models.S3Credential, bucket
 		return h.sendError(c, errNotImplemented)
 	}
 
+	// hasQuery reports whether the parameter is present, even with an empty
+	// value ("?uploads" has no "=").
+	hasQuery := func(name string) bool {
+		return c.Request().URI().QueryArgs().Has(name)
+	}
+
 	// Multipart query parameters take precedence.
-	if c.Query("uploadId") != "" || c.Query("uploads") != "" {
+	if hasQuery("uploadId") || hasQuery("uploads") {
 		return h.multipartOps(c, credential, bucketName, key)
 	}
 
@@ -313,14 +319,35 @@ func (h *handler) getObject(c fiber.Ctx, credential *models.S3Credential, bucket
 		return h.sendError(c, err)
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Minute)
-	defer cancel()
+	// The response body streams after this handler returns, so the context
+	// must not be cancelled when the handler finishes.
+	ctx := context.WithoutCancel(c.Context())
+
+	if string(c.Method()) == http.MethodHead {
+		obj, err := conn.StatObject(ctx, key)
+		if err != nil {
+			return h.sendError(c, errNoSuchKey)
+		}
+
+		c.Set("ETag", `"`+obj.ETag+`"`)
+		c.Set("Last-Modified", obj.LastModified.UTC().Format(http.TimeFormat))
+		if obj.ContentType != "" {
+			c.Set("Content-Type", obj.ContentType)
+		}
+		// fasthttp computes Content-Length from the (empty) body; set it
+		// explicitly on the response header instead. SendStatus is avoided:
+		// it fills the body with the status text ("OK", 2 bytes), which
+		// would override the advertised length.
+		c.Response().Header.SetContentLength(int(obj.Size))
+		c.Response().ResetBody()
+		c.Response().SetStatusCode(fiber.StatusOK)
+		return nil
+	}
 
 	reader, obj, err := conn.GetObject(ctx, key)
 	if err != nil {
 		return h.sendError(c, errNoSuchKey)
 	}
-	defer reader.Close()
 
 	c.Set("ETag", `"`+obj.ETag+`"`)
 	c.Set("Last-Modified", obj.LastModified.UTC().Format(http.TimeFormat))
@@ -328,11 +355,7 @@ func (h *handler) getObject(c fiber.Ctx, credential *models.S3Credential, bucket
 		c.Set("Content-Type", obj.ContentType)
 	}
 
-	if string(c.Method()) == http.MethodHead {
-		c.Set("Content-Length", strconv.FormatInt(obj.Size, 10))
-		return c.SendStatus(200)
-	}
-
+	// fasthttp closes the stream after writing the response.
 	return c.SendStream(reader, int(obj.Size))
 }
 
@@ -360,6 +383,9 @@ func (h *handler) putObject(c fiber.Ctx, credential *models.S3Credential, bucket
 		if size < 0 {
 			size = 0
 		}
+		if h.service.Logger != nil {
+			h.service.Logger.Debug("s3 put object", "key", key, "content_length", c.Request().Header.ContentLength(), "decoded", c.Get("X-Amz-Decoded-Content-Length"), "size", size)
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), 30*time.Minute)
@@ -368,6 +394,9 @@ func (h *handler) putObject(c fiber.Ctx, credential *models.S3Credential, bucket
 	obj, err := conn.PutObject(ctx, key, body, size, contentType)
 	if err != nil {
 		return h.sendError(c, errtrace.Wrap(err))
+	}
+	if h.service.Logger != nil {
+		h.service.Logger.Debug("s3 put object done", "key", key, "stored_size", obj.Size, "etag", obj.ETag)
 	}
 
 	c.Set("ETag", `"`+obj.ETag+`"`)
@@ -409,11 +438,13 @@ func (h *handler) multipartOps(c fiber.Ctx, credential *models.S3Credential, buc
 		return h.sendError(c, err)
 	}
 
-	ctx, cancel := context.WithTimeout(c.Context(), 60*time.Minute)
-	defer cancel()
+	ctx := context.WithoutCancel(c.Context())
+	hasQuery := func(name string) bool {
+		return c.Request().URI().QueryArgs().Has(name)
+	}
 
 	// POST /{bucket}/{key}?uploads — initiate.
-	if c.Query("uploads") != "" && string(c.Method()) == http.MethodPost {
+	if hasQuery("uploads") && string(c.Method()) == http.MethodPost {
 		info, err := conn.CreateMultipartUpload(ctx, key, c.Get("Content-Type"))
 		if err != nil {
 			return h.sendError(c, errtrace.Wrap(err))
@@ -426,7 +457,7 @@ func (h *handler) multipartOps(c fiber.Ctx, credential *models.S3Credential, buc
 	uploadID := c.Query("uploadId")
 
 	// PUT /{bucket}/{key}?partNumber=N&uploadId=… — upload part.
-	if string(c.Method()) == http.MethodPut && c.Query("partNumber") != "" {
+	if string(c.Method()) == http.MethodPut && hasQuery("partNumber") {
 		partNumber, convErr := strconv.Atoi(c.Query("partNumber"))
 		if convErr != nil || partNumber < 1 || partNumber > 10000 {
 			return h.sendError(c, errInvalidArgument)
@@ -454,7 +485,7 @@ func (h *handler) multipartOps(c fiber.Ctx, credential *models.S3Credential, buc
 	}
 
 	// POST /{bucket}/{key}?uploadId=… — complete.
-	if string(c.Method()) == http.MethodPost && uploadID != "" {
+	if string(c.Method()) == http.MethodPost && hasQuery("uploadId") {
 		var payload completeMultipartUpload
 		if err := xml.Unmarshal(c.Body(), &payload); err != nil || len(payload.Parts) == 0 {
 			return h.sendError(c, errMalformedXML)
@@ -479,7 +510,7 @@ func (h *handler) multipartOps(c fiber.Ctx, credential *models.S3Credential, buc
 	}
 
 	// DELETE /{bucket}/{key}?uploadId=… — abort.
-	if string(c.Method()) == http.MethodDelete && uploadID != "" {
+	if string(c.Method()) == http.MethodDelete && hasQuery("uploadId") {
 		if err := conn.AbortMultipartUpload(ctx, key, uploadID); err != nil {
 			return h.sendError(c, errtrace.Wrap(err))
 		}
