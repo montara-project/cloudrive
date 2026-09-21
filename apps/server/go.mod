@@ -6,6 +6,7 @@ require (
 	github.com/gofiber/fiber/v3 v3.5.0
 	github.com/minio/minio-go/v7 v7.3.0
 	github.com/resend/resend-go/v4 v4.3.0
+	github.com/testcontainers/testcontainers-go v0.44.0
 	github.com/uptrace/bun v1.2.18
 	github.com/uptrace/bun/dialect/pgdialect v1.2.18
 	golang.org/x/oauth2 v0.37.0
@@ -117,7 +118,6 @@ require (
 	github.com/stretchr/testify v1.12.1 // indirect
 	github.com/swaggest/jsonschema-go v0.3.79 // indirect
 	github.com/swaggest/refl v1.4.0 // indirect
-	github.com/testcontainers/testcontainers-go v0.44.0 // indirect
 	github.com/testcontainers/testcontainers-go/modules/mysql v0.44.0 // indirect
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.44.0 // indirect
 	github.com/tklauser/go-sysconf v0.4.0 // indirect
