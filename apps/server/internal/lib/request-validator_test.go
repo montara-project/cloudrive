@@ -173,14 +173,3 @@ func TestValidateRequestQuery_EmptyParamTreatedAsAbsent(t *testing.T) {
 		t.Fatalf("empty order should pass like an absent param, got %v", err)
 	}
 }
-
-func TestValidateStruct_UsesStructShape(t *testing.T) {
-	err := ValidateStruct(&dtos.UpdateInvitationRequest{Status: "bogus"})
-	if ve := validationErr(t, err); len(ve.MessageRecord["status"]) == 0 {
-		t.Fatalf("expected status error, got %v", ve.MessageRecord)
-	}
-
-	if err := ValidateStruct(&dtos.UpdateInvitationRequest{Status: "accepted"}); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}

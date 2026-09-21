@@ -21,19 +21,6 @@ type Validatable interface {
 	Validate(v *validator.MapValidator)
 }
 
-// ValidateStruct validates obj's marshaled JSON shape. Because unset fields
-// marshal as zero values ("" / 0 / null), optional enum and format rules see
-// them as present-but-empty — prefer ValidateRequestBody/ValidateRequestQuery
-// for request input, where absent keys stay absent.
-func ValidateStruct(obj Validatable) error {
-	data := make(map[string]interface{})
-	if jsonData, err := json.Marshal(obj); err == nil {
-		_ = json.Unmarshal(jsonData, &data)
-	}
-
-	return validateDict(obj, data)
-}
-
 // ValidateRequestQuery validates the raw query map before binding it into
 // obj, so optional parameters that are absent stay absent.
 func ValidateRequestQuery(c fiber.Ctx, obj Validatable) error {

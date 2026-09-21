@@ -68,35 +68,32 @@ func currentUser(c fiber.Ctx) (uuid.UUID, error) {
 	return uid, nil
 }
 
-// respond writes a {"message": ...} body with the given status and reports
+// respond writes the JSON body with the given status and reports
 // ErrResponded so helpers can propagate "already handled" through their
 // error return.
-func respond(c fiber.Ctx, status int, message string) error {
-	if err := c.Status(status).JSON(fiber.Map{"message": message}); err != nil {
+func respond(c fiber.Ctx, status int, body interface{}) error {
+	if err := c.Status(status).JSON(body); err != nil {
 		return err
 	}
 	return ErrResponded
 }
 
 func unauthorized(c fiber.Ctx) error {
-	return respond(c, fiber.StatusUnauthorized, "Unauthorized, invalid session")
+	return respond(c, fiber.StatusUnauthorized, fiber.Map{"message": "Unauthorized, invalid session"})
 }
 
 func badRequest(c fiber.Ctx, message string) error {
-	return respond(c, fiber.StatusBadRequest, message)
+	return respond(c, fiber.StatusBadRequest, fiber.Map{"message": message})
 }
 
 func forbidden(c fiber.Ctx, message string) error {
-	return respond(c, fiber.StatusForbidden, message)
+	return respond(c, fiber.StatusForbidden, fiber.Map{"message": message})
 }
 
 // unprocessable renders a 422 with the per-field messages collected by a
 // MapValidator.
 func unprocessable(c fiber.Ctx, mr validator.MessageRecord) error {
-	if err := c.Status(fiber.StatusUnprocessableEntity).JSON(lib.WrapValidationError(mr)); err != nil {
-		return err
-	}
-	return ErrResponded
+	return respond(c, fiber.StatusUnprocessableEntity, lib.WrapValidationError(mr))
 }
 
 // requestError maps a failed request bind/validation onto the HTTP response:
