@@ -51,3 +51,13 @@ type UpdateCredentialsRequest struct {
 func (dto UpdateCredentialsRequest) Validate(v *validator.MapValidator) {
 	v.Field("credentials").Required()
 }
+
+// ListStorageAccountsQuery binds the query params of the account list
+// endpoint.
+type ListStorageAccountsQuery struct {
+	WorkspaceID string `query:"workspace_id"`
+}
+
+func (dto ListStorageAccountsQuery) Validate(v *validator.MapValidator) {
+	v.Field("workspace_id").Required().UUID()
+}

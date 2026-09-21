@@ -39,7 +39,7 @@ type CreateS3BucketRequest struct {
 }
 
 func (dto CreateS3BucketRequest) Validate(v *validator.MapValidator) {
-	v.Field("name").Required().Regex(bucketNamePattern.String())
+	v.Field("name").Required().Match(bucketNamePattern)
 	v.Field("storage_account_id").Required().UUID()
 	v.Field("root_prefix").String()
 }

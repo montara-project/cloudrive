@@ -19,7 +19,7 @@ func (h *providerHandler) List(c fiber.Ctx) error {
 
 	opts, q, err := pagination(c)
 	if err != nil {
-		return badRequest(c, "Invalid pagination parameters")
+		return err
 	}
 
 	providers, metadata, err := h.app.Repositories.Provider.List(opts)

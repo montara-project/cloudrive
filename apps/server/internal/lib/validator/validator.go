@@ -11,7 +11,7 @@ func NewMapValidator() *MapValidator {
 	return v
 }
 
-func NewMapValidatorWithPath(path path) *MapValidator {
+func newMapValidatorWithPath(path path) *MapValidator {
 	v := &MapValidator{}
 	v.path = path
 	v.fvs = make(map[string]*FieldValidator)

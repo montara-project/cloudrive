@@ -102,11 +102,11 @@ func (h *storageAccountHandler) List(c fiber.Ctx) error {
 		return err
 	}
 
-	workspaceParam := c.Queries()["workspace_id"]
-	if workspaceParam == "" {
-		return badRequest(c, "workspace_id query parameter is required")
+	lq := &dtos.ListStorageAccountsQuery{}
+	if err := lib.ValidateRequestQuery(c, lq); err != nil {
+		return requestError(c, err, "Invalid query parameters")
 	}
-	wsID, err := uuid.Parse(workspaceParam)
+	wsID, err := uuid.Parse(lq.WorkspaceID)
 	if err != nil {
 		return badRequest(c, "Invalid workspace_id")
 	}

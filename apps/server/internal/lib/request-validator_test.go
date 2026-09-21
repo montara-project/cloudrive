@@ -146,6 +146,34 @@ func TestValidateRequestQuery_ValidParamsPass(t *testing.T) {
 	}
 }
 
+func TestValidateRequestBody_EmptyStringTreatedAsAbsent(t *testing.T) {
+	// An explicit "" on an optional enum/format field behaves like an absent
+	// key: it passes validation and the handler default applies.
+	req := &dtos.CreateInvitationRequest{}
+	if err := runBody(t, `{"email":"a@b.co","role":""}`, req); err != nil {
+		t.Fatalf("empty optional role should pass, got %v", err)
+	}
+}
+
+func TestValidateRequestBody_EmptyStringStatusPasses(t *testing.T) {
+	req := &dtos.UpdateStorageAccountRequest{}
+	if err := runBody(t, `{"status":""}`, req); err != nil {
+		t.Fatalf("empty status should pass as no-change, got %v", err)
+	}
+}
+
+func TestValidateRequestBody_EmptyStringStillFailsRequired(t *testing.T) {
+	err := runBody(t, `{"email":""}`, &dtos.CreateInvitationRequest{})
+	validationErr(t, err)
+}
+
+func TestValidateRequestQuery_EmptyParamTreatedAsAbsent(t *testing.T) {
+	q := &dtos.ListQuery{}
+	if err := runQuery(t, "/t?order=", q); err != nil {
+		t.Fatalf("empty order should pass like an absent param, got %v", err)
+	}
+}
+
 func TestValidateStruct_UsesStructShape(t *testing.T) {
 	err := ValidateStruct(&dtos.UpdateInvitationRequest{Status: "bogus"})
 	if ve := validationErr(t, err); len(ve.MessageRecord["status"]) == 0 {

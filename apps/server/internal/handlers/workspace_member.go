@@ -5,6 +5,7 @@ import (
 	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/models"
+	"slices"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -100,7 +101,7 @@ func (h *workspaceMemberHandler) Add(c fiber.Ctx) error {
 	if req.Role == "" {
 		req.Role = "member"
 	}
-	if !contains([]string{"admin", "member", "viewer"}, req.Role) {
+	if !slices.Contains([]string{"admin", "member", "viewer"}, req.Role) {
 		return badRequest(c, "Role must be admin, member, or viewer")
 	}
 
@@ -142,7 +143,7 @@ func (h *workspaceMemberHandler) UpdateRole(c fiber.Ctx) error {
 	if err := bindBody(c, req); err != nil {
 		return err
 	}
-	if !contains([]string{"admin", "member", "viewer"}, req.Role) {
+	if !slices.Contains([]string{"admin", "member", "viewer"}, req.Role) {
 		return badRequest(c, "Role must be admin, member, or viewer")
 	}
 

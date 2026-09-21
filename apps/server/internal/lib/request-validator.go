@@ -21,6 +21,10 @@ type Validatable interface {
 	Validate(v *validator.MapValidator)
 }
 
+// ValidateStruct validates obj's marshaled JSON shape. Because unset fields
+// marshal as zero values ("" / 0 / null), optional enum and format rules see
+// them as present-but-empty — prefer ValidateRequestBody/ValidateRequestQuery
+// for request input, where absent keys stay absent.
 func ValidateStruct(obj Validatable) error {
 	data := make(map[string]interface{})
 	if jsonData, err := json.Marshal(obj); err == nil {
@@ -30,17 +34,20 @@ func ValidateStruct(obj Validatable) error {
 	return validateDict(obj, data)
 }
 
+// ValidateRequestQuery validates the raw query map before binding it into
+// obj, so optional parameters that are absent stay absent.
 func ValidateRequestQuery(c fiber.Ctx, obj Validatable) error {
-	if err := c.Bind().Query(obj); err != nil {
-		return err
-	}
-
 	data := make(map[string]interface{}, len(c.Queries()))
 	for key, val := range c.Queries() {
 		data[key] = val
 	}
+	dropEmpty(data)
 
-	return validateDict(obj, data)
+	if err := validateDict(obj, data); err != nil {
+		return err
+	}
+
+	return c.Bind().Query(obj)
 }
 
 // ValidateRequestBody validates the raw JSON object before binding it into
@@ -56,6 +63,7 @@ func ValidateRequestBody(c fiber.Ctx, obj Validatable) error {
 			return err
 		}
 	}
+	dropEmpty(data)
 
 	if err := validateDict(obj, data); err != nil {
 		return err
@@ -65,6 +73,17 @@ func ValidateRequestBody(c fiber.Ctx, obj Validatable) error {
 		return nil
 	}
 	return c.Bind().Body(obj)
+}
+
+// dropEmpty removes empty-string values so an explicit "" is validated like
+// an absent key: optional format/enum rules skip it and Required still
+// rejects it. The struct binding still sees the original value.
+func dropEmpty(data map[string]interface{}) {
+	for key, val := range data {
+		if s, ok := val.(string); ok && s == "" {
+			delete(data, key)
+		}
+	}
 }
 
 func validateDict(obj Validatable, data map[string]interface{}) error {

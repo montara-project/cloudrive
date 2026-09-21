@@ -62,11 +62,11 @@ func (v *FieldValidator) Map(f func(v *MapValidator)) *FieldValidator {
 			dict = converted
 		}
 
-		mv := NewMapValidatorWithPath(v.path)
+		mv := newMapValidatorWithPath(v.path)
 		f(mv)
 
-		passes, mr := mv.Validate(dict)
-		return dict, passes, mr
+		mr, passes := mv.Validate(dict)
+		return dict, mr, passes
 	}
 
 	v.registerRule(rule)
@@ -233,15 +233,21 @@ func (v *FieldValidator) String() *FieldValidator {
 }
 
 func (v *FieldValidator) Regex(pattern string) *FieldValidator {
+	return v.Match(regexp.MustCompile(pattern))
+}
+
+// Match validates a string against a pre-compiled pattern; prefer it over
+// Regex when the pattern is a package-level var so it is not recompiled per
+// request.
+func (v *FieldValidator) Match(re *regexp.Regexp) *FieldValidator {
 	rule := func(path path, data interface{}) (interface{}, MessageRecord, bool) {
 		if data == nil {
 			return data, make(MessageRecord), true
 		}
 
 		str, ok := unwrapValue(data).(string)
-		re := regexp.MustCompile(pattern)
 		if !ok || !re.MatchString(str) {
-			msg := fmt.Sprintf("%s must match the pattern %s", path.last(), pattern)
+			msg := fmt.Sprintf("%s must match the pattern %s", path.last(), re.String())
 			mr := make(MessageRecord)
 			mr.InsertMessage(path, msg)
 			return data, mr, false
@@ -254,14 +260,15 @@ func (v *FieldValidator) Regex(pattern string) *FieldValidator {
 	return v
 }
 
+var emailPattern = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+
 func (v *FieldValidator) Email() *FieldValidator {
 	rule := func(path path, data interface{}) (interface{}, MessageRecord, bool) {
 		if data == nil {
 			return data, make(MessageRecord), true
 		}
 		str, ok := unwrapValue(data).(string)
-		re := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
-		if !ok || !re.MatchString(str) {
+		if !ok || !emailPattern.MatchString(str) {
 			msg := fmt.Sprintf("%s must be a valid email address", path.last())
 			mr := make(MessageRecord)
 			mr.InsertMessage(path, msg)
@@ -311,7 +318,7 @@ func (v *FieldValidator) Date() *FieldValidator {
 
 		_, err := time.Parse(time.RFC3339, dateStr)
 		if err != nil {
-			msg := fmt.Sprintf("%s must be a valid date-time in the format", path.last())
+			msg := fmt.Sprintf("%s must be a valid RFC3339 date-time", path.last())
 			mr := make(MessageRecord)
 			mr.InsertMessage(path, msg)
 			return data, mr, false
@@ -324,36 +331,44 @@ func (v *FieldValidator) Date() *FieldValidator {
 	return v
 }
 
+// toFloat converts any numeric value to float64; non-numeric values report
+// false so rules can choose their own leniency.
+func toFloat(data interface{}) (float64, bool) {
+	switch v := data.(type) {
+	case int:
+		return float64(v), true
+	case int8:
+		return float64(v), true
+	case int16:
+		return float64(v), true
+	case int32:
+		return float64(v), true
+	case int64:
+		return float64(v), true
+	case uint:
+		return float64(v), true
+	case uint8:
+		return float64(v), true
+	case uint16:
+		return float64(v), true
+	case uint32:
+		return float64(v), true
+	case uint64:
+		return float64(v), true
+	case float32:
+		return float64(v), true
+	case float64:
+		return v, true
+	}
+	return 0, false
+}
+
 func (v *FieldValidator) Min(n float64) *FieldValidator {
 	rule := func(path path, data interface{}) (interface{}, MessageRecord, bool) {
 		passes := true
 
-		uv := unwrapValue(data)
-		switch v := uv.(type) {
-		case int:
-			passes = float64(v) >= n
-		case int8:
-			passes = float64(v) >= n
-		case int16:
-			passes = float64(v) >= n
-		case int32:
-			passes = float64(v) >= n
-		case int64:
-			passes = float64(v) >= n
-		case uint:
-			passes = float64(v) >= n
-		case uint8:
-			passes = float64(v) >= n
-		case uint16:
-			passes = float64(v) >= n
-		case uint32:
-			passes = float64(v) >= n
-		case uint64:
-			passes = float64(v) >= n
-		case float32:
-			passes = float64(v) >= n
-		case float64:
-			passes = v >= n
+		if f, ok := toFloat(unwrapValue(data)); ok {
+			passes = f >= n
 		}
 
 		if !passes {
@@ -374,32 +389,8 @@ func (v *FieldValidator) Max(n float64) *FieldValidator {
 	rule := func(path path, data interface{}) (interface{}, MessageRecord, bool) {
 		passes := true
 
-		uv := unwrapValue(data)
-		switch v := uv.(type) {
-		case int:
-			passes = float64(v) <= n
-		case int8:
-			passes = float64(v) <= n
-		case int16:
-			passes = float64(v) <= n
-		case int32:
-			passes = float64(v) <= n
-		case int64:
-			passes = float64(v) <= n
-		case uint:
-			passes = float64(v) <= n
-		case uint8:
-			passes = float64(v) <= n
-		case uint16:
-			passes = float64(v) <= n
-		case uint32:
-			passes = float64(v) <= n
-		case uint64:
-			passes = float64(v) <= n
-		case float32:
-			passes = float64(v) <= n
-		case float64:
-			passes = v <= n
+		if f, ok := toFloat(unwrapValue(data)); ok {
+			passes = f <= n
 		}
 
 		if !passes {
@@ -475,8 +466,11 @@ func (v *FieldValidator) MaxLen(n int) *FieldValidator {
 
 func (v *FieldValidator) Within(vals ...int) *FieldValidator {
 	rule := func(path path, data interface{}) (interface{}, MessageRecord, bool) {
-		if num, ok := unwrapValue(data).(int); ok {
-			if !slices.Contains(vals, num) {
+		// JSON numbers decode as float64, so check numerics generically and
+		// only compare integral values against the int set.
+		if f, ok := toFloat(unwrapValue(data)); ok {
+			num := int(f)
+			if f != float64(num) || !slices.Contains(vals, num) {
 				strVals := make([]string, 0, len(vals))
 				for _, val := range vals {
 					strVals = append(strVals, fmt.Sprintf("%d", val))
@@ -500,7 +494,7 @@ func (v *FieldValidator) WithinS(vals ...string) *FieldValidator {
 	rule := func(path path, data interface{}) (interface{}, MessageRecord, bool) {
 		if str, ok := unwrapValue(data).(string); ok {
 			if !slices.Contains(vals, str) {
-				msg := fmt.Sprintf("%s may only contain %s", path.key(), strings.Join(vals, ", "))
+				msg := fmt.Sprintf("%s may only contain %s", path.last(), strings.Join(vals, ", "))
 				mr := make(MessageRecord)
 				mr.InsertMessage(path, msg)
 				return data, mr, false
@@ -514,7 +508,7 @@ func (v *FieldValidator) WithinS(vals ...string) *FieldValidator {
 	return v
 }
 
-func (v *FieldValidator) Base64(vals ...string) *FieldValidator {
+func (v *FieldValidator) Base64() *FieldValidator {
 	rule := func(path path, data interface{}) (interface{}, MessageRecord, bool) {
 		if data == nil {
 			return data, make(MessageRecord), true
@@ -533,7 +527,7 @@ func (v *FieldValidator) Base64(vals ...string) *FieldValidator {
 		}
 
 		if !passes {
-			msg := fmt.Sprintf("%s must be a base64 encoded string", path.key())
+			msg := fmt.Sprintf("%s must be a base64 encoded string", path.last())
 			mr := make(MessageRecord)
 			mr.InsertMessage(path, msg)
 			return data, mr, false
@@ -548,21 +542,16 @@ func (v *FieldValidator) Base64(vals ...string) *FieldValidator {
 
 func (v *FieldValidator) MinRune(n int) *FieldValidator {
 	rule := func(path path, data interface{}) (interface{}, MessageRecord, bool) {
-		if str, ok := data.(string); ok {
-			if utf8.RuneCountInString(str) >= n {
-				return data, make(MessageRecord), true
+		if str, ok := unwrapValue(data).(string); ok {
+			if utf8.RuneCountInString(str) < n {
+				msg := fmt.Sprintf("%s must be at least %d characters long", path.last(), n)
+				mr := make(MessageRecord)
+				mr.InsertMessage(path, msg)
+				return data, mr, false
 			}
-
-			msg := fmt.Sprintf("%s must be at least %d characters long", path.last(), n)
-			mr := make(MessageRecord)
-			mr.InsertMessage(path, msg)
-			return data, mr, false
 		}
 
-		msg := fmt.Sprintf("%s is not a string", path.last())
-		mr := make(MessageRecord)
-		mr.InsertMessage(path, msg)
-		return data, mr, false
+		return data, make(MessageRecord), true
 	}
 
 	v.registerRule(rule)
@@ -571,21 +560,16 @@ func (v *FieldValidator) MinRune(n int) *FieldValidator {
 
 func (v *FieldValidator) MaxRune(n int) *FieldValidator {
 	rule := func(path path, data interface{}) (interface{}, MessageRecord, bool) {
-		if str, ok := data.(string); ok {
-			if utf8.RuneCountInString(str) <= n {
-				return data, make(MessageRecord), true
+		if str, ok := unwrapValue(data).(string); ok {
+			if utf8.RuneCountInString(str) > n {
+				msg := fmt.Sprintf("%s must be at most %d characters long", path.last(), n)
+				mr := make(MessageRecord)
+				mr.InsertMessage(path, msg)
+				return data, mr, false
 			}
-
-			msg := fmt.Sprintf("%s must be at most %d characters long", path.last(), n)
-			mr := make(MessageRecord)
-			mr.InsertMessage(path, msg)
-			return data, mr, false
 		}
 
-		msg := fmt.Sprintf("%s is not a string", path.last())
-		mr := make(MessageRecord)
-		mr.InsertMessage(path, msg)
-		return data, mr, false
+		return data, make(MessageRecord), true
 	}
 
 	v.registerRule(rule)

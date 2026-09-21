@@ -5,6 +5,7 @@ import (
 	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/models"
+	"slices"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -69,7 +70,7 @@ func (h *organizationMemberHandler) Add(c fiber.Ctx) error {
 	if req.Role == "" {
 		req.Role = "member"
 	}
-	if !contains([]string{"admin", "member"}, req.Role) {
+	if !slices.Contains([]string{"admin", "member"}, req.Role) {
 		return badRequest(c, "Role must be admin or member (ownership is transferred, not granted)")
 	}
 
@@ -115,7 +116,7 @@ func (h *organizationMemberHandler) UpdateRole(c fiber.Ctx) error {
 	if err := bindBody(c, req); err != nil {
 		return err
 	}
-	if !contains([]string{"owner", "admin", "member"}, req.Role) {
+	if !slices.Contains([]string{"owner", "admin", "member"}, req.Role) {
 		return badRequest(c, "Role must be owner, admin, or member")
 	}
 

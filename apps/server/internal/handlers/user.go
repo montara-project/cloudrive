@@ -20,17 +20,13 @@ type userHandler struct {
 func (h *userHandler) Me(c fiber.Ctx) error {
 	uid, err := lib.ContextGetUID(c)
 	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"message": "Unauthorized, invalid session",
-		})
+		return unauthorized(c)
 	}
 
 	user, err := h.app.Repositories.User.Get(uid)
 	if err != nil {
 		if errors.Is(err, repositories.ErrRecordNotFound) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"message": "User not found",
-			})
+			return respond(c, fiber.StatusNotFound, "User not found")
 		}
 		return err
 	}

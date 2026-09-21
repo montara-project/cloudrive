@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"cloudrive/server/internal/app"
 	"cloudrive/server/internal/dtos"
@@ -149,18 +150,9 @@ func requireOrgMember(c fiber.Ctx, app *app.Application, orgID uuid.UUID, userID
 		return nil, err
 	}
 
-	if len(roles) > 0 && !contains(roles, member.Role) {
+	if len(roles) > 0 && !slices.Contains(roles, member.Role) {
 		return nil, forbidden(c, fmt.Sprintf("This action requires role: %v", roles))
 	}
 
 	return member, nil
-}
-
-func contains(values []string, want string) bool {
-	for _, v := range values {
-		if v == want {
-			return true
-		}
-	}
-	return false
 }
