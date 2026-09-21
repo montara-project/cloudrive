@@ -151,6 +151,65 @@ func (r StorageAccountRepository) Get(id uuid.UUID) (*models.StorageAccount, err
 	return r.getExec(r.DB, id)
 }
 
+// GetWithProvider loads the account together with its provider catalog row
+// in one query — the shape the connector registry consumes.
+func (r StorageAccountRepository) GetWithProvider(id uuid.UUID) (*models.StorageAccount, *models.Provider, error) {
+	query := `
+		SELECT a."id", a."organization_id", a."workspace_id", a."provider_id", a."owner_user_id",
+		       a."display_name", a."account_email", a."external_account_id", a."settings",
+		       a."status", a."last_synced_at", a."deleted_at", a."created_at", a."updated_at",
+		       p."id", p."slug", p."name", p."protocol", p."auth_type", p."capabilities",
+		       p."is_active", p."deleted_at", p."created_at", p."updated_at"
+		FROM "storage_accounts" a
+		JOIN "providers" p ON p."id" = a."provider_id"
+		WHERE a."id" = $1;
+	`
+
+	r.debugQuery(query)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	account := &models.StorageAccount{}
+	provider := &models.Provider{}
+	err := r.DB.QueryRowContext(ctx, query, id).Scan(
+		&account.ID,
+		&account.OrganizationID,
+		&account.WorkspaceID,
+		&account.ProviderID,
+		&account.OwnerUserID,
+		&account.DisplayName,
+		&account.AccountEmail,
+		&account.ExternalAccountID,
+		&account.Settings,
+		&account.Status,
+		&account.LastSyncedAt,
+		&account.DeletedAt,
+		&account.CreatedAt,
+		&account.UpdatedAt,
+		&provider.ID,
+		&provider.Slug,
+		&provider.Name,
+		&provider.Protocol,
+		&provider.AuthType,
+		&provider.Capabilities,
+		&provider.IsActive,
+		&provider.DeletedAt,
+		&provider.CreatedAt,
+		&provider.UpdatedAt,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, nil, ErrRecordNotFound
+		default:
+			return nil, nil, errtrace.Errorf("error scanning row: %w", err)
+		}
+	}
+
+	return account, provider, nil
+}
+
 func (r StorageAccountRepository) getExec(exc Executor, id uuid.UUID) (*models.StorageAccount, error) {
 	query := `
 		SELECT "id", "organization_id", "workspace_id", "provider_id", "owner_user_id",

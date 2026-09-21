@@ -75,4 +75,13 @@ func routes(r *fiber.App, app *app.Application) {
 	r.Patch("/v1/storage/accounts/:accountId", m.Authorization(), h.StorageAccount.Update)
 	r.Put("/v1/storage/accounts/:accountId/credentials", m.Authorization(), h.StorageAccount.Rotate)
 	r.Delete("/v1/storage/accounts/:accountId", m.Authorization(), h.StorageAccount.Disconnect)
+
+	// S3-compatible gateway management (SigV4 access keys and bucket
+	// mappings). Creation/revocation requires org owner or admin.
+	r.Post("/v1/workspaces/:wsId/s3/credentials", m.Authorization(), h.S3Gateway.CreateCredential)
+	r.Get("/v1/workspaces/:wsId/s3/credentials", m.Authorization(), h.S3Gateway.ListCredentials)
+	r.Delete("/v1/workspaces/:wsId/s3/credentials/:credentialId", m.Authorization(), h.S3Gateway.RevokeCredential)
+	r.Post("/v1/workspaces/:wsId/s3/buckets", m.Authorization(), h.S3Gateway.CreateBucket)
+	r.Get("/v1/workspaces/:wsId/s3/buckets", m.Authorization(), h.S3Gateway.ListBuckets)
+	r.Delete("/v1/workspaces/:wsId/s3/buckets/:bucketId", m.Authorization(), h.S3Gateway.DeleteBucket)
 }

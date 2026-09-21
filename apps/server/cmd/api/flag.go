@@ -53,6 +53,11 @@ func parseFlag(cfg *config.Config) {
 	flag.StringVar(&cfg.S3.Endpoint, "s3-endpoint", "", "S3 endpoint")
 	flag.StringVar(&cfg.S3.Token, "s3-token", "", "S3 token")
 
+	// S3-compatible gateway: separate listener speaking the S3 REST dialect
+	// (SigV4, path-style, XML). Empty disables the gateway listener.
+	flag.StringVar(&cfg.S3.APIAddr, "s3-api-addr", "", "S3 gateway listen address (:9000); empty disables it")
+	flag.StringVar(&cfg.S3.StagingDir, "s3-staging-dir", "", "Staging directory for multipart uploads to non-passthrough backends")
+
 	// Storage provider credential vault: comma-separated key_id:base64 entries
 	// (32-byte keys); the first entry encrypts new secrets.
 	flag.StringVar(&cfg.Storage.CredentialsKeys, "storage-credentials-keys", "", "Provider credential encryption keys (key_id:base64(32-byte key), comma-separated)")

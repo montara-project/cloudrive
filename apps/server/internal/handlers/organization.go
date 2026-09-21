@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"cloudrive/server/internal/app"
+	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/models"
 
@@ -12,12 +13,6 @@ type organizationHandler struct {
 	app *app.Application
 }
 
-type createOrganizationRequest struct {
-	Name string `json:"name"`
-	Slug string `json:"slug"`
-	Logo string `json:"logo"`
-}
-
 // Create registers a new organization and makes the current user its owner in
 // one transaction (repositories.OrganizationRepository.CreateWithOwner).
 func (h *organizationHandler) Create(c fiber.Ctx) error {
@@ -26,12 +21,9 @@ func (h *organizationHandler) Create(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &createOrganizationRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
-	}
-	if req.Name == "" || req.Slug == "" {
-		return badRequest(c, "Name and slug are required")
+	req := &dtos.CreateOrganizationRequest{}
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 
 	organization := &models.Organization{
@@ -59,7 +51,7 @@ func (h *organizationHandler) List(c fiber.Ctx) error {
 
 	opts, q, err := pagination(c)
 	if err != nil {
-		return badRequest(c, "Invalid pagination parameters")
+		return err
 	}
 
 	organizations, metadata, err := h.app.Repositories.Organization.ListByUser(userID, opts)
@@ -94,11 +86,6 @@ func (h *organizationHandler) Get(c fiber.Ctx) error {
 	return c.JSON(organization)
 }
 
-type updateOrganizationRequest struct {
-	Name string `json:"name"`
-	Logo string `json:"logo"`
-}
-
 // Update changes the organization profile. Requires the owner or admin role.
 func (h *organizationHandler) Update(c fiber.Ctx) error {
 	userID, err := currentUser(c)
@@ -115,12 +102,9 @@ func (h *organizationHandler) Update(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &updateOrganizationRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
-	}
-	if req.Name == "" {
-		return badRequest(c, "Name is required")
+	req := &dtos.UpdateOrganizationRequest{}
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 
 	current, err := h.app.Repositories.Organization.Get(orgID)

@@ -3,9 +3,12 @@ package handlers
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"cloudrive/server/internal/app"
+	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
+	"cloudrive/server/internal/lib/validator"
 	"cloudrive/server/internal/models"
 	"cloudrive/server/internal/repositories"
 
@@ -14,19 +17,15 @@ import (
 	"github.com/lib/pq"
 )
 
-// listQuery is the shared pagination/ordering binding for list endpoints.
-// Page starts at 1; limit is clamped to 100.
-type listQuery struct {
-	Page    int    `query:"page"`
-	Limit   int    `query:"limit"`
-	OrderBy string `query:"order_by"`
-	Order   string `query:"order"`
-}
+// ErrResponded reports that a helper has already written the HTTP response.
+// It is non-nil so callers can propagate it with `return err`, and the Fiber
+// error handler ignores it so the buffered response is delivered unchanged.
+var ErrResponded = errors.New("response already written")
 
-func pagination(c fiber.Ctx) (*repositories.QueryOptions, *listQuery, error) {
-	q := &listQuery{}
-	if err := c.Bind().Query(q); err != nil {
-		return nil, nil, err
+func pagination(c fiber.Ctx) (*repositories.QueryOptions, *dtos.ListQuery, error) {
+	q := &dtos.ListQuery{}
+	if err := lib.ValidateRequestQuery(c, q); err != nil {
+		return nil, nil, requestError(c, err, "Invalid pagination parameters")
 	}
 
 	if q.Page <= 0 {
@@ -48,7 +47,7 @@ func pagination(c fiber.Ctx) (*repositories.QueryOptions, *listQuery, error) {
 }
 
 // listResponse wraps a page of results with pagination metadata.
-func listResponse(c fiber.Ctx, q *listQuery, total int64, data any) error {
+func listResponse(c fiber.Ctx, q *dtos.ListQuery, total int64, data any) error {
 	return c.JSON(fiber.Map{
 		"data": data,
 		"metadata": fiber.Map{
@@ -69,18 +68,53 @@ func currentUser(c fiber.Ctx) (uuid.UUID, error) {
 	return uid, nil
 }
 
+// respond writes the JSON body with the given status and reports
+// ErrResponded so helpers can propagate "already handled" through their
+// error return.
+func respond(c fiber.Ctx, status int, body interface{}) error {
+	if err := c.Status(status).JSON(body); err != nil {
+		return err
+	}
+	return ErrResponded
+}
+
 func unauthorized(c fiber.Ctx) error {
-	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-		"message": "Unauthorized, invalid session",
-	})
+	return respond(c, fiber.StatusUnauthorized, fiber.Map{"message": "Unauthorized, invalid session"})
 }
 
 func badRequest(c fiber.Ctx, message string) error {
-	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": message})
+	return respond(c, fiber.StatusBadRequest, fiber.Map{"message": message})
 }
 
 func forbidden(c fiber.Ctx, message string) error {
-	return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"message": message})
+	return respond(c, fiber.StatusForbidden, fiber.Map{"message": message})
+}
+
+// unprocessable renders a 422 with the per-field messages collected by a
+// MapValidator.
+func unprocessable(c fiber.Ctx, mr validator.MessageRecord) error {
+	return respond(c, fiber.StatusUnprocessableEntity, lib.WrapValidationError(mr))
+}
+
+// requestError maps a failed request bind/validation onto the HTTP response:
+// rule violations are a 422 keyed by field, anything else a 400.
+func requestError(c fiber.Ctx, err error, message string) error {
+	var ve *lib.ErrValidationFailed
+	switch {
+	case err == nil:
+		return nil
+	case errors.As(err, &ve):
+		return unprocessable(c, ve.MessageRecord)
+	default:
+		return badRequest(c, message)
+	}
+}
+
+// bindBody decodes the JSON request body into req and enforces the rules it
+// declares. Malformed JSON is a 400; rule violations are a 422 keyed by
+// field.
+func bindBody(c fiber.Ctx, req lib.Validatable) error {
+	return requestError(c, lib.ValidateRequestBody(c, req), "Invalid request body")
 }
 
 // respondError maps repository errors onto HTTP responses. Unknown errors are
@@ -89,15 +123,13 @@ func respondError(c fiber.Ctx, err error) error {
 	var pqErr *pq.Error
 	switch {
 	case errors.Is(err, repositories.ErrRecordNotFound):
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"message": "Resource not found"})
+		return respond(c, fiber.StatusNotFound, "Resource not found")
 	case errors.Is(err, repositories.ErrInsertDuplicate):
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"message": "Resource already exists"})
+		return respond(c, fiber.StatusConflict, "Resource already exists")
 	case errors.Is(err, repositories.ErrEditConflict):
-		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"message": "Resource changed or does not exist"})
+		return respond(c, fiber.StatusConflict, "Resource changed or does not exist")
 	case errors.As(err, &pqErr) && pqErr.Code == "23503":
-		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
-			"message": "Operation references a resource that does not exist or is not allowed",
-		})
+		return respond(c, fiber.StatusUnprocessableEntity, "Operation references a resource that does not exist or is not allowed")
 	default:
 		return err
 	}
@@ -115,18 +147,9 @@ func requireOrgMember(c fiber.Ctx, app *app.Application, orgID uuid.UUID, userID
 		return nil, err
 	}
 
-	if len(roles) > 0 && !contains(roles, member.Role) {
+	if len(roles) > 0 && !slices.Contains(roles, member.Role) {
 		return nil, forbidden(c, fmt.Sprintf("This action requires role: %v", roles))
 	}
 
 	return member, nil
-}
-
-func contains(values []string, want string) bool {
-	for _, v := range values {
-		if v == want {
-			return true
-		}
-	}
-	return false
 }

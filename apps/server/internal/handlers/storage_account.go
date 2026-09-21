@@ -1,9 +1,8 @@
 package handlers
 
 import (
-	"encoding/json"
-
 	"cloudrive/server/internal/app"
+	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/models"
 
@@ -35,17 +34,6 @@ func (h *storageAccountHandler) authorize(c fiber.Ctx, accountID, userID uuid.UU
 	return account, nil
 }
 
-type createStorageAccountRequest struct {
-	WorkspaceID       uuid.UUID       `json:"workspace_id"`
-	ProviderID        uuid.UUID       `json:"provider_id"`
-	ProviderSlug      string          `json:"provider_slug"`
-	DisplayName       string          `json:"display_name"`
-	AccountEmail      string          `json:"account_email"`
-	ExternalAccountID string          `json:"external_account_id"`
-	Settings          json.RawMessage `json:"settings"`
-	Credentials       json.RawMessage `json:"credentials"`
-}
-
 // Connect stores a connected provider account. The credentials object (OAuth
 // tokens or access keys) is encrypted by the repository before it is written;
 // no decrypted value is ever persisted or returned by this API.
@@ -55,18 +43,12 @@ func (h *storageAccountHandler) Connect(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &createStorageAccountRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
+	req := &dtos.CreateStorageAccountRequest{}
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 	if req.WorkspaceID == uuid.Nil {
 		return badRequest(c, "workspace_id is required")
-	}
-	if req.DisplayName == "" || req.ExternalAccountID == "" {
-		return badRequest(c, "display_name and external_account_id are required")
-	}
-	if len(req.Credentials) == 0 {
-		return badRequest(c, "credentials are required")
 	}
 
 	workspace, err := h.app.Repositories.Workspace.Get(req.WorkspaceID)
@@ -120,11 +102,11 @@ func (h *storageAccountHandler) List(c fiber.Ctx) error {
 		return err
 	}
 
-	workspaceParam := c.Queries()["workspace_id"]
-	if workspaceParam == "" {
-		return badRequest(c, "workspace_id query parameter is required")
+	lq := &dtos.ListStorageAccountsQuery{}
+	if err := lib.ValidateRequestQuery(c, lq); err != nil {
+		return requestError(c, err, "Invalid query parameters")
 	}
-	wsID, err := uuid.Parse(workspaceParam)
+	wsID, err := uuid.Parse(lq.WorkspaceID)
 	if err != nil {
 		return badRequest(c, "Invalid workspace_id")
 	}
@@ -140,7 +122,7 @@ func (h *storageAccountHandler) List(c fiber.Ctx) error {
 
 	opts, q, err := pagination(c)
 	if err != nil {
-		return badRequest(c, "Invalid pagination parameters")
+		return err
 	}
 
 	accounts, metadata, err := h.app.Repositories.StorageAccount.ListByWorkspace(wsID, opts)
@@ -171,12 +153,6 @@ func (h *storageAccountHandler) Get(c fiber.Ctx) error {
 	return c.JSON(account)
 }
 
-type updateStorageAccountRequest struct {
-	DisplayName string          `json:"display_name"`
-	Status      string          `json:"status"`
-	Settings    json.RawMessage `json:"settings"`
-}
-
 // Update changes the account's label, settings, or status. Requires owner or
 // admin of the organization.
 func (h *storageAccountHandler) Update(c fiber.Ctx) error {
@@ -195,12 +171,9 @@ func (h *storageAccountHandler) Update(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &updateStorageAccountRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
-	}
-	if req.Status != "" && !contains([]string{"pending_auth", "active", "expired", "revoked", "error"}, req.Status) {
-		return badRequest(c, "Invalid status")
+	req := &dtos.UpdateStorageAccountRequest{}
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 
 	if req.DisplayName != "" {
@@ -220,10 +193,6 @@ func (h *storageAccountHandler) Update(c fiber.Ctx) error {
 	return c.JSON(account)
 }
 
-type updateCredentialsRequest struct {
-	Credentials json.RawMessage `json:"credentials"`
-}
-
 // Rotate replaces the stored credentials (e.g. after a token refresh). The
 // new value is encrypted by the repository.
 func (h *storageAccountHandler) Rotate(c fiber.Ctx) error {
@@ -241,12 +210,9 @@ func (h *storageAccountHandler) Rotate(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &updateCredentialsRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
-	}
-	if len(req.Credentials) == 0 {
-		return badRequest(c, "credentials are required")
+	req := &dtos.UpdateCredentialsRequest{}
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 
 	if err := h.app.Repositories.StorageAccount.UpdateCredentials(accountID, req.Credentials); err != nil {

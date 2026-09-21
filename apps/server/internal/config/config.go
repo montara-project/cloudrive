@@ -57,6 +57,12 @@ type ConfigS3 struct {
 	Region       string
 	Endpoint     string
 	Token        string
+	// APIAddr is the S3 gateway's dedicated listen address; empty disables
+	// the gateway listener.
+	APIAddr string
+	// StagingDir buffers multipart parts for backends without native
+	// multipart support (e.g. Google Drive). Empty falls back to os.TempDir.
+	StagingDir string
 }
 
 // ConfigStorage holds the key spec for the provider credential vault: comma

@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"cloudrive/server/internal/app"
+	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/models"
+	"slices"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -60,7 +62,7 @@ func (h *workspaceMemberHandler) List(c fiber.Ctx) error {
 
 	opts, q, err := pagination(c)
 	if err != nil {
-		return badRequest(c, "Invalid pagination parameters")
+		return err
 	}
 
 	members, metadata, err := h.app.Repositories.WorkspaceMember.ListByWorkspace(wsID, opts)
@@ -69,11 +71,6 @@ func (h *workspaceMemberHandler) List(c fiber.Ctx) error {
 	}
 
 	return listResponse(c, q, metadata.Total, members)
-}
-
-type addWorkspaceMemberRequest struct {
-	UserID uuid.UUID `json:"user_id"`
-	Role   string    `json:"role"`
 }
 
 // Add attaches an organization member to the workspace. The composite foreign
@@ -94,9 +91,9 @@ func (h *workspaceMemberHandler) Add(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &addWorkspaceMemberRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
+	req := &dtos.AddMemberRequest{}
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 	if req.UserID == uuid.Nil {
 		return badRequest(c, "user_id is required")
@@ -104,7 +101,7 @@ func (h *workspaceMemberHandler) Add(c fiber.Ctx) error {
 	if req.Role == "" {
 		req.Role = "member"
 	}
-	if !contains([]string{"admin", "member", "viewer"}, req.Role) {
+	if !slices.Contains([]string{"admin", "member", "viewer"}, req.Role) {
 		return badRequest(c, "Role must be admin, member, or viewer")
 	}
 
@@ -119,10 +116,6 @@ func (h *workspaceMemberHandler) Add(c fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(member)
-}
-
-type updateWorkspaceMemberRequest struct {
-	Role string `json:"role"`
 }
 
 // UpdateRole changes a workspace member's role.
@@ -146,11 +139,11 @@ func (h *workspaceMemberHandler) UpdateRole(c fiber.Ctx) error {
 		return badRequest(c, "Invalid user id")
 	}
 
-	req := &updateWorkspaceMemberRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
+	req := &dtos.UpdateMemberRoleRequest{}
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
-	if !contains([]string{"admin", "member", "viewer"}, req.Role) {
+	if !slices.Contains([]string{"admin", "member", "viewer"}, req.Role) {
 		return badRequest(c, "Role must be admin, member, or viewer")
 	}
 

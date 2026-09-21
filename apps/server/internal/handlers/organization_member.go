@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"cloudrive/server/internal/app"
+	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/models"
+	"slices"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -31,7 +33,7 @@ func (h *organizationMemberHandler) List(c fiber.Ctx) error {
 
 	opts, q, err := pagination(c)
 	if err != nil {
-		return badRequest(c, "Invalid pagination parameters")
+		return err
 	}
 
 	members, metadata, err := h.app.Repositories.OrganizationMember.ListByOrganization(orgID, opts)
@@ -40,11 +42,6 @@ func (h *organizationMemberHandler) List(c fiber.Ctx) error {
 	}
 
 	return listResponse(c, q, metadata.Total, members)
-}
-
-type addOrganizationMemberRequest struct {
-	UserID uuid.UUID `json:"user_id"`
-	Role   string    `json:"role"`
 }
 
 // Add attaches an existing user to the organization. Requires owner or admin.
@@ -63,9 +60,9 @@ func (h *organizationMemberHandler) Add(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &addOrganizationMemberRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
+	req := &dtos.AddMemberRequest{}
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 	if req.UserID == uuid.Nil {
 		return badRequest(c, "user_id is required")
@@ -73,7 +70,7 @@ func (h *organizationMemberHandler) Add(c fiber.Ctx) error {
 	if req.Role == "" {
 		req.Role = "member"
 	}
-	if !contains([]string{"admin", "member"}, req.Role) {
+	if !slices.Contains([]string{"admin", "member"}, req.Role) {
 		return badRequest(c, "Role must be admin or member (ownership is transferred, not granted)")
 	}
 
@@ -91,10 +88,6 @@ func (h *organizationMemberHandler) Add(c fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(member)
-}
-
-type updateOrganizationMemberRequest struct {
-	Role string `json:"role"`
 }
 
 // UpdateRole changes a member's role. The database's single-owner guarantee
@@ -119,11 +112,11 @@ func (h *organizationMemberHandler) UpdateRole(c fiber.Ctx) error {
 		return badRequest(c, "Invalid user id")
 	}
 
-	req := &updateOrganizationMemberRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
+	req := &dtos.UpdateMemberRoleRequest{}
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
-	if !contains([]string{"owner", "admin", "member"}, req.Role) {
+	if !slices.Contains([]string{"owner", "admin", "member"}, req.Role) {
 		return badRequest(c, "Role must be owner, admin, or member")
 	}
 

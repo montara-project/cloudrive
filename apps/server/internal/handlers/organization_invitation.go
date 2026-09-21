@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"cloudrive/server/internal/app"
+	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/models"
 
@@ -17,11 +18,6 @@ const invitationExpiresIn = 7 * 24 * time.Hour
 
 type organizationInvitationHandler struct {
 	app *app.Application
-}
-
-type createInvitationRequest struct {
-	Email string `json:"email"`
-	Role  string `json:"role"`
 }
 
 // Create invites an email address to join the organization. Requires owner or
@@ -41,18 +37,12 @@ func (h *organizationInvitationHandler) Create(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &createInvitationRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
-	}
-	if req.Email == "" {
-		return badRequest(c, "email is required")
+	req := &dtos.CreateInvitationRequest{}
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 	if req.Role == "" {
 		req.Role = "member"
-	}
-	if !contains([]string{"admin", "member"}, req.Role) {
-		return badRequest(c, "Role must be admin or member")
 	}
 
 	// Inviting someone who is already a member is a conflict, not a new row.
@@ -103,7 +93,7 @@ func (h *organizationInvitationHandler) List(c fiber.Ctx) error {
 
 	opts, q, err := pagination(c)
 	if err != nil {
-		return badRequest(c, "Invalid pagination parameters")
+		return err
 	}
 
 	invitations, metadata, err := h.app.Repositories.OrganizationInvitation.ListByOrganization(orgID, opts)
@@ -112,10 +102,6 @@ func (h *organizationInvitationHandler) List(c fiber.Ctx) error {
 	}
 
 	return listResponse(c, q, metadata.Total, invitations)
-}
-
-type updateInvitationRequest struct {
-	Status string `json:"status"`
 }
 
 // UpdateStatus transitions an invitation (accepted/rejected by the invitee,
@@ -140,12 +126,9 @@ func (h *organizationInvitationHandler) UpdateStatus(c fiber.Ctx) error {
 		return err
 	}
 
-	req := &updateInvitationRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
-	}
-	if !contains([]string{"accepted", "rejected", "revoked", "expired"}, req.Status) {
-		return badRequest(c, "Status must be accepted, rejected, revoked, or expired")
+	req := &dtos.UpdateInvitationRequest{}
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 
 	// Keep the invitation inside this organization: a mismatched pair is a 404.

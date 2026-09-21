@@ -15,6 +15,7 @@ type Handlers struct {
 	Workspace              workspaceHandler
 	WorkspaceMember        workspaceMemberHandler
 	StorageAccount         storageAccountHandler
+	S3Gateway              s3GatewayHandler
 }
 
 func New(app *app.Application) Handlers {
@@ -28,5 +29,6 @@ func New(app *app.Application) Handlers {
 		Workspace:              workspaceHandler{app: app},
 		WorkspaceMember:        workspaceMemberHandler{app: app},
 		StorageAccount:         storageAccountHandler{app: app},
+		S3Gateway:              s3GatewayHandler{app: app},
 	}
 }

@@ -31,7 +31,7 @@
   "settings": {},
   "overrides": [
     {
-      "files": ["apps/admin-web/**", "apps/app-web/**", "apps/main-web/**"],
+      "files": ["apps/admin/**", "apps/app/**", "apps/main/**", "apps/web/**"],
       "plugins": ["typescript", "unicorn", "react", "react-perf", "jsx-a11y", "promise", "import"],
       "env": {
         "browser": true,
