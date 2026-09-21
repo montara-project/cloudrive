@@ -38,17 +38,11 @@ func (h *organizationInvitationHandler) Create(c fiber.Ctx) error {
 	}
 
 	req := &dtos.CreateInvitationRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
-	}
-	if req.Email == "" {
-		return badRequest(c, "email is required")
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 	if req.Role == "" {
 		req.Role = "member"
-	}
-	if !contains([]string{"admin", "member"}, req.Role) {
-		return badRequest(c, "Role must be admin or member")
 	}
 
 	// Inviting someone who is already a member is a conflict, not a new row.
@@ -99,7 +93,7 @@ func (h *organizationInvitationHandler) List(c fiber.Ctx) error {
 
 	opts, q, err := pagination(c)
 	if err != nil {
-		return badRequest(c, "Invalid pagination parameters")
+		return err
 	}
 
 	invitations, metadata, err := h.app.Repositories.OrganizationInvitation.ListByOrganization(orgID, opts)
@@ -133,11 +127,8 @@ func (h *organizationInvitationHandler) UpdateStatus(c fiber.Ctx) error {
 	}
 
 	req := &dtos.UpdateInvitationRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
-	}
-	if !contains([]string{"accepted", "rejected", "revoked", "expired"}, req.Status) {
-		return badRequest(c, "Status must be accepted, rejected, revoked, or expired")
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 
 	// Keep the invitation inside this organization: a mismatched pair is a 404.

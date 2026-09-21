@@ -61,7 +61,7 @@ func (h *workspaceMemberHandler) List(c fiber.Ctx) error {
 
 	opts, q, err := pagination(c)
 	if err != nil {
-		return badRequest(c, "Invalid pagination parameters")
+		return err
 	}
 
 	members, metadata, err := h.app.Repositories.WorkspaceMember.ListByWorkspace(wsID, opts)
@@ -91,8 +91,8 @@ func (h *workspaceMemberHandler) Add(c fiber.Ctx) error {
 	}
 
 	req := &dtos.AddMemberRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 	if req.UserID == uuid.Nil {
 		return badRequest(c, "user_id is required")
@@ -139,8 +139,8 @@ func (h *workspaceMemberHandler) UpdateRole(c fiber.Ctx) error {
 	}
 
 	req := &dtos.UpdateMemberRoleRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 	if !contains([]string{"admin", "member", "viewer"}, req.Role) {
 		return badRequest(c, "Role must be admin, member, or viewer")

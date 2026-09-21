@@ -44,17 +44,11 @@ func (h *storageAccountHandler) Connect(c fiber.Ctx) error {
 	}
 
 	req := &dtos.CreateStorageAccountRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 	if req.WorkspaceID == uuid.Nil {
 		return badRequest(c, "workspace_id is required")
-	}
-	if req.DisplayName == "" || req.ExternalAccountID == "" {
-		return badRequest(c, "display_name and external_account_id are required")
-	}
-	if len(req.Credentials) == 0 {
-		return badRequest(c, "credentials are required")
 	}
 
 	workspace, err := h.app.Repositories.Workspace.Get(req.WorkspaceID)
@@ -128,7 +122,7 @@ func (h *storageAccountHandler) List(c fiber.Ctx) error {
 
 	opts, q, err := pagination(c)
 	if err != nil {
-		return badRequest(c, "Invalid pagination parameters")
+		return err
 	}
 
 	accounts, metadata, err := h.app.Repositories.StorageAccount.ListByWorkspace(wsID, opts)
@@ -178,11 +172,8 @@ func (h *storageAccountHandler) Update(c fiber.Ctx) error {
 	}
 
 	req := &dtos.UpdateStorageAccountRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
-	}
-	if req.Status != "" && !contains([]string{"pending_auth", "active", "expired", "revoked", "error"}, req.Status) {
-		return badRequest(c, "Invalid status")
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 
 	if req.DisplayName != "" {
@@ -220,11 +211,8 @@ func (h *storageAccountHandler) Rotate(c fiber.Ctx) error {
 	}
 
 	req := &dtos.UpdateCredentialsRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
-	}
-	if len(req.Credentials) == 0 {
-		return badRequest(c, "credentials are required")
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 
 	if err := h.app.Repositories.StorageAccount.UpdateCredentials(accountID, req.Credentials); err != nil {

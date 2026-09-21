@@ -22,11 +22,8 @@ func (h *organizationHandler) Create(c fiber.Ctx) error {
 	}
 
 	req := &dtos.CreateOrganizationRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
-	}
-	if req.Name == "" || req.Slug == "" {
-		return badRequest(c, "Name and slug are required")
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 
 	organization := &models.Organization{
@@ -54,7 +51,7 @@ func (h *organizationHandler) List(c fiber.Ctx) error {
 
 	opts, q, err := pagination(c)
 	if err != nil {
-		return badRequest(c, "Invalid pagination parameters")
+		return err
 	}
 
 	organizations, metadata, err := h.app.Repositories.Organization.ListByUser(userID, opts)
@@ -106,11 +103,8 @@ func (h *organizationHandler) Update(c fiber.Ctx) error {
 	}
 
 	req := &dtos.UpdateOrganizationRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
-	}
-	if req.Name == "" {
-		return badRequest(c, "Name is required")
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 
 	current, err := h.app.Repositories.Organization.Get(orgID)

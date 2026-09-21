@@ -32,7 +32,7 @@ func (h *organizationMemberHandler) List(c fiber.Ctx) error {
 
 	opts, q, err := pagination(c)
 	if err != nil {
-		return badRequest(c, "Invalid pagination parameters")
+		return err
 	}
 
 	members, metadata, err := h.app.Repositories.OrganizationMember.ListByOrganization(orgID, opts)
@@ -60,8 +60,8 @@ func (h *organizationMemberHandler) Add(c fiber.Ctx) error {
 	}
 
 	req := &dtos.AddMemberRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 	if req.UserID == uuid.Nil {
 		return badRequest(c, "user_id is required")
@@ -112,8 +112,8 @@ func (h *organizationMemberHandler) UpdateRole(c fiber.Ctx) error {
 	}
 
 	req := &dtos.UpdateMemberRoleRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 	if !contains([]string{"owner", "admin", "member"}, req.Role) {
 		return badRequest(c, "Role must be owner, admin, or member")

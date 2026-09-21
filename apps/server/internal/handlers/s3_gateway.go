@@ -3,7 +3,6 @@ package handlers
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"regexp"
 	"strings"
 
 	"cloudrive/server/internal/app"
@@ -18,10 +17,6 @@ import (
 type s3GatewayHandler struct {
 	app *app.Application
 }
-
-// bucketNamePattern mirrors the S3 bucket naming rules enforced by the
-// database CHECK constraint (3-63 chars, lowercase, dots/dashes).
-var bucketNamePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$`)
 
 // authorizeWorkspace loads the workspace and requires the user to be an
 // organization owner/admin for creation/issuance flows.
@@ -59,8 +54,12 @@ func (h *s3GatewayHandler) CreateCredential(c fiber.Ctx) error {
 		return err
 	}
 
+	// Body is optional (label only); bindBody treats an absent body as an
+	// empty object.
 	req := &dtos.CreateS3CredentialRequest{}
-	_ = c.Bind().Body(req) // body is optional (label only)
+	if err := bindBody(c, req); err != nil {
+		return err
+	}
 
 	accessKeyID := "CR" + strings.ToUpper(randomToken(12))
 	secretKey := randomToken(32)
@@ -114,7 +113,7 @@ func (h *s3GatewayHandler) ListCredentials(c fiber.Ctx) error {
 
 	opts, q, err := pagination(c)
 	if err != nil {
-		return badRequest(c, "Invalid pagination parameters")
+		return err
 	}
 
 	credentials, metadata, err := h.app.Repositories.S3Credential.ListByWorkspace(wsID, opts)
@@ -181,11 +180,8 @@ func (h *s3GatewayHandler) CreateBucket(c fiber.Ctx) error {
 	}
 
 	req := &dtos.CreateS3BucketRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
-	}
-	if !bucketNamePattern.MatchString(req.Name) {
-		return badRequest(c, "Invalid bucket name (3-63 chars, lowercase letters, digits, dots and dashes)")
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 
 	accountID, err := uuid.Parse(req.StorageAccountID)
@@ -240,7 +236,7 @@ func (h *s3GatewayHandler) ListBuckets(c fiber.Ctx) error {
 
 	opts, q, err := pagination(c)
 	if err != nil {
-		return badRequest(c, "Invalid pagination parameters")
+		return err
 	}
 
 	buckets, metadata, err := h.app.Repositories.S3Bucket.ListByWorkspace(wsID, opts)

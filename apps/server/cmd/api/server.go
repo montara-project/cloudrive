@@ -3,6 +3,7 @@ package main
 import (
 	"cloudrive/server/internal/app"
 	"cloudrive/server/internal/connectors"
+	"cloudrive/server/internal/handlers"
 	"cloudrive/server/internal/services/s3"
 	"errors"
 	"fmt"
@@ -41,6 +42,12 @@ func serve(app *app.Application) error {
 			Proxies: trustedProxies,
 		},
 		ErrorHandler: func(c fiber.Ctx, err error) error {
+			// Handler helpers that already wrote a response report
+			// ErrResponded; leave the buffered response untouched.
+			if errors.Is(err, handlers.ErrResponded) {
+				return nil
+			}
+
 			// never echo internal error strings to the client; map Fiber's
 			// typed errors to their real status and log everything else.
 			code := fiber.StatusInternalServerError

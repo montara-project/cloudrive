@@ -30,11 +30,8 @@ func (h *workspaceHandler) Create(c fiber.Ctx) error {
 	}
 
 	req := &dtos.CreateWorkspaceRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
-	}
-	if req.Name == "" || req.Slug == "" {
-		return badRequest(c, "Name and slug are required")
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 
 	workspace := &models.Workspace{
@@ -72,7 +69,7 @@ func (h *workspaceHandler) List(c fiber.Ctx) error {
 
 	opts, q, err := pagination(c)
 	if err != nil {
-		return badRequest(c, "Invalid pagination parameters")
+		return err
 	}
 
 	workspaces, metadata, err := h.app.Repositories.Workspace.ListByOrganization(orgID, opts)
@@ -130,11 +127,8 @@ func (h *workspaceHandler) Update(c fiber.Ctx) error {
 	}
 
 	req := &dtos.UpdateWorkspaceRequest{}
-	if err := c.Bind().Body(req); err != nil {
-		return badRequest(c, "Invalid request body")
-	}
-	if req.Name == "" {
-		return badRequest(c, "Name is required")
+	if err := bindBody(c, req); err != nil {
+		return err
 	}
 
 	workspace.Name = req.Name
