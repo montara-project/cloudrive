@@ -3,11 +3,11 @@
 # release.sh — release apps/server using semantic versioning.
 #
 # The script determines the next version (vMAJOR.MINOR.PATCH) from
-# conventional commits, writes it to apps/server/VERSION, creates the release
-# commit `chore: release version vX.Y.Z`, tags that commit (vX.Y.Z), and
-# pushes both. The pushed tag triggers .github/workflows/server-release.yaml,
-# which builds the API image from apps/server/deploy/Dockerfile and pushes it
-# to ghcr.io/<owner>/<repo>/api.
+# conventional commits, bumps the `version` field in apps/server/package.json,
+# creates the release commit `chore: release version vX.Y.Z`, tags that commit
+# (vX.Y.Z), and pushes both. The pushed tag triggers
+# .github/workflows/server-release.yaml, which builds the API image from
+# apps/server/Dockerfile and pushes it to ghcr.io/<owner>/<repo>/api.
 #
 # Usage:
 #   bash scripts/release.sh [options]
@@ -32,7 +32,7 @@
 set -euo pipefail
 
 TAG_GLOB="v*"
-VERSION_FILE_REL="apps/server/VERSION"
+PKG_FILE_REL="apps/server/package.json"
 REMOTE="${RELEASE_REMOTE:-origin}"
 
 # --- output helpers ------------------------------------------------------
@@ -75,7 +75,9 @@ fi
 git rev-parse --is-inside-work-tree > /dev/null 2>&1 \
   || die "not inside a git repository"
 
-VERSION_FILE="$(git rev-parse --show-toplevel)/${VERSION_FILE_REL}"
+PKG_FILE="$(git rev-parse --show-toplevel)/${PKG_FILE_REL}"
+
+[[ -f "$PKG_FILE" ]] || die "package.json not found at ${PKG_FILE_REL}"
 
 # Untracked files do not change the tagged commit, so only staged/unstaged
 # changes to tracked files block a release.
@@ -142,11 +144,8 @@ RELEASE_MESSAGE="chore: release version ${NEW_TAG}"
 
 info "current version : ${LATEST_TAG:-<none>} (${CURRENT})"
 info "bump            : ${BUMP_TYPE}"
-if [[ -f "$VERSION_FILE" ]]; then
-  info "version file    : ${VERSION_FILE_REL} ($(cat "$VERSION_FILE" 2> /dev/null || true)) -> ${VERSION}"
-else
-  info "version file    : ${VERSION_FILE_REL} (new) -> ${VERSION}"
-fi
+PKG_VERSION="$(node -p "require('${PKG_FILE}').version" 2> /dev/null || true)"
+info "package.json    : ${PKG_FILE_REL} (${PKG_VERSION:-unknown}) -> ${VERSION}"
 info "release commit  : ${RELEASE_MESSAGE}"
 info "tag             : ${NEW_TAG}"
 
@@ -159,10 +158,18 @@ fi
 git symbolic-ref -q HEAD > /dev/null 2>&1 \
   || die "detached HEAD — checkout a branch before releasing"
 
-# --- write version file, commit, tag -------------------------------------
+# --- bump package.json, commit, tag --------------------------------------
 
-printf '%s\n' "$VERSION" > "$VERSION_FILE"
-git add "$VERSION_FILE"
+# node edits the JSON in place (preserving key order and 2-space indent);
+# plain sed on the "version" line would work too but node is already a repo
+# requirement and stays correct if the file layout changes.
+node -e '
+  const fs = require("fs");
+  const pkg = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+  pkg.version = process.argv[2];
+  fs.writeFileSync(process.argv[1], JSON.stringify(pkg, null, 2) + "\n");
+' "$PKG_FILE" "$VERSION"
+git add "$PKG_FILE"
 git commit -m "$RELEASE_MESSAGE" > /dev/null
 ok "commit created: ${RELEASE_MESSAGE}"
 
