@@ -42,6 +42,9 @@ run:
 		--s3-region=$(S3_REGION) \
 		--s3-endpoint=$(S3_ENDPOINT) \
 		--s3-token=$(S3_TOKEN) \
+		--s3-api-addr=$(S3_API_ADDR) \
+		--s3-staging-dir=$(S3_STAGING_DIR) \
+		--trusted-proxies=$(TRUSTED_PROXIES) \
 		--storage-credentials-keys=$(STORAGE_CREDENTIALS_KEYS) \
 		--typesafe-api-key=$(TYPESAFE_API_KEY) \
 		--typesafe-api-url=$(TYPESAFE_API_URL) \
@@ -74,4 +77,4 @@ db/migrations/refresh/seed:
 
 ## run/prod: apply migrations, then start the API
 .PHONY: run/prod
-run/prod: migrate/up run
+run/prod: db/migrations/up run

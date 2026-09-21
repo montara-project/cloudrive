@@ -139,6 +139,7 @@ func serve(app *app.Application) error {
 		})
 
 		gateway.Use(recover.New())
+		gateway.Use(logger.New())
 
 		s3.Register(gateway, &s3.Service{
 			Repos: s3.RepoAdapter{
