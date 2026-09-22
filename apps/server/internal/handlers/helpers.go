@@ -79,7 +79,7 @@ func respond(c fiber.Ctx, status int, body interface{}) error {
 }
 
 func unauthorized(c fiber.Ctx) error {
-	return respond(c, fiber.StatusUnauthorized, fiber.Map{"message": "Unauthorized, invalid session"})
+	return respond(c, fiber.StatusUnauthorized, fiber.Map{"message": "Unauthorized, invalid bearer token"})
 }
 
 func badRequest(c fiber.Ctx, message string) error {

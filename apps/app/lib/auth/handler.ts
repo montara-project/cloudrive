@@ -9,10 +9,9 @@ import { getStoredAccessToken, getStoredRefreshToken } from './token-storage'
 /**
  * Read the session issued by our own backend.
  *
- * Identity is resolved via `GET /v1/me` — the Bearer access token (stored in
- * cookies by `token-storage.ts`) when present, otherwise the Authula session
- * cookie which flows through `credentials: 'include'` (OAuth2 sign-ins mint
- * no JWT).
+ * Identity is resolved via `GET /v1/me` using the Bearer access token stored
+ * in cookies by `token-storage.ts`. The server authenticates by bearer token
+ * only — there is no session-cookie fallback.
  */
 async function getBackendSession(): Promise<AuthSession | null> {
   const accessToken = getStoredAccessToken()
@@ -21,7 +20,6 @@ async function getBackendSession(): Promise<AuthSession | null> {
   try {
     const res = await fetch(`${env.NEXT_PUBLIC_API_URL}/v1/me`, {
       headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
-      credentials: 'include',
       cache: 'no-store',
     })
 

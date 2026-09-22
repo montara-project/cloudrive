@@ -47,7 +47,7 @@ Only set variables become flags, so compose `env_file` or `docker run -e`
 work directly; no `.env` is baked into the image.
 
 Auth endpoints are served by Authula under `/v1/auth`. Everything else under
-`/v1` requires a session.
+`/v1` requires a bearer token (`Authorization: Bearer <jwt>`).
 
 ## S3 gateway
 
@@ -63,7 +63,7 @@ The gateway has two surfaces:
 ### Management endpoints
 
 Registered in `cmd/api/routes.go`, implemented in
-`internal/handlers/s3_gateway.go`. All require a session; create/delete
+`internal/handlers/s3_gateway.go`. All require a bearer token; create/delete
 operations additionally require org `owner` or `admin` role.
 
 | Method   | Path                                                | Handler            | Description                                                                               |

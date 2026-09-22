@@ -30,7 +30,7 @@ func routes(r *fiber.App, app *app.Application) {
 		Handler: app.Auth.Handler(),
 	}))
 
-	// Application routes that require a session.
+	// Application routes that require a bearer token.
 	r.Get("/v1/me", m.Authorization(), h.User.Me)
 
 	// Providers (catalog).
