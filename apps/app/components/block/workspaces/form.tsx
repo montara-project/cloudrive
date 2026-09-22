@@ -5,21 +5,21 @@ import { useMutation } from '@tanstack/react-query'
 import { useAppForm } from '@/hooks/form'
 import { toastAxiosError } from '@/lib/api/axios-error'
 import {
-  CreateOrganizationDto,
-  CreateOrganizationSchema,
-  UpdateOrganizationDto,
-  UpdateOrganizationSchema,
-} from '@/lib/api/dtos/organization/schema'
+  CreateWorkspaceDto,
+  CreateWorkspaceSchema,
+  UpdateWorkspaceDto,
+  UpdateWorkspaceSchema,
+} from '@/lib/api/dtos/workspace/schema'
 import { Models } from '@/lib/api/models'
 import { queries } from '@/lib/api/queries'
 import { BaseAbstractForm } from '@/types/form'
 
 import SimpleAlertScrollableDialogForm from '../common/simple-alert-scrollable-dialog-form'
 
-type TModel = CreateOrganizationDto
-type TMutation = CreateOrganizationDto
-type TDto = CreateOrganizationDto | UpdateOrganizationDto
-type TResponse = Models.Organization
+type TModel = CreateWorkspaceDto
+type TMutation = CreateWorkspaceDto
+type TDto = CreateWorkspaceDto | UpdateWorkspaceDto
+type TResponse = Models.Workspace
 
 type AbstractFormProps = Omit<BaseAbstractForm<TModel, TMutation, TDto, TResponse>, 'mutation'> & {
   mutation: {
@@ -63,39 +63,40 @@ function AbstractForm({
       }}
       open={open}
       onOpenChange={onOpenChange}
-      title={`${isEdit ? 'Edit' : 'Create'} Organization`}
-      description="Organizations group workspaces, members and storage."
+      title={`${isEdit ? 'Edit' : 'Create'} Workspace`}
+      description="Workspaces hold storage accounts and S3 gateways."
       confirmText={isEdit ? 'Update' : 'Save'}
       loading={mutation.isPending}
       size="xl"
     >
       <form.AppField
         name="name"
-        children={(field) => <field.TextField label="Name" placeholder="Acme Inc." asterisk />}
+        children={(field) => <field.TextField label="Name" placeholder="Production" asterisk />}
       />
 
       <form.AppField
         name="slug"
         children={(field) => (
-          <field.TextField label="Slug" placeholder="acme" asterisk disabled={!!isEdit} />
+          <field.TextField label="Slug" placeholder="production" asterisk disabled={!!isEdit} />
         )}
       />
 
       <form.AppField
-        name="logo"
-        children={(field) => <field.TextField label="Logo URL" placeholder="https://…" />}
+        name="description"
+        children={(field) => <field.TextareaField label="Description" placeholder="Optional" />}
       />
     </SimpleAlertScrollableDialogForm>
   )
 }
 
-type AddOrganizationFormProps = {
+type AddWorkspaceFormProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  orgId: string
 }
 
-export function AddOrganizationForm({ open, onOpenChange }: AddOrganizationFormProps) {
-  const mutation = useMutation(queries.organizations.create())
+export function AddWorkspaceForm({ open, onOpenChange, orgId }: AddWorkspaceFormProps) {
+  const mutation = useMutation(queries.workspaces.create(orgId))
 
   return (
     <AbstractForm
@@ -104,22 +105,22 @@ export function AddOrganizationForm({ open, onOpenChange }: AddOrganizationFormP
       defaultValues={{
         name: '',
         slug: '',
-        logo: '',
+        description: '',
       }}
-      schema={CreateOrganizationSchema}
+      schema={CreateWorkspaceSchema}
       mutation={mutation}
     />
   )
 }
 
-type EditOrganizationFormProps = {
+type EditWorkspaceFormProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  record: Models.Organization
+  record: Models.Workspace
 }
 
-export function EditOrganizationForm({ open, onOpenChange, record }: EditOrganizationFormProps) {
-  const mutation = useMutation(queries.organizations.update(record.id))
+export function EditWorkspaceForm({ open, onOpenChange, record }: EditWorkspaceFormProps) {
+  const mutation = useMutation(queries.workspaces.update(record.id))
 
   return (
     <AbstractForm
@@ -127,9 +128,9 @@ export function EditOrganizationForm({ open, onOpenChange, record }: EditOrganiz
       onOpenChange={onOpenChange}
       defaultValues={{
         ...record,
-        logo: record.logo ?? '',
+        description: record.description ?? '',
       }}
-      schema={UpdateOrganizationSchema}
+      schema={UpdateWorkspaceSchema}
       mutation={mutation}
       isEdit
     />

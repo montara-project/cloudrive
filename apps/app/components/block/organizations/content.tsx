@@ -1,3 +1,5 @@
+'use client'
+
 import { IconPlus } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'

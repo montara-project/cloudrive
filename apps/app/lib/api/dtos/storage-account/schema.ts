@@ -34,5 +34,12 @@ export const UpdateStorageAccountSchema = z.object({
   status: z.enum(['pending_auth', 'active', 'expired', 'revoked', 'error']),
 })
 
+export const RotateStorageAccountCredentialsSchema = z.object({
+  credentials: jsonObject('credentials'),
+})
+
 export type ConnectStorageAccountDto = z.infer<typeof ConnectStorageAccountSchema>
 export type UpdateStorageAccountDto = z.infer<typeof UpdateStorageAccountSchema>
+export type RotateStorageAccountCredentialsDto = z.infer<
+  typeof RotateStorageAccountCredentialsSchema
+>

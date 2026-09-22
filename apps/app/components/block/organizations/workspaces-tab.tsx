@@ -10,7 +10,7 @@ import type { Models } from '@/lib/api/models'
 
 import DataTable, { type DataTableColumn } from '@/components/block/common/data-table'
 import SimpleAlertDialog from '@/components/block/common/simple-alert-dialog'
-import WorkspaceDialog from '@/components/block/workspaces/workspace-dialog'
+import { AddWorkspaceForm } from '@/components/block/workspaces/form'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -86,7 +86,7 @@ export default function WorkspacesTab({ orgId }: { orgId: string }) {
         onRowClick={(w) => router.push(`/workspaces/${w.id}`)}
       />
 
-      <WorkspaceDialog orgId={orgId} open={creating} onOpenChange={setCreating} />
+      <AddWorkspaceForm orgId={orgId} open={creating} onOpenChange={setCreating} />
 
       <SimpleAlertDialog
         open={!!deleting}
