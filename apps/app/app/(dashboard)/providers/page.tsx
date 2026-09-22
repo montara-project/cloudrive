@@ -1,14 +1,15 @@
 'use client'
 
 import { IconCloud } from '@tabler/icons-react'
+import { useQuery } from '@tanstack/react-query'
 
 import SectionCard from '@/components/block/common/section-card'
 import StatusBadge from '@/components/block/common/status-badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { useProviders } from '@/lib/api/queries'
+import { queries } from '@/lib/api/queries'
 
 export default function ProvidersPage() {
-  const providers = useProviders()
+  const providers = useQuery(queries.providers.list())
 
   return (
     <SectionCard

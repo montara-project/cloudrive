@@ -1,44 +1,18 @@
 'use client'
 
 import { IconArrowRight, IconBuilding, IconCloud, IconPackages } from '@tabler/icons-react'
+import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 
+import StatCard from '@/components/block/dashboard/stat-card'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useOrganizations, useProviders } from '@/lib/api/queries'
-
-function StatCard({
-  title,
-  value,
-  href,
-  icon: Icon,
-  loading,
-}: {
-  title: string
-  value: number | undefined
-  href: string
-  icon: typeof IconBuilding
-  loading: boolean
-}) {
-  return (
-    <Link href={href}>
-      <Card className="transition-colors hover:border-primary/40">
-        <CardContent className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-2xl font-semibold tabular-nums">{loading ? '…' : (value ?? 0)}</p>
-          </div>
-          <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Icon className="size-5" />
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
-  )
-}
+import { queries } from '@/lib/api/queries'
 
 export default function DashboardPage() {
-  const orgs = useOrganizations({ limit: 5, order_by: 'created_at', order: 'desc' })
-  const providers = useProviders()
+  const orgs = useQuery(
+    queries.organizations.list({ limit: 5, order_by: 'created_at', order: 'desc' })
+  )
+  const providers = useQuery(queries.providers.list())
 
   return (
     <div className="flex flex-col gap-6">

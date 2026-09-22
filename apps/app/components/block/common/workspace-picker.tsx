@@ -1,5 +1,6 @@
 'use client'
 
+import { useQuery } from '@tanstack/react-query'
 import { useQueryState } from 'nuqs'
 
 import {
@@ -9,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useOrganizations, useWorkspaces } from '@/lib/api/queries'
+import { queries } from '@/lib/api/queries'
 
 /**
  * Organization → workspace selectors synced to the `org`/`ws` query params.
@@ -20,8 +21,8 @@ export default function WorkspacePicker() {
   const [orgId, setOrgId] = useQueryState('org')
   const [wsId, setWsId] = useQueryState('ws')
 
-  const orgs = useOrganizations({ limit: 100 })
-  const workspaces = useWorkspaces(orgId ?? undefined, { limit: 100 })
+  const orgs = useQuery(queries.organizations.list({ limit: 100 }))
+  const workspaces = useQuery(queries.workspaces.list(orgId ?? '', { limit: 100 }))
 
   return (
     <div className="flex flex-wrap items-center gap-2">

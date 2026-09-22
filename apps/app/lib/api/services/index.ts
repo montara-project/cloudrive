@@ -8,7 +8,7 @@ import { workspaceServices } from './workspace'
 export const services = {
   auth: authServices,
   organization: organizationServices,
-  workspace: workspaceServices,
+  workspaces: workspaceServices,
   provider: providerServices,
   storageAccount: storageAccountServices,
   s3: s3Services,

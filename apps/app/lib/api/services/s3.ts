@@ -1,38 +1,44 @@
-import type { ApiListResponse } from '@/types/api'
-
 import { env } from '@/config/env'
 import { AUTH_STORAGE_KEYS } from '@/lib/constants/auth'
 
-import type { Models } from '../models'
-
 import { ClientFetchApi } from '../client-fetch'
+import { S3BucketResources, S3CredentialResources } from './types/s3'
 
 const api = new ClientFetchApi({
   baseURL: String(env.NEXT_PUBLIC_API_URL),
   storageKey: AUTH_STORAGE_KEYS.AUTH_STORAGE,
 }).default
 
-const base = (wsId: string) => `/v1/workspaces/${wsId}/s3`
+// Credentials — secret_key is returned once on creation, never again.
+const s3CredentialResources = (): S3CredentialResources => {
+  return {
+    list: (wsId, params) => {
+      return api.get(`/v1/workspaces/${wsId}/s3/credentials`, { params })
+    },
+    create: (wsId, reqBody) => {
+      return api.post(`/v1/workspaces/${wsId}/s3/credentials`, reqBody)
+    },
+    revoke: (wsId, credentialId) => {
+      return api.delete(`/v1/workspaces/${wsId}/s3/credentials/${credentialId}`)
+    },
+  }
+}
+
+const s3BucketResources = (): S3BucketResources => {
+  return {
+    list: (wsId, params) => {
+      return api.get(`/v1/workspaces/${wsId}/s3/buckets`, { params })
+    },
+    create: (wsId, reqBody) => {
+      return api.post(`/v1/workspaces/${wsId}/s3/buckets`, reqBody)
+    },
+    delete: (wsId, bucketId) => {
+      return api.delete(`/v1/workspaces/${wsId}/s3/buckets/${bucketId}`)
+    },
+  }
+}
 
 export const s3Services = {
-  // Credentials — secret_key is returned once on creation, never again.
-  listCredentials: (wsId: string, params?: Record<string, unknown>) =>
-    api.get<ApiListResponse<Models.S3Credential>>(`${base(wsId)}/credentials`, { params }),
-
-  createCredential: (wsId: string, body: { label?: string }) =>
-    api.post<Models.S3Credential>(`${base(wsId)}/credentials`, body),
-
-  revokeCredential: (wsId: string, credentialId: string) =>
-    api.delete(`${base(wsId)}/credentials/${credentialId}`),
-
-  // Buckets
-  listBuckets: (wsId: string, params?: Record<string, unknown>) =>
-    api.get<ApiListResponse<Models.S3Bucket>>(`${base(wsId)}/buckets`, { params }),
-
-  createBucket: (
-    wsId: string,
-    body: { name: string; storage_account_id: string; root_prefix?: string }
-  ) => api.post<Models.S3Bucket>(`${base(wsId)}/buckets`, body),
-
-  deleteBucket: (wsId: string, bucketId: string) => api.delete(`${base(wsId)}/buckets/${bucketId}`),
-} as const
+  credentials: s3CredentialResources(),
+  buckets: s3BucketResources(),
+}

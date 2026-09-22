@@ -1,6 +1,7 @@
 'use client'
 
 import { IconArrowLeft, IconDotsVertical, IconPlus, IconTrash } from '@tabler/icons-react'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -12,7 +13,7 @@ import DataTable, { type DataTableColumn } from '@/components/block/common/data-
 import MemberDialog from '@/components/block/common/member-dialog'
 import SectionCard from '@/components/block/common/section-card'
 import SimpleAlertDialog from '@/components/block/common/simple-alert-dialog'
-import SimpleDialog from '@/components/block/common/simple-dialog'
+import WorkspaceDialog from '@/components/block/workspaces/workspace-dialog'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -20,112 +21,26 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Field } from '@/components/ui/field'
-import { useAppForm } from '@/hooks/form'
-import { throwAxiosError } from '@/lib/api/axios-error'
-import { UpdateWorkspaceSchema } from '@/lib/api/dtos/workspace/schema'
-import {
-  useAddWorkspaceMember,
-  useDeleteWorkspace,
-  useRemoveWorkspaceMember,
-  useUpdateWorkspace,
-  useUpdateWorkspaceMemberRole,
-  useWorkspace,
-  useWorkspaceMembers,
-} from '@/lib/api/queries'
-
-function toastError(error: unknown) {
-  try {
-    throwAxiosError(error as Error)
-  } catch (e) {
-    toast.error(e instanceof Error ? e.message : 'An error occurred')
-  }
-}
-
-function EditDialog({
-  workspace,
-  open,
-  onOpenChange,
-}: {
-  workspace: Models.Workspace
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}) {
-  const update = useUpdateWorkspace(workspace.id)
-  const [isLoading, setIsLoading] = useState(false)
-
-  const form = useAppForm({
-    defaultValues: {
-      name: workspace.name,
-      description: workspace.description ?? '',
-    },
-    validators: {
-      onSubmit: UpdateWorkspaceSchema,
-    },
-    onSubmit: async ({ value }) => {
-      setIsLoading(true)
-      try {
-        await update.mutateAsync({
-          name: value.name,
-          ...(value.description ? { description: value.description } : {}),
-        })
-        toast.success('Workspace updated')
-        onOpenChange(false)
-      } catch (error) {
-        toastError(error)
-      } finally {
-        setIsLoading(false)
-      }
-    },
-  })
-
-  return (
-    <SimpleDialog title="Edit workspace" open={open} onOpenChange={onOpenChange}>
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={(e) => {
-          e.preventDefault()
-          form.handleSubmit()
-        }}
-      >
-        <form.AppField
-          name="name"
-          children={(field) => <field.TextField label="Name" asterisk />}
-        />
-        <form.AppField
-          name="description"
-          children={(field) => <field.TextareaField label="Description" placeholder="Optional" />}
-        />
-        <Field className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="primary" disabled={isLoading}>
-            {isLoading ? 'Saving…' : 'Save changes'}
-          </Button>
-        </Field>
-      </form>
-    </SimpleDialog>
-  )
-}
+import { toastAxiosError } from '@/lib/api/axios-error'
+import { queries } from '@/lib/api/queries'
 
 export default function WorkspaceDetailPage() {
   const params = useParams<{ wsId: string }>()
   const wsId = params.wsId
   const router = useRouter()
 
-  const workspace = useWorkspace(wsId)
-  const members = useWorkspaceMembers(wsId, { limit: 100 })
+  const workspace = useQuery(queries.workspaces.get({ id: wsId }))
+  const members = useQuery(queries.workspaces.members.list(wsId, { limit: 100 }))
 
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [addingMember, setAddingMember] = useState(false)
   const [removing, setRemoving] = useState<Models.WorkspaceMember | null>(null)
 
-  const del = useDeleteWorkspace()
-  const addMember = useAddWorkspaceMember(wsId)
-  const updateRole = useUpdateWorkspaceMemberRole(wsId)
-  const removeMember = useRemoveWorkspaceMember(wsId)
+  const del = useMutation(queries.workspaces.delete())
+  const addMember = useMutation(queries.workspaces.members.add(wsId))
+  const updateRole = useMutation(queries.workspaces.members.update(wsId))
+  const removeMember = useMutation(queries.workspaces.members.remove(wsId))
 
   if (workspace.isLoading) {
     return (
@@ -146,7 +61,7 @@ export default function WorkspaceDetailPage() {
     )
   }
 
-  const ws = workspace.data
+  const ws = workspace.data.data
   const memberColumns: DataTableColumn<Models.WorkspaceMember>[] = [
     {
       header: 'User',
@@ -164,7 +79,7 @@ export default function WorkspaceDetailPage() {
               await updateRole.mutateAsync({ userId: m.user_id, role: e.target.value })
               toast.success('Role updated')
             } catch (error) {
-              toastError(error)
+              toastAxiosError(error)
             }
           }}
         >
@@ -255,7 +170,7 @@ export default function WorkspaceDetailPage() {
         />
       </SectionCard>
 
-      <EditDialog workspace={ws} open={editing} onOpenChange={setEditing} />
+      <WorkspaceDialog workspace={ws} open={editing} onOpenChange={setEditing} />
 
       <MemberDialog
         open={addingMember}
@@ -281,7 +196,7 @@ export default function WorkspaceDetailPage() {
             toast.success('Workspace deleted')
             router.push('/workspaces')
           } catch (error) {
-            toastError(error)
+            toastAxiosError(error)
           }
         }}
       />
@@ -299,7 +214,7 @@ export default function WorkspaceDetailPage() {
             toast.success('Member removed')
             setRemoving(null)
           } catch (error) {
-            toastError(error)
+            toastAxiosError(error)
           }
         }}
       />

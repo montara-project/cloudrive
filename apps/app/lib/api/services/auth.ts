@@ -12,7 +12,7 @@ const api = new ClientFetchApi({
   storageKey: AUTH_STORAGE_KEYS.AUTH_STORAGE,
 }).default
 
-const resources = (): AuthResources => {
+const authResources = (): AuthResources => {
   return {
     signIn: (reqBody) => {
       return api.post(`${path}/email-password/sign-in`, reqBody)
@@ -38,4 +38,4 @@ const resources = (): AuthResources => {
   }
 }
 
-export const authServices = resources()
+export const authServices = authResources()

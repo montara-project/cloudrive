@@ -1,6 +1,7 @@
 'use client'
 
 import { IconDotsVertical, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { useQueryState } from 'nuqs'
 import { useState } from 'react'
@@ -11,7 +12,7 @@ import type { Models } from '@/lib/api/models'
 import DataTable, { type DataTableColumn } from '@/components/block/common/data-table'
 import SectionCard from '@/components/block/common/section-card'
 import SimpleAlertDialog from '@/components/block/common/simple-alert-dialog'
-import SimpleDialog from '@/components/block/common/simple-dialog'
+import WorkspaceDialog from '@/components/block/workspaces/workspace-dialog'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -19,7 +20,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Field } from '@/components/ui/field'
 import {
   Select,
   SelectContent,
@@ -27,140 +27,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useAppForm } from '@/hooks/form'
-import { throwAxiosError } from '@/lib/api/axios-error'
-import { CreateWorkspaceSchema, type CreateWorkspaceDto } from '@/lib/api/dtos/workspace/schema'
-import {
-  useCreateWorkspace,
-  useDeleteWorkspace,
-  useOrganizations,
-  useUpdateWorkspace,
-  useWorkspaces,
-} from '@/lib/api/queries'
+import { toastAxiosError } from '@/lib/api/axios-error'
+import { queries } from '@/lib/api/queries'
 
 type Workspace = Models.Workspace
-
-function toastError(error: unknown) {
-  try {
-    throwAxiosError(error as Error)
-  } catch (e) {
-    toast.error(e instanceof Error ? e.message : 'An error occurred')
-  }
-}
-
-function WorkspaceDialog({
-  orgId,
-  workspace,
-  open,
-  onOpenChange,
-}: {
-  orgId: string
-  workspace: Workspace | null
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}) {
-  const create = useCreateWorkspace(orgId)
-  const update = useUpdateWorkspace(workspace?.id ?? '')
-  const [isLoading, setIsLoading] = useState(false)
-
-  const form = useAppForm({
-    defaultValues: {
-      name: workspace?.name ?? '',
-      slug: workspace?.slug ?? '',
-      description: workspace?.description ?? '',
-    } satisfies CreateWorkspaceDto,
-    validators: {
-      onSubmit: CreateWorkspaceSchema,
-    },
-    onSubmit: async ({ value }) => {
-      setIsLoading(true)
-      try {
-        if (workspace) {
-          await update.mutateAsync({
-            name: value.name,
-            ...(value.description ? { description: value.description } : {}),
-          })
-          toast.success('Workspace updated')
-        } else {
-          await create.mutateAsync({
-            name: value.name,
-            slug: value.slug,
-            ...(value.description ? { description: value.description } : {}),
-          })
-          toast.success('Workspace created')
-        }
-        onOpenChange(false)
-      } catch (error) {
-        toastError(error)
-      } finally {
-        setIsLoading(false)
-      }
-    },
-  })
-
-  return (
-    <SimpleDialog
-      title={workspace ? 'Edit workspace' : 'Create workspace'}
-      description={workspace ? undefined : 'Workspaces hold storage accounts and S3 gateways.'}
-      open={open}
-      onOpenChange={onOpenChange}
-    >
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={(e) => {
-          e.preventDefault()
-          form.handleSubmit()
-        }}
-      >
-        <form.AppField
-          name="name"
-          children={(field) => <field.TextField label="Name" placeholder="Production" asterisk />}
-        />
-        <form.AppField
-          name="slug"
-          children={(field) => (
-            <field.TextField
-              label="Slug"
-              placeholder="production"
-              asterisk={!workspace}
-              disabled={!!workspace}
-            />
-          )}
-        />
-        <form.AppField
-          name="description"
-          children={(field) => <field.TextareaField label="Description" placeholder="Optional" />}
-        />
-        <Field className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="primary" disabled={isLoading}>
-            {isLoading ? 'Saving…' : workspace ? 'Save changes' : 'Create'}
-          </Button>
-        </Field>
-      </form>
-    </SimpleDialog>
-  )
-}
 
 export default function WorkspacesPage() {
   const router = useRouter()
   const [orgId, setOrgId] = useQueryState('org')
 
-  const orgs = useOrganizations({ limit: 100 })
-  const workspaces = useWorkspaces(orgId ?? undefined, {
-    limit: 100,
-    order_by: 'created_at',
-    order: 'desc',
-  })
+  const orgs = useQuery(queries.organizations.list({ limit: 100 }))
+  const workspaces = useQuery(
+    queries.workspaces.list(orgId ?? '', {
+      limit: 100,
+      order_by: 'created_at',
+      order: 'desc',
+    })
+  )
 
   const [dialog, setDialog] = useState<{ open: boolean; ws: Workspace | null }>({
     open: false,
     ws: null,
   })
   const [deleting, setDeleting] = useState<Workspace | null>(null)
-  const del = useDeleteWorkspace()
+  const del = useMutation(queries.workspaces.delete())
 
   const columns: DataTableColumn<Workspace>[] = [
     {
@@ -262,15 +152,13 @@ export default function WorkspacesPage() {
         )}
       </SectionCard>
 
-      {orgId && (
-        <WorkspaceDialog
-          key={dialog.ws?.id ?? 'new'}
-          orgId={orgId}
-          workspace={dialog.ws}
-          open={dialog.open}
-          onOpenChange={(open) => setDialog({ open, ws: open ? dialog.ws : null })}
-        />
-      )}
+      <WorkspaceDialog
+        key={dialog.ws?.id ?? 'new'}
+        orgId={orgId ?? undefined}
+        workspace={dialog.ws}
+        open={dialog.open}
+        onOpenChange={(open) => setDialog({ open, ws: open ? dialog.ws : null })}
+      />
 
       <SimpleAlertDialog
         open={!!deleting}
@@ -285,7 +173,7 @@ export default function WorkspacesPage() {
             toast.success('Workspace deleted')
             setDeleting(null)
           } catch (error) {
-            toastError(error)
+            toastAxiosError(error)
           }
         }}
       />

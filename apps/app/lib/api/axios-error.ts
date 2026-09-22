@@ -1,4 +1,5 @@
 import { AxiosError } from 'axios'
+import { toast } from 'sonner'
 
 interface ErrorItem {
   code: string
@@ -25,4 +26,13 @@ export function throwAxiosError(error: Error) {
   }
 
   throw new Error(error.message)
+}
+
+/** Toast the message extracted by {@link throwAxiosError}. */
+export function toastAxiosError(error: unknown) {
+  try {
+    throwAxiosError(error as Error)
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : 'An error occurred')
+  }
 }
