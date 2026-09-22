@@ -54,8 +54,8 @@ func parseFlag(cfg *config.Config) {
 	flag.StringVar(&cfg.S3.Token, "s3-token", "", "S3 token")
 
 	// S3-compatible gateway: separate listener speaking the S3 REST dialect
-	// (SigV4, path-style, XML). Empty disables the gateway listener.
-	flag.StringVar(&cfg.S3.APIAddr, "s3-api-addr", "", "S3 gateway listen address (:9000); empty disables it")
+	// (SigV4, path-style, XML). 0 disables the gateway listener.
+	flag.IntVar(&cfg.S3.APIPort, "s3-api-port", 9000, "S3 gateway listen port; 0 disables it")
 	flag.StringVar(&cfg.S3.StagingDir, "s3-staging-dir", "", "Staging directory for multipart uploads to non-passthrough backends")
 
 	// Storage provider credential vault: comma-separated key_id:base64 entries

@@ -57,9 +57,9 @@ type ConfigS3 struct {
 	Region       string
 	Endpoint     string
 	Token        string
-	// APIAddr is the S3 gateway's dedicated listen address; empty disables
-	// the gateway listener.
-	APIAddr string
+	// APIPort is the S3 gateway's dedicated listen port; 0 disables the
+	// gateway listener.
+	APIPort int
 	// StagingDir buffers multipart parts for backends without native
 	// multipart support (e.g. Google Drive). Empty falls back to os.TempDir.
 	StagingDir string

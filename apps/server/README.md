@@ -28,7 +28,7 @@ make run                   # go run ./cmd/api with flags from .env
 
 The Dockerfile builds a minimal Alpine image (`api` + `migrate` binaries,
 migrations, templates, static assets) running as a non-root user. The API
-listens on 8080; the S3 gateway on 9000 when `S3_API_ADDR` is set.
+listens on 8080; the S3 gateway on `S3_API_PORT` (default 9000, `0` disables it).
 
 The binary is configured by CLI flags only, so the image entrypoint
 (`scripts/entrypoint.sh`) translates environment variables into flags —
@@ -55,8 +55,8 @@ The gateway has two surfaces:
 
 1. **Management API** — JSON endpoints on the main listener for issuing
    SigV4 credentials and mapping bucket names onto storage accounts.
-2. **S3-compatible API** — a dedicated Fiber app on `S3_API_ADDR` (e.g.
-   `:9000`; empty disables it) speaking the AWS S3 REST dialect: XML bodies,
+2. **S3-compatible API** — a dedicated Fiber app on `S3_API_PORT` (default
+   `9000`; `0` disables it) speaking the AWS S3 REST dialect: XML bodies,
    path-style addressing, SigV4 auth (header or presigned URL). Point any
    S3 client at it with the issued access key/secret.
 

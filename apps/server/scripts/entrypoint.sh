@@ -35,7 +35,7 @@ for pair in \
 	s3-region:S3_REGION \
 	s3-endpoint:S3_ENDPOINT \
 	s3-token:S3_TOKEN \
-	s3-api-addr:S3_API_ADDR \
+	s3-api-port:S3_API_PORT \
 	s3-staging-dir:S3_STAGING_DIR \
 	storage-credentials-keys:STORAGE_CREDENTIALS_KEYS \
 	typesafe-api-key:TYPESAFE_API_KEY \
