@@ -28,8 +28,8 @@ func pagination(c fiber.Ctx) (*repositories.QueryOptions, *dtos.ListQuery, error
 		return nil, nil, requestError(c, err, "Invalid pagination parameters")
 	}
 
-	if q.Page <= 0 {
-		q.Page = 1
+	if q.Offset < 0 {
+		q.Offset = 0
 	}
 	if q.Limit <= 0 {
 		q.Limit = 20
@@ -40,7 +40,7 @@ func pagination(c fiber.Ctx) (*repositories.QueryOptions, *dtos.ListQuery, error
 
 	return &repositories.QueryOptions{
 		Limit:   int64(q.Limit),
-		Offset:  int64((q.Page - 1) * q.Limit),
+		Offset:  int64(q.Offset),
 		OrderBy: q.OrderBy,
 		Order:   q.Order,
 	}, q, nil
@@ -51,9 +51,9 @@ func listResponse(c fiber.Ctx, q *dtos.ListQuery, total int64, data any) error {
 	return c.JSON(fiber.Map{
 		"data": data,
 		"metadata": fiber.Map{
-			"total": total,
-			"page":  q.Page,
-			"limit": q.Limit,
+			"total":  total,
+			"offset": q.Offset,
+			"limit":  q.Limit,
 		},
 	})
 }
