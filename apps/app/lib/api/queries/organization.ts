@@ -8,6 +8,8 @@ import { PaginateDto } from '../dtos/paginate'
 import { services } from '../services'
 import { GetBaseParams } from './types/param'
 
+export const ORGANIZATION_QUERY_KEY = ['organizations']
+
 export const LIST_ORGANIZATION_QUERY_KEY = (params?: PaginateDto) => {
   return ['organizations', params]
 }
@@ -41,42 +43,49 @@ const get = (params: GetBaseParams) =>
     },
   })
 
-const create = () =>
-  mutationOptions({
+const create = (params?: PaginateDto) => {
+  return mutationOptions({
     mutationFn: async (reqBody: CreateOrganizationDto) => {
       const res = await services.organization.create(reqBody)
       return res.data
     },
     onSuccess: () => {
-      getQueryClient().invalidateQueries({ queryKey: ['organizations'] })
+      const qc = getQueryClient()
+      qc.invalidateQueries({ queryKey: ORGANIZATION_QUERY_KEY })
+      qc.invalidateQueries({ queryKey: LIST_ORGANIZATION_QUERY_KEY(params) })
     },
   })
+}
 
-const update = (orgId: string) =>
-  mutationOptions({
+const update = (orgId: string, params?: PaginateDto) => {
+  return mutationOptions({
     mutationFn: async (reqBody: UpdateOrganizationDto) => {
       const res = await services.organization.update(orgId, reqBody)
       return res.data
     },
     onSuccess: () => {
       const qc = getQueryClient()
-      qc.invalidateQueries({ queryKey: ['organizations'] })
+      qc.invalidateQueries({ queryKey: ORGANIZATION_QUERY_KEY })
+      qc.invalidateQueries({ queryKey: LIST_ORGANIZATION_QUERY_KEY(params) })
       qc.invalidateQueries({ queryKey: GET_ORGANIZATION_QUERY_KEY(orgId) })
     },
   })
+}
 
-const del = () =>
-  mutationOptions({
+const del = (params?: PaginateDto) => {
+  return mutationOptions({
     mutationFn: async (orgId: string) => {
       const res = await services.organization.delete(orgId)
       return res.data
     },
     onSuccess: (_, orgId) => {
       const qc = getQueryClient()
-      qc.invalidateQueries({ queryKey: ['organizations'] })
+      qc.invalidateQueries({ queryKey: ORGANIZATION_QUERY_KEY })
+      qc.invalidateQueries({ queryKey: LIST_ORGANIZATION_QUERY_KEY(params) })
       qc.invalidateQueries({ queryKey: GET_ORGANIZATION_QUERY_KEY(orgId) })
     },
   })
+}
 
 export const organizationQueries = {
   list,

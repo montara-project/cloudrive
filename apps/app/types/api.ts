@@ -19,7 +19,7 @@ export type API_METHOD_MAP = {
 export type Metadata = {
   total?: number
   message?: string
-  page?: number
+  offset?: number
   per_page?: number
   from?: number
   to?: number

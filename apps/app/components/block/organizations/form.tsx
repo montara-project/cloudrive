@@ -20,8 +20,6 @@ type TDto = CreateOrganizationDto | UpdateOrganizationDto
 type TResponse = Models.Organization
 
 type AbstractFormProps = Omit<BaseAbstractForm<TModel, TMutation, TDto, TResponse>, 'mutation'> & {
-  // UpdateOrganizationDto omits slug — assignable from CreateOrganizationDto's shape,
-  // so a mutation taking either DTO accepts mutateAsync(value: TMutation).
   mutation: {
     mutateAsync: (value: TMutation) => Promise<unknown>
     isPending: boolean
@@ -126,8 +124,7 @@ export function EditOrganizationForm({ open, onOpenChange, record }: EditOrganiz
       open={open}
       onOpenChange={onOpenChange}
       defaultValues={{
-        name: record.name,
-        slug: record.slug,
+        ...record,
         logo: record.logo ?? '',
       }}
       schema={UpdateOrganizationSchema}
