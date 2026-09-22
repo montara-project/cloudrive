@@ -1,8 +1,8 @@
 'use client'
 
 import { IconBarrierBlock } from '@tabler/icons-react'
-import { useRouter } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -21,7 +21,7 @@ interface EmptySectionProps {
 }
 
 export default function EmptySection({ title, message, ...props }: EmptySectionProps) {
-  const { navigate } = useRouter()
+  const router = useRouter()
 
   return (
     <Empty>
@@ -32,7 +32,7 @@ export default function EmptySection({ title, message, ...props }: EmptySectionP
       </EmptyHeader>
       <EmptyContent>
         <div className="flex gap-2">
-          <Button className="cursor-pointer" onClick={() => navigate({ to: '/' })}>
+          <Button className="cursor-pointer" onClick={() => router.push('/dashboard')}>
             <ArrowLeft />
             <span>Back</span>
           </Button>

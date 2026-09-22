@@ -1,15 +1,10 @@
-import type { ISO8601DateString } from '@/types/time'
-
-export interface SignInResponse {
-  uid: string
-  display_name: string
-  email: string
+// Authula's jwt.respond_json replaces the sign-in/exchange response body with
+// the minted token pair.
+export interface TokenPairResponse {
   access_token: string
   refresh_token: string
-  id_token: string
-  expires_at: ISO8601DateString
-  expires_in: number
-  role: string
+  token_type?: string
+  expires_in?: number
 }
 
-export type RefreshTokenResponse = SignInResponse
+export type RefreshTokenResponse = TokenPairResponse

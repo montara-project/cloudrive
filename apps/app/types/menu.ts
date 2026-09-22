@@ -39,11 +39,8 @@ export type SidebarMenuData = {
   teams: TeamItem[]
   navMenu: {
     overview: NavMainItem[]
-    traffic: NavMainItem[]
-    connections: NavMainItem[]
-    safety: NavMainItem[]
-    analytics: NavMainItem[]
-    developer: NavMainItem[]
+    manage: NavMainItem[]
+    storage: NavMainItem[]
   }
   navSetting: NavMainItem[]
 }

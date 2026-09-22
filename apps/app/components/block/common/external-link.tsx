@@ -1,7 +1,7 @@
 'use client'
 
 import { IconExternalLink } from '@tabler/icons-react'
-import { Link } from '@tanstack/react-router'
+import Link from 'next/link'
 
 import { Button } from '@/components/ui/button'
 
@@ -17,7 +17,7 @@ export default function ExternalLink({ label = 'Visit', link }: ExternalLinkProp
 
   return (
     <Button mode="link" underline="solid" asChild>
-      <Link to={link} target="_blank">
+      <Link href={link} target="_blank">
         {label}
         <IconExternalLink />
       </Link>

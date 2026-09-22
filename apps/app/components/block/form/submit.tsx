@@ -28,7 +28,7 @@ export default function SubmitButton({
         <Button
           type="submit"
           className={cn(
-            'text-off-white bg-obsidian-black hover:bg-obsidian-black/80 h-10 rounded-lg px-6 transition-colors',
+            'bg-primary text-primary-foreground hover:bg-primary/90 h-10 rounded-lg px-6 transition-colors',
             className
           )}
           disabled={isSubmitting}

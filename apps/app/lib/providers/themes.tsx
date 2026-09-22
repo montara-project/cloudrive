@@ -1,3 +1,5 @@
+'use client'
+
 import { ThemeProvider as NextThemesProvider } from 'next-themes'
 import React from 'react'
 
@@ -9,7 +11,7 @@ import React from 'react'
 export default function ThemeProvider({ children }: { children: React.ReactNode }) {
   return (
     <NextThemesProvider
-      storageKey="tera-router-theme"
+      storageKey="cloudrive-theme"
       defaultTheme="dark"
       attribute="class"
       disableTransitionOnChange

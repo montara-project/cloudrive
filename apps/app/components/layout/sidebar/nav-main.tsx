@@ -1,7 +1,8 @@
 'use client'
 
-import { Link, useLocation } from '@tanstack/react-router'
 import { ChevronRight } from 'lucide-react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
@@ -22,14 +23,14 @@ type NavMainProps = {
 }
 
 export default function NavMain({ title, items }: NavMainProps) {
-  const pathname = useLocation().pathname
+  const pathname = usePathname()
 
   const renderSidebarMenu = (item: NavMainItem) => {
     if (item.items.length === 0) {
       return (
         <SidebarMenuItem key={item.title}>
           <SidebarMenuButton tooltip={item.title} asChild isActive={pathname.includes(item.url)}>
-            <Link to={item.url}>
+            <Link href={item.url}>
               {item.icon && <item.icon />}
               <span>{item.title}</span>
             </Link>
@@ -62,7 +63,7 @@ export default function NavMain({ title, items }: NavMainProps) {
                 {item.items.map((subItem) => (
                   <SidebarMenuSubItem key={subItem.title}>
                     <SidebarMenuSubButton asChild isActive={pathname.includes(subItem.url)}>
-                      <Link to={subItem.url}>
+                      <Link href={subItem.url}>
                         {subItem.icon && <subItem.icon />}
                         <span>{subItem.title}</span>
                       </Link>

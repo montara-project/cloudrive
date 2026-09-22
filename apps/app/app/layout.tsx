@@ -2,7 +2,10 @@ import type { Metadata, Viewport } from 'next'
 
 import './globals.css'
 
+import { Toaster } from '@/components/ui/sonner'
 import { META } from '@/lib/constants/meta'
+import DecorationProvider from '@/lib/providers/decoration'
+import ReactQueryProvider from '@/lib/providers/react-query'
 
 export const metadata: Metadata = META
 
@@ -12,7 +15,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script
           defer
@@ -27,7 +30,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             __html: "document.documentElement.classList.add('js')",
           }}
         />
-        {children}
+        <ReactQueryProvider>
+          <DecorationProvider>{children}</DecorationProvider>
+        </ReactQueryProvider>
+        <Toaster />
       </body>
     </html>
   )

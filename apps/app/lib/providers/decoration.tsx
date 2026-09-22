@@ -1,4 +1,6 @@
-import { NuqsAdapter } from 'nuqs/adapters/tanstack-router'
+'use client'
+
+import { NuqsAdapter } from 'nuqs/adapters/next/app'
 
 import ThemeProvider from './themes'
 

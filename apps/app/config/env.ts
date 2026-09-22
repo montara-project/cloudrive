@@ -6,10 +6,7 @@ export const env = createEnv({
    * Serverside Environment variables, not available on the client.
    * Will throw if you access these variables on the client.
    */
-  server: {
-    BETTER_AUTH_URL: z.url(),
-    BETTER_AUTH_SECRET: z.string(),
-  },
+  server: {},
   /*
    * Environment variables available on the client (and server).
    *
@@ -32,8 +29,5 @@ export const env = createEnv({
     NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     NEXT_PUBLIC_OSM_API_URL: process.env.NEXT_PUBLIC_OSM_API_URL,
-
-    BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
-    BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
   },
 })

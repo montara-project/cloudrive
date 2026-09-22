@@ -40,7 +40,7 @@ export default function TextareaField({
         onChange={(e) => field.handleChange(e.target.value)}
         aria-invalid={isInvalid}
         placeholder={placeholder}
-        className="min-h-[120px]"
+        className="min-h-30"
         rows={rows}
       />
       {note && <FieldDescription>{note}</FieldDescription>}
