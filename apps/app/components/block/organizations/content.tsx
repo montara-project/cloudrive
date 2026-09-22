@@ -29,7 +29,7 @@ export default function OrganizationContent() {
 
   const total = getTotal(orgs)
   const columns = OrganizationColumn({ loading: isLoading || isFetching || isPending })
-  const chains = useMemo(() => (orgs?.data && orgs?.data?.length > 0 ? orgs.data : []), [orgs])
+  const organizations = useMemo(() => (orgs?.data && orgs?.data?.length > 0 ? orgs.data : []), [orgs])
 
   return (
     <>
@@ -44,7 +44,7 @@ export default function OrganizationContent() {
       >
         <ReactTable
           total={total}
-          data={chains}
+          data={organizations}
           pageIndex={pageIndex}
           pageSize={limit}
           columns={columns}

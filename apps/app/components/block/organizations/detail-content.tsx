@@ -21,11 +21,11 @@ import WorkspacesTab from './workspaces-tab'
 export default function OrganizationDetailContent({ orgId }: { orgId: string }) {
   const router = useRouter()
 
-  const org = useQuery(queries.organizations.get({ id: orgId }))
+  const { data: org, isLoading, isError } = useQuery(queries.organizations.get({ id: orgId }))
   const del = useMutation(queries.organizations.delete())
   const [deleting, setDeleting] = useState(false)
 
-  if (org.isLoading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center py-20">
         <span className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -33,7 +33,7 @@ export default function OrganizationDetailContent({ orgId }: { orgId: string }) 
     )
   }
 
-  if (org.isError || !org.data) {
+  if (isError || !org?.data) {
     return (
       <div className="flex flex-col items-center gap-3 py-20 text-center">
         <p className="text-muted-foreground">Organization not found or unavailable.</p>
@@ -54,8 +54,8 @@ export default function OrganizationDetailContent({ orgId }: { orgId: string }) 
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{org.data.data.name}</h1>
-            <p className="text-sm text-muted-foreground">@{org.data.data.slug}</p>
+            <h1 className="text-2xl font-semibold tracking-tight">{org.data.name}</h1>
+            <p className="text-sm text-muted-foreground">@{org.data.slug}</p>
           </div>
         </div>
         <Button variant="destructive" size="sm" onClick={() => setDeleting(true)}>
@@ -63,7 +63,7 @@ export default function OrganizationDetailContent({ orgId }: { orgId: string }) 
         </Button>
       </div>
 
-      <SectionCard title={org.data.data.name} description={`@${org.data.data.slug}`}>
+      <SectionCard title={org.data.name} description={`@${org.data.slug}`}>
         <Tabs defaultValue="workspaces">
           <TabsList className="mb-4">
             <TabsTrigger value="workspaces">Workspaces</TabsTrigger>
@@ -86,7 +86,7 @@ export default function OrganizationDetailContent({ orgId }: { orgId: string }) 
         open={deleting}
         onOpenChange={setDeleting}
         title="Delete organization"
-        description={`Delete "${org.data.data.name}"? Its workspaces and storage accounts will be removed. This cannot be undone.`}
+        description={`Delete "${org.data.name}"? Its workspaces and storage accounts will be removed. This cannot be undone.`}
         confirmText="Delete"
         onConfirm={async () => {
           try {
