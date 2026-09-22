@@ -18,8 +18,8 @@ export const GET_ORGANIZATION_QUERY_KEY = (id: string) => {
   return ['organizations/id', id]
 }
 
-const list = (params?: PaginateDto) =>
-  queryOptions({
+const list = (params?: PaginateDto) => {
+  return queryOptions({
     queryKey: LIST_ORGANIZATION_QUERY_KEY(params),
     queryFn: async () => {
       const pagination = {
@@ -33,15 +33,17 @@ const list = (params?: PaginateDto) =>
       return res.data
     },
   })
+}
 
-const get = (params: GetBaseParams) =>
-  queryOptions({
+const get = (params: GetBaseParams) => {
+  return queryOptions({
     queryKey: GET_ORGANIZATION_QUERY_KEY(params.id),
     queryFn: async () => {
       const res = await services.organization.get(params.id)
       return res.data
     },
   })
+}
 
 const create = (params?: PaginateDto) => {
   return mutationOptions({
