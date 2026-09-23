@@ -1,6 +1,6 @@
 'use client'
 
-import { IconKey, IconTrash } from '@tabler/icons-react'
+import { IconKey, IconRefresh, IconTrash } from '@tabler/icons-react'
 import { useMutation } from '@tanstack/react-query'
 import { ColumnDef } from '@tanstack/react-table'
 import React, { useMemo, useState } from 'react'
@@ -111,6 +111,20 @@ function ActionCell({ record, wsId }: ActionCellProps) {
   const [openDisconnect, setOpenDisconnect] = useState(false)
 
   const mutation = useMutation(queries.storageAccounts.disconnect(wsId))
+  const refreshOAuth = useMutation(queries.storageAccounts.refreshOAuth(wsId))
+
+  // OAuth accounts carry a "<slug>:<identifier>" external id (server-side
+  // normalization); a prefixed id marks an OAuth-connected account.
+  const isOAuthAccount = record.external_account_id.includes(':')
+
+  const handleRefreshTokens = async () => {
+    try {
+      await refreshOAuth.mutateAsync(record.id)
+      toast.success('Tokens renewed')
+    } catch (error) {
+      toastAxiosError(error)
+    }
+  }
 
   const handleDisconnect = async () => {
     try {
@@ -127,6 +141,11 @@ function ActionCell({ record, wsId }: ActionCellProps) {
         onEdit={() => setOpenEdit(true)}
         dropdown={
           <React.Fragment>
+            {isOAuthAccount && (
+              <DropdownMenuItem onClick={() => handleRefreshTokens()}>
+                <IconRefresh /> Renew tokens
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => setOpenRotate(true)}>
               <IconKey /> Rotate credentials
             </DropdownMenuItem>

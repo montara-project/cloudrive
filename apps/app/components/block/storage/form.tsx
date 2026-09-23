@@ -1,6 +1,7 @@
 'use client'
 
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
 import z from 'zod'
 
 import { useAppForm } from '@/hooks/form'
@@ -31,10 +32,16 @@ export function ConnectStorageAccountForm({
 }: ConnectStorageAccountFormProps) {
   const providers = useQuery(queries.providers.list())
   const mutation = useMutation(queries.storageAccounts.connect())
+  const authorize = useMutation(queries.storageAccounts.authorizeOAuth())
 
-  const providerOptions = (providers.data?.data ?? [])
-    .filter((p) => p.is_active)
-    .map((p) => ({ label: p.name, value: p.id }))
+  const providerById = useMemo(
+    () =>
+      Object.fromEntries((providers.data?.data ?? []).map((p) => [p.id, p])) as Record<
+        string,
+        Models.Provider
+      >,
+    [providers.data]
+  )
 
   const defaultValues: ConnectFormValues = {
     workspace_id: wsId,
@@ -48,12 +55,27 @@ export function ConnectStorageAccountForm({
 
   const form = useAppForm({
     defaultValues,
-    validators: {
-      onSubmit: ConnectStorageAccountSchema,
-      onChange: ConnectStorageAccountSchema,
-    },
     onSubmit: async ({ value }) => {
       try {
+        const provider = providerById[value.provider_id]
+
+        // Validation is conditional: OAuth providers never fill the
+        // credentials form, so the full schema (which requires it) cannot
+        // run for them — only the workspace + provider pair is needed.
+        if (provider?.auth_type === 'oauth2') {
+          const dto = ConnectStorageAccountSchema.pick({
+            workspace_id: true,
+            provider_id: true,
+          }).parse(value)
+
+          // The server-hosted authorization-code flow mints and seals the
+          // credentials. The browser leaves for the consent screen; the
+          // server callback returns to /storage.
+          await authorize.mutateAsync({ providerSlug: provider.slug, wsId: dto.workspace_id })
+          onOpenChange(false)
+          return
+        }
+
         const dto = ConnectStorageAccountSchema.parse(value)
         await mutation.mutateAsync({
           workspace_id: dto.workspace_id,
@@ -64,6 +86,7 @@ export function ConnectStorageAccountForm({
           ...(dto.account_email ? { account_email: dto.account_email } : {}),
           ...(dto.settings ? { settings: dto.settings } : {}),
         })
+        onOpenChange(false)
       } catch (error) {
         toastAxiosError(error)
       } finally {
@@ -71,6 +94,12 @@ export function ConnectStorageAccountForm({
       }
     },
   })
+
+  // SelectField's onSelect keeps a plain React state in sync with the form
+  // value; TanStack's useStore is not exposed by the createFormHook wrapper.
+  const [selectedProviderId, setSelectedProviderId] = useState('')
+  const selectedProvider = providerById[selectedProviderId]
+  const isOAuthProvider = selectedProvider?.auth_type === 'oauth2'
 
   return (
     <SimpleAlertScrollableDialogForm
@@ -82,8 +111,11 @@ export function ConnectStorageAccountForm({
       onOpenChange={onOpenChange}
       title="Connect storage account"
       description="Link a cloud storage provider account to this workspace."
-      confirmText="Connect"
-      loading={mutation.isPending}
+      confirmText={
+        isOAuthProvider ? `Continue with ${selectedProvider?.name ?? 'provider'}` : 'Connect'
+      }
+      loading={mutation.isPending || authorize.isPending}
+      disabled={!selectedProviderId}
       size="xl"
     >
       <form.AppField
@@ -92,59 +124,71 @@ export function ConnectStorageAccountForm({
           <field.SelectField
             label="Provider"
             placeholder="Select provider"
-            options={providerOptions}
+            options={(providers.data?.data ?? [])
+              .filter((p) => p.is_active)
+              .map((p) => ({ label: p.name, value: p.id }))}
             loading={providers.isLoading}
+            onSelect={(value) => setSelectedProviderId(value)}
             asterisk
           />
         )}
       />
 
-      <form.AppField
-        name="display_name"
-        children={(field) => (
-          <field.TextField label="Display name" placeholder="Production bucket" asterisk />
-        )}
-      />
-
-      <form.AppField
-        name="external_account_id"
-        children={(field) => (
-          <field.TextField
-            label="External account ID"
-            placeholder="Bucket name / account ID at the provider"
-            asterisk
+      {isOAuthProvider ? (
+        <p className="text-sm text-muted-foreground">
+          You will be redirected to {selectedProvider?.name} to authorize access. Cloudrive never
+          sees or stores your password — only encrypted tokens it can renew.
+        </p>
+      ) : (
+        <>
+          <form.AppField
+            name="display_name"
+            children={(field) => (
+              <field.TextField label="Display name" placeholder="Production bucket" asterisk />
+            )}
           />
-        )}
-      />
 
-      <form.AppField
-        name="account_email"
-        children={(field) => <field.TextField label="Account email" placeholder="Optional" />}
-      />
-
-      <form.AppField
-        name="credentials"
-        children={(field) => (
-          <field.TextareaField
-            label="Credentials (JSON)"
-            placeholder='{"access_key_id": "…", "secret_access_key": "…"}'
-            note="Stored encrypted. Shape depends on the provider's auth type."
-            rows={4}
-            asterisk
+          <form.AppField
+            name="external_account_id"
+            children={(field) => (
+              <field.TextField
+                label="External account ID"
+                placeholder="Bucket name / account ID at the provider"
+                asterisk
+              />
+            )}
           />
-        )}
-      />
 
-      <form.AppField
-        name="settings"
-        children={(field) => (
-          <field.TextareaField
-            label="Settings (JSON, optional)"
-            placeholder='{"region": "us-east-1"}'
-            rows={3}
+          <form.AppField
+            name="account_email"
+            children={(field) => <field.TextField label="Account email" placeholder="Optional" />}
           />
-        )}
-      />
+
+          <form.AppField
+            name="credentials"
+            children={(field) => (
+              <field.TextareaField
+                label="Credentials (JSON)"
+                placeholder='{"access_key_id": "…", "secret_access_key": "…"}'
+                note="Stored encrypted. Shape depends on the provider's auth type."
+                rows={4}
+                asterisk
+              />
+            )}
+          />
+
+          <form.AppField
+            name="settings"
+            children={(field) => (
+              <field.TextareaField
+                label="Settings (JSON, optional)"
+                placeholder='{"region": "us-east-1"}'
+                rows={3}
+              />
+            )}
+          />
+        </>
+      )}
     </SimpleAlertScrollableDialogForm>
   )
 }
