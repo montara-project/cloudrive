@@ -1,4 +1,5 @@
 import { AUTH_STORAGE_KEYS } from '../constants/auth'
+import { getQueryClient } from '../providers/react-query'
 
 const isBrowser = typeof window !== 'undefined'
 
@@ -37,6 +38,13 @@ function removeCookie(name: string) {
 /**
  * Persist backend-issued auth tokens in cookies so they are available both to the
  * browser (axios interceptor) and to the server (`getSession` in `handler.ts`).
+ *
+ * Writing tokens changes who the user is, so the cached session must go with
+ * them: `getQueryClient().clear()` drops the stale "signed out" answer that
+ * gates would otherwise reuse (the session query has no `staleTime` for exactly
+ * this reason). `clear()` rather than `invalidateQueries` because every cached
+ * query belongs to the previous identity — organizations, workspaces, storage
+ * accounts — and must not survive a login or logout.
  */
 export function setAuthTokens({ accessToken, refreshToken, idToken, expiresIn }: AuthTokens) {
   const accessMaxAge = expiresIn ?? DEFAULT_ACCESS_TOKEN_MAX_AGE
@@ -53,6 +61,8 @@ export function setAuthTokens({ accessToken, refreshToken, idToken, expiresIn }:
   if (idToken) {
     writeCookie(AUTH_STORAGE_KEYS.ID_TOKEN, idToken, accessMaxAge)
   }
+
+  getQueryClient().clear()
 }
 
 /**
@@ -71,9 +81,15 @@ export function getStoredRefreshToken(): string | null {
 
 /**
  * Remove all backend-issued auth tokens from cookies.
+ *
+ * Drops the cached session with them, mirroring `setAuthTokens` — otherwise a
+ * signed-out user would keep reading the previous identity until the query
+ * happened to refetch.
  */
 export function clearAuthTokens() {
   removeCookie(AUTH_STORAGE_KEYS.ACCESS_TOKEN)
   removeCookie(AUTH_STORAGE_KEYS.REFRESH_TOKEN)
   removeCookie(AUTH_STORAGE_KEYS.ID_TOKEN)
+
+  getQueryClient().clear()
 }

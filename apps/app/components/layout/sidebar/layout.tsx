@@ -4,8 +4,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
 
-import type { AuthSession } from '@/types/auth'
-
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -22,10 +20,9 @@ import AppSidebar from './app-sidebar'
 
 interface SidebarLayoutProps {
   children: React.ReactNode
-  auth?: AuthSession | null
 }
 
-export default function SidebarLayout({ children, auth }: SidebarLayoutProps) {
+export default function SidebarLayout({ children }: SidebarLayoutProps) {
   const pathname = usePathname()
   const [now, setNow] = useState(() => new Date())
 
@@ -103,7 +100,7 @@ export default function SidebarLayout({ children, auth }: SidebarLayoutProps) {
         } as React.CSSProperties
       }
     >
-      <AppSidebar auth={auth} />
+      <AppSidebar />
       <SidebarInset>
         <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
           <div className="flex w-full items-center justify-between px-4">

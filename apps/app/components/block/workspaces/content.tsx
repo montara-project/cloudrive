@@ -2,19 +2,13 @@
 
 import { IconPlus } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
-import { useQueryState } from 'nuqs'
+import Link from 'next/link'
 import { useMemo, useState } from 'react'
 
 import ReactTable from '@/components/block/common/react-table'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { usePaginationQuery } from '@/hooks/use-pagination-query'
+import { useWorkspaceContext } from '@/hooks/use-workspace-context'
 import { queries } from '@/lib/api/queries'
 import { getTotal } from '@/lib/constants/paginate'
 
@@ -24,18 +18,17 @@ import { AddWorkspaceForm } from './form'
 
 export default function WorkspaceContent() {
   const [openAdd, setOpenAdd] = useState(false)
-  const [orgId, setOrgId] = useQueryState('org')
+  const { organization, orgId } = useWorkspaceContext()
 
   const { offset, limit, pageIndex } = usePaginationQuery()
   const defaultQueryParams = useMemo(() => ({ offset, limit }), [offset, limit])
 
-  const orgs = useQuery(queries.organizations.list({ limit: 100 }))
   const {
     data: workspaces,
     isLoading,
     isFetching,
     isPending,
-  } = useQuery(queries.workspaces.list(orgId ?? '', defaultQueryParams))
+  } = useQuery(queries.workspaces.list(orgId, defaultQueryParams))
 
   const total = getTotal(workspaces)
   const columns = WorkspaceColumn({ loading: isLoading || isFetching || isPending })
@@ -48,30 +41,24 @@ export default function WorkspaceContent() {
     <>
       <SectionCard
         title="Workspaces"
-        description="Workspaces inside the selected organization."
+        description={
+          organization
+            ? `Workspaces inside ${organization.name}.`
+            : 'Workspaces inside the selected organization.'
+        }
         toolbar={
-          <div className="flex items-center gap-2">
-            <Select value={orgId ?? ''} onValueChange={setOrgId}>
-              <SelectTrigger className="h-9 min-w-44">
-                <SelectValue placeholder={orgs.isLoading ? 'Loading…' : 'Select organization'} />
-              </SelectTrigger>
-              <SelectContent>
-                {(orgs.data?.data ?? []).map((o) => (
-                  <SelectItem key={o.id} value={o.id}>
-                    {o.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="primary" size="sm" disabled={!orgId} onClick={() => setOpenAdd(true)}>
-              <IconPlus className="size-4" /> New workspace
-            </Button>
-          </div>
+          <Button variant="primary" size="sm" disabled={!orgId} onClick={() => setOpenAdd(true)}>
+            <IconPlus className="size-4" /> New workspace
+          </Button>
         }
       >
         {!orgId ? (
           <p className="py-10 text-center text-sm text-muted-foreground">
-            Select an organization to see its workspaces.
+            Pick an organization in the sidebar, or{' '}
+            <Link href="/organizations" className="text-primary hover:underline">
+              create your first one
+            </Link>
+            .
           </p>
         ) : (
           <ReactTable

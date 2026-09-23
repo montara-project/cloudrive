@@ -1,36 +1,20 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
-
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { signOut } from '@/lib/auth/email-auth'
-import { getSession } from '@/lib/auth/handler'
-import { clearAuthTokens } from '@/lib/auth/token-storage'
+import { useSession, useSignOut } from '@/hooks/use-session'
 
 import SectionCard from '../common/section-card'
 
 export default function SettingContent() {
-  const router = useRouter()
-  const session = useQuery({ queryKey: ['me'], queryFn: getSession })
+  const { data: session, isLoading } = useSession()
+  const { signOut, isSigningOut } = useSignOut()
 
-  const user = session.data?.user
-
-  const handleSignOut = async () => {
-    try {
-      await signOut()
-    } finally {
-      clearAuthTokens()
-      toast.success('Signed out')
-      router.replace('/login')
-    }
-  }
+  const user = session?.user
 
   return (
     <SectionCard title="Settings" description="Your account and session.">
-      {session.isLoading ? (
+      {isLoading ? (
         <div className="py-10 text-center">
           <span className="inline-block size-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         </div>
@@ -66,13 +50,13 @@ export default function SettingContent() {
             </div>
             <div>
               <dt className="text-muted-foreground">Sign-in method</dt>
-              <dd className="capitalize">{session.data?.data.provider ?? '—'}</dd>
+              <dd className="capitalize">{session?.data.provider ?? '—'}</dd>
             </div>
           </dl>
 
           <div className="border-t border-border pt-4">
-            <Button variant="destructive" size="sm" onClick={handleSignOut}>
-              Sign out
+            <Button variant="destructive" size="sm" disabled={isSigningOut} onClick={signOut}>
+              {isSigningOut ? 'Signing out…' : 'Sign out'}
             </Button>
           </div>
         </div>

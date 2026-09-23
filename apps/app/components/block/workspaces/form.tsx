@@ -93,9 +93,11 @@ type AddWorkspaceFormProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   orgId: string
+  /** Called with the created workspace so callers can switch context to it. */
+  onCreated?: (workspace: Models.Workspace) => void
 }
 
-export function AddWorkspaceForm({ open, onOpenChange, orgId }: AddWorkspaceFormProps) {
+export function AddWorkspaceForm({ open, onOpenChange, orgId, onCreated }: AddWorkspaceFormProps) {
   const mutation = useMutation(queries.workspaces.create(orgId))
 
   return (
@@ -108,7 +110,14 @@ export function AddWorkspaceForm({ open, onOpenChange, orgId }: AddWorkspaceForm
         description: '',
       }}
       schema={CreateWorkspaceSchema}
-      mutation={mutation}
+      mutation={{
+        mutateAsync: async (value) => {
+          const res = await mutation.mutateAsync(value)
+          if (res.data) onCreated?.(res.data)
+          return res
+        },
+        isPending: mutation.isPending,
+      }}
     />
   )
 }

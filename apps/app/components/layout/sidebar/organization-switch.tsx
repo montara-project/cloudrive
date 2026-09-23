@@ -1,9 +1,8 @@
 'use client'
 
 import { IconPlus } from '@tabler/icons-react'
-import { useQuery } from '@tanstack/react-query'
-import { ChevronsUpDown } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { Check, ChevronsUpDown } from 'lucide-react'
+import { useState } from 'react'
 
 import { AddOrganizationForm } from '@/components/block/organizations/form'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -21,8 +20,9 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useWorkspaceContext } from '@/hooks/use-workspace-context'
 import { Models } from '@/lib/api/models'
-import { queries } from '@/lib/api/queries'
 
 function OrganizationLogo({ org, className }: { org?: Models.Organization; className?: string }) {
   return (
@@ -35,58 +35,38 @@ function OrganizationLogo({ org, className }: { org?: Models.Organization; class
 
 export default function OrganizationSwitch() {
   const { isMobile } = useSidebar()
-
-  const {
-    data: orgs,
-    isLoading,
-    isFetching,
-    isPending,
-  } = useQuery(queries.organizations.list({ limit: 100 }))
-
-  const loading = isLoading || isFetching || isPending
-
-  const organizations = useMemo(
-    () => (orgs?.data && orgs?.data?.length > 0 ? orgs.data : []),
-    [orgs]
-  )
-
-  const [selected, setSelected] = useState<Models.Organization>()
-  const activeOrganization = selected ?? organizations[0]
-
+  const { organizations, organization, isLoading, selectOrganization } = useWorkspaceContext()
   const [openAdd, setOpenAdd] = useState(false)
-
-  const renderOrganization = () => {
-    if (loading) {
-      return <div>Loading...</div>
-    }
-
-    return (
-      <SidebarMenuButton
-        size="lg"
-        className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-      >
-        <OrganizationLogo
-          org={activeOrganization}
-          className="size-8 rounded-lg bg-sidebar-primary text-sidebar-primary-foreground"
-        />
-        <div className="grid flex-1 text-left text-sm leading-tight">
-          <span className="truncate font-medium">
-            {activeOrganization ? activeOrganization.name : 'No organization'}
-          </span>
-          <span className="truncate text-xs">
-            {activeOrganization ? `@${activeOrganization.slug}` : 'Create one to get started'}
-          </span>
-        </div>
-        <ChevronsUpDown className="ml-auto" />
-      </SidebarMenuButton>
-    )
-  }
 
   return (
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>{renderOrganization()}</DropdownMenuTrigger>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton
+              size="lg"
+              tooltip={organization?.name ?? 'Organization'}
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            >
+              {isLoading ? (
+                <Skeleton className="size-8 shrink-0 rounded-lg" />
+              ) : (
+                <OrganizationLogo
+                  org={organization}
+                  className="size-8 rounded-lg bg-sidebar-primary text-sidebar-primary-foreground"
+                />
+              )}
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-semibold">
+                  {organization?.name ?? 'No organization'}
+                </span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {organization ? `@${organization.slug}` : 'Create one to get started'}
+                </span>
+              </div>
+              <ChevronsUpDown className="ml-auto size-4" />
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
             align="start"
@@ -100,10 +80,14 @@ export default function OrganizationSwitch() {
               <DropdownMenuItem
                 key={item.id}
                 className="gap-2 p-2"
-                onClick={() => setSelected(item)}
+                onClick={() => selectOrganization(item.id)}
               >
                 <OrganizationLogo org={item} className="size-6 rounded-md border" />
-                {item.name}
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate">{item.name}</span>
+                  <span className="truncate text-xs text-muted-foreground">@{item.slug}</span>
+                </div>
+                {item.id === organization?.id && <Check className="size-4 shrink-0" />}
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
@@ -111,7 +95,7 @@ export default function OrganizationSwitch() {
               <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
                 <IconPlus className="size-4" />
               </div>
-              <div className="font-medium text-muted-foreground">Add Organization</div>
+              <div className="font-medium text-muted-foreground">Add organization</div>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

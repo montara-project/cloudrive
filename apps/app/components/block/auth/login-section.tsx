@@ -1,17 +1,26 @@
 'use client'
 
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
-import { Field, FieldGroup } from '@/components/ui/field'
-import { Separator } from '@/components/ui/separator'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Field } from '@/components/ui/field'
 import { useAppForm } from '@/hooks/form'
 import { MagicLinkSchema, SignInSchema } from '@/lib/api/dtos/auth/schema'
 import { signInWithEmail, signInWithGoogle, signInWithMagicLink } from '@/lib/auth/email-auth'
 import { cn } from '@/lib/utils'
+
+import BrandMark from './brand-mark'
+
+/** Which credential form the card is showing. Google is an action, not a mode. */
+type LoginMode = 'magic-link' | 'password'
+
+const MODE_LABEL: Record<LoginMode, string> = {
+  'magic-link': 'Magic link',
+  password: 'Email & password',
+}
 
 function GoogleIcon() {
   return (
@@ -160,51 +169,80 @@ function MagicLinkForm() {
 }
 
 export default function LoginSection({ className, ...props }: React.ComponentProps<'div'>) {
+  const [mode, setMode] = useState<LoginMode>('magic-link')
+  const reduceMotion = useReducedMotion()
+
+  // Swap layout: the active method owns the button above the form, and the
+  // remaining two sit below it. Google has no form, so it only ever appears as
+  // an alternative — clicking it starts the OAuth redirect instead of swapping.
+  const alternatives: Array<{ id: LoginMode | 'google'; label: string }> =
+    mode === 'magic-link'
+      ? [
+          { id: 'password', label: MODE_LABEL.password },
+          { id: 'google', label: 'Google' },
+        ]
+      : [
+          { id: 'magic-link', label: MODE_LABEL['magic-link'] },
+          { id: 'google', label: 'Google' },
+        ]
+
+  const handleAlternative = (id: LoginMode | 'google') => {
+    if (id === 'google') {
+      signInWithGoogle()
+      return
+    }
+    setMode(id)
+  }
+
+  const transition = { duration: reduceMotion ? 0 : 0.2, ease: 'easeOut' } as const
+  const formMotion = reduceMotion
+    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
+    : {
+        initial: { opacity: 0, y: 8 },
+        animate: { opacity: 1, y: 0 },
+        exit: { opacity: 0, y: -8 },
+      }
+
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
-      <FieldGroup>
-        <div className="flex flex-col items-center gap-2 text-center">
-          <div className="flex size-10 items-center justify-center rounded-lg bg-primary">
-            <svg viewBox="0 0 32 32" className="size-6" aria-hidden>
-              <path
-                d="M10.5 22.5a4.6 4.6 0 0 1-.5-9.17A6.3 6.3 0 0 1 22.4 14.4a4.1 4.1 0 0 1-.9 8.1z"
-                fill="#fff"
-              />
-              <circle cx="16" cy="18.4" r="2.1" fill="#D97706" />
-            </svg>
-          </div>
-          <h1 className="text-xl font-bold">Welcome to Cloudrive</h1>
-          <p className="text-sm text-muted-foreground">All your clouds. One drive.</p>
-        </div>
+      <div className="flex flex-col items-center gap-2 text-center">
+        <BrandMark className="size-10" />
+        <h1 className="text-xl font-bold">Welcome to Cloudrive</h1>
+        <p className="text-sm text-muted-foreground">All your clouds. One drive.</p>
+      </div>
 
-        <Tabs defaultValue="password">
-          <TabsList className="w-full">
-            <TabsTrigger value="password" className="flex-1">
-              Password
-            </TabsTrigger>
-            <TabsTrigger value="magic-link" className="flex-1">
-              Magic link
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="password" className="pt-4">
-            <PasswordForm />
-          </TabsContent>
-          <TabsContent value="magic-link" className="pt-4">
-            <MagicLinkForm />
-          </TabsContent>
-        </Tabs>
+      {/* Active method. Already selected, so it carries state rather than an
+          action — `aria-pressed` tells assistive tech which form is open. */}
+      <Button type="button" variant="primary" className="w-full" aria-pressed>
+        {MODE_LABEL[mode]}
+      </Button>
 
-        <div className="flex items-center gap-3">
-          <Separator className="flex-1" />
-          <span className="text-xs text-muted-foreground">or</span>
-          <Separator className="flex-1" />
-        </div>
+      {/* Height eases with the swap so the card does not jump between the
+          one-field magic-link form and the two-field password form. */}
+      <motion.div layout transition={transition}>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={mode} transition={transition} {...formMotion}>
+            {mode === 'magic-link' ? <MagicLinkForm /> : <PasswordForm />}
+          </motion.div>
+        </AnimatePresence>
+      </motion.div>
 
-        <Button variant="outline" className="w-full" onClick={() => signInWithGoogle()}>
-          <GoogleIcon />
-          Continue with Google
-        </Button>
-      </FieldGroup>
+      <div className="grid grid-cols-2 gap-2">
+        {alternatives.map((item) => (
+          <Button
+            key={item.id}
+            type="button"
+            variant="outline"
+            className="w-full"
+            // Google is an action, not a toggle, so it gets no pressed state.
+            aria-pressed={item.id === 'google' ? undefined : false}
+            onClick={() => handleAlternative(item.id)}
+          >
+            {item.id === 'google' && <GoogleIcon />}
+            {item.label}
+          </Button>
+        ))}
+      </div>
     </div>
   )
 }

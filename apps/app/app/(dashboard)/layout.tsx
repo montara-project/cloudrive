@@ -1,33 +1,28 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 
-import type { AuthSession } from '@/types/auth'
-
-import GuardSkeleton from '@/components/block/dashboard/guard-skeleton'
+import SessionLoading from '@/components/block/auth/session-loading'
 import SidebarLayout from '@/components/layout/sidebar/layout'
-import { getSession } from '@/lib/auth/handler'
+import { useSession } from '@/hooks/use-session'
 
 export default function DashboardGroupLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
-  const [session, setSession] = useState<AuthSession | null>(null)
-  const [checked, setChecked] = useState(false)
+  const { data: session, isPending } = useSession()
 
   useEffect(() => {
-    getSession().then((s) => {
-      if (!s) {
-        router.replace('/login')
-        return
-      }
-      setSession(s)
-      setChecked(true)
-    })
-  }, [router])
+    if (!isPending && !session) {
+      router.replace('/login')
+    }
+  }, [isPending, session, router])
 
-  if (!checked) {
-    return <GuardSkeleton />
+  // One layer covers both "still checking" and "checked, bouncing to /login" —
+  // the dashboard never mounts without a session, so no chrome is ever shown
+  // and then swapped out.
+  if (isPending || !session) {
+    return <SessionLoading />
   }
 
-  return <SidebarLayout auth={session}>{children}</SidebarLayout>
+  return <SidebarLayout>{children}</SidebarLayout>
 }

@@ -14,6 +14,9 @@ interface SignInWithEmailParams {
  * Authula's jwt.respond_json returns the token pair at the top level of the
  * response body; the tokens are stored and attached to subsequent API requests
  * by the axios interceptor in `client-fetch.ts`.
+ *
+ * `setAuthTokens` invalidates the cached session, so the next gate render
+ * re-probes instead of reusing the "signed out" answer from the login page.
  */
 export async function signInWithEmail({ email, password }: SignInWithEmailParams) {
   try {
