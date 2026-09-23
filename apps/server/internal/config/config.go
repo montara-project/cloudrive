@@ -3,13 +3,15 @@ package config
 import "time"
 
 type Config struct {
-	App     ConfigApp
-	DB      ConfigDB
-	Resend  ConfigResend
-	Google  ConfigGoogle
-	S3      ConfigS3
-	Storage ConfigStorage
-	Diag    ConfigDiag
+	App      ConfigApp
+	DB       ConfigDB
+	Resend   ConfigResend
+	Google   ConfigGoogle
+	OneDrive ConfigOneDrive
+	Dropbox  ConfigDropbox
+	S3       ConfigS3
+	Storage  ConfigStorage
+	Diag     ConfigDiag
 }
 
 type ConfigApp struct {
@@ -47,6 +49,19 @@ type ConfigResend struct {
 }
 
 type ConfigGoogle struct {
+	ClientID     string
+	ClientSecret string
+}
+
+type ConfigOneDrive struct {
+	ClientID     string
+	ClientSecret string
+	// Tenant is the Microsoft authority tenant: "common" (default),
+	// "consumers", "organizations", or a directory UUID.
+	Tenant string
+}
+
+type ConfigDropbox struct {
 	ClientID     string
 	ClientSecret string
 }

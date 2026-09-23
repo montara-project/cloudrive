@@ -37,6 +37,11 @@ run:
 		--resend-debug-to-email=$(RESEND_DEBUG_TO_EMAIL) \
 		--google-client-id=$(GOOGLE_CLIENT_ID) \
 		--google-client-secret=$(GOOGLE_CLIENT_SECRET) \
+		--onedrive-client-id=$(ONEDRIVE_CLIENT_ID) \
+		--onedrive-client-secret=$(ONEDRIVE_CLIENT_SECRET) \
+		--onedrive-tenant=$(ONEDRIVE_TENANT_ID) \
+		--dropbox-client-id=$(DROPBOX_CLIENT_ID) \
+		--dropbox-client-secret=$(DROPBOX_CLIENT_SECRET) \
 		--s3-client-id=$(S3_CLIENT_ID) \
 		--s3-client-secret=$(S3_CLIENT_SECRET) \
 		--s3-region=$(S3_REGION) \

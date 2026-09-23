@@ -149,9 +149,15 @@ func serve(app *app.Application) error {
 				StorageAccount: app.Repositories.StorageAccount,
 			},
 			Registry: connectors.Registry{
-				GoogleClientID:     app.Config.Google.ClientID,
-				GoogleClientSecret: app.Config.Google.ClientSecret,
-				StagingDir:         app.Config.S3.StagingDir,
+				GoogleClientID:       app.Config.Google.ClientID,
+				GoogleClientSecret:   app.Config.Google.ClientSecret,
+				OneDriveClientID:     app.Config.OneDrive.ClientID,
+				OneDriveClientSecret: app.Config.OneDrive.ClientSecret,
+				OneDriveTenant:       app.Config.OneDrive.Tenant,
+				DropboxClientID:      app.Config.Dropbox.ClientID,
+				DropboxClientSecret:  app.Config.Dropbox.ClientSecret,
+				ServerURL:            app.Config.App.ServerURL,
+				StagingDir:           app.Config.S3.StagingDir,
 			},
 		})
 
