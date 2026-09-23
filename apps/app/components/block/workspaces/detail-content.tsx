@@ -2,17 +2,14 @@
 
 import { IconArrowLeft, IconDotsVertical, IconPlus, IconTrash } from '@tabler/icons-react'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { ColumnDef } from '@tanstack/react-table'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import type { Models } from '@/lib/api/models'
 
-import DataTable, { type DataTableColumn } from '@/components/block/common/data-table'
-import MemberDialog from '@/components/block/common/member-dialog'
-import SectionCard from '@/components/block/common/section-card'
-import SimpleAlertDialog from '@/components/block/common/simple-alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -20,10 +17,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Skeleton } from '@/components/ui/skeleton'
 import { toastAxiosError } from '@/lib/api/axios-error'
 import { queries } from '@/lib/api/queries'
 
+import MemberDialog from '../common/member-dialog'
+import { features } from '../common/react-table'
+import ReactTable from '../common/react-table'
+import SectionCard from '../common/section-card'
+import SimpleAlertDialog from '../common/simple-alert-dialog'
 import { EditWorkspaceForm } from './form'
+
+type ColumnType = ColumnDef<typeof features, Models.WorkspaceMember, unknown>
 
 export default function WorkspaceDetailContent({ wsId }: { wsId: string }) {
   const router = useRouter()
@@ -61,60 +66,94 @@ export default function WorkspaceDetailContent({ wsId }: { wsId: string }) {
   }
 
   const ws = workspace.data.data
-  const memberColumns: DataTableColumn<Models.WorkspaceMember>[] = [
-    {
-      header: 'User',
-      cell: (m) => <span className="font-mono text-xs">{m.user_id}</span>,
-    },
-    {
-      header: 'Role',
-      cell: (m) => (
-        <select
-          className="h-8 rounded-md border border-border bg-background px-2 text-sm capitalize"
-          value={m.role}
-          onClick={(e) => e.stopPropagation()}
-          onChange={async (e) => {
-            try {
-              await updateRole.mutateAsync({ userId: m.user_id, role: e.target.value })
-              toast.success('Role updated')
-            } catch (error) {
-              toastAxiosError(error)
-            }
-          }}
-        >
-          {['admin', 'member', 'viewer'].map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
-      ),
-    },
-    {
-      header: 'Joined',
-      cell: (m) => (
-        <span className="text-muted-foreground">{new Date(m.created_at).toLocaleDateString()}</span>
-      ),
-    },
-    {
-      header: '',
-      className: 'w-12 text-right',
-      cell: (m) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-8">
-              <IconDotsVertical className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem variant="destructive" onClick={() => setRemoving(m)}>
-              <IconTrash className="size-4" /> Remove
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
-    },
-  ]
+
+  const membersLoading = members.isLoading || members.isFetching || members.isPending
+
+  const memberColumns = useMemo<ColumnType[]>(() => {
+    return [
+      {
+        accessorKey: 'user_id',
+        header: 'User',
+        cell: (info) => {
+          const value = info.getValue() as string
+          return membersLoading ? (
+            <Skeleton className="h-5 w-full" />
+          ) : (
+            <span className="font-mono text-xs">{value}</span>
+          )
+        },
+      },
+      {
+        accessorKey: 'role',
+        header: 'Role',
+        cell: ({ row }) => {
+          const m = row.original
+          return membersLoading ? (
+            <Skeleton className="h-5 w-full" />
+          ) : (
+            <select
+              className="h-8 rounded-md border border-border bg-background px-2 text-sm capitalize"
+              value={m.role}
+              onClick={(e) => e.stopPropagation()}
+              onChange={async (e) => {
+                try {
+                  await updateRole.mutateAsync({ userId: m.user_id, role: e.target.value })
+                  toast.success('Role updated')
+                } catch (error) {
+                  toastAxiosError(error)
+                }
+              }}
+            >
+              {['admin', 'member', 'viewer'].map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          )
+        },
+      },
+      {
+        accessorKey: 'created_at',
+        header: 'Joined',
+        cell: (info) => {
+          const value = info.getValue() as string
+          return membersLoading ? (
+            <Skeleton className="h-5 w-full" />
+          ) : (
+            <span className="text-muted-foreground">
+              {value ? new Date(value).toLocaleDateString() : '—'}
+            </span>
+          )
+        },
+      },
+      {
+        id: 'actions',
+        header: '',
+        size: 50,
+        meta: { cellClassName: 'w-12 text-right' },
+        cell: ({ row }) => {
+          const m = row.original
+          return membersLoading ? (
+            <Skeleton className="h-5 w-full" />
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-8">
+                  <IconDotsVertical className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem variant="destructive" onClick={() => setRemoving(m)}>
+                  <IconTrash className="size-4" /> Remove
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )
+        },
+      },
+    ]
+  }, [membersLoading, updateRole])
 
   return (
     <div className="flex flex-col gap-6">
@@ -161,10 +200,11 @@ export default function WorkspaceDetailContent({ wsId }: { wsId: string }) {
           </Button>
         }
       >
-        <DataTable
+        <ReactTable
           columns={memberColumns}
-          rows={members.data?.data ?? []}
-          loading={members.isLoading}
+          data={members.data?.data ?? []}
+          total={members.data?.metadata?.total ?? members.data?.data?.length ?? 0}
+          pageSize={100}
           empty="No members yet."
         />
       </SectionCard>

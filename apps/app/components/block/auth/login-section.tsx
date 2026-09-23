@@ -7,11 +7,13 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
+import { Separator } from '@/components/ui/separator'
 import { useAppForm } from '@/hooks/form'
 import { MagicLinkSchema, SignInSchema } from '@/lib/api/dtos/auth/schema'
 import { signInWithEmail, signInWithGoogle, signInWithMagicLink } from '@/lib/auth/email-auth'
 import { cn } from '@/lib/utils'
 
+import { Icons } from '../common/icons'
 import BrandMark from './brand-mark'
 
 /** Which credential form the card is showing. Google is an action, not a mode. */
@@ -20,29 +22,6 @@ type LoginMode = 'magic-link' | 'password'
 const MODE_LABEL: Record<LoginMode, string> = {
   'magic-link': 'Magic link',
   password: 'Email & password',
-}
-
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-4" aria-hidden>
-      <path
-        fill="#4285F4"
-        d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C18.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09C6.22 6.86 8.87 4.75 12 4.75z"
-      />
-    </svg>
-  )
 }
 
 function PasswordForm() {
@@ -211,12 +190,6 @@ export default function LoginSection({ className, ...props }: React.ComponentPro
         <p className="text-sm text-muted-foreground">All your clouds. One drive.</p>
       </div>
 
-      {/* Active method. Already selected, so it carries state rather than an
-          action — `aria-pressed` tells assistive tech which form is open. */}
-      <Button type="button" variant="primary" className="w-full" aria-pressed>
-        {MODE_LABEL[mode]}
-      </Button>
-
       {/* Height eases with the swap so the card does not jump between the
           one-field magic-link form and the two-field password form. */}
       <motion.div layout transition={transition}>
@@ -227,19 +200,20 @@ export default function LoginSection({ className, ...props }: React.ComponentPro
         </AnimatePresence>
       </motion.div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <Separator />
+
+      <div className="flex flex-col gap-2">
         {alternatives.map((item) => (
           <Button
             key={item.id}
             type="button"
             variant="outline"
-            className="w-full"
-            // Google is an action, not a toggle, so it gets no pressed state.
+            className="w-full h-10 flex items-center justify-center text-center"
             aria-pressed={item.id === 'google' ? undefined : false}
             onClick={() => handleAlternative(item.id)}
           >
-            {item.id === 'google' && <GoogleIcon />}
-            {item.label}
+            {item.id === 'google' && <Icons.googleColorful />}
+            <span>{item.label}</span>
           </Button>
         ))}
       </div>
