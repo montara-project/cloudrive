@@ -29,7 +29,10 @@ export default function OrganizationContent() {
 
   const total = getTotal(orgs)
   const columns = OrganizationColumn({ loading: isLoading || isFetching || isPending })
-  const organizations = useMemo(() => (orgs?.data && orgs?.data?.length > 0 ? orgs.data : []), [orgs])
+  const organizations = useMemo(
+    () => (orgs?.data && orgs?.data?.length > 0 ? orgs.data : []),
+    [orgs]
+  )
 
   return (
     <>

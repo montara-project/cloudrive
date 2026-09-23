@@ -9,7 +9,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarRail
+  SidebarRail,
 } from '@/components/ui/sidebar'
 import { getSidebarMenu } from '@/data/sidebar-menu'
 
