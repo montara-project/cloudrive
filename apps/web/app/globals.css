@@ -1,8 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
-@import 'tailwindcss';
+@import url("https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&display=swap");
+
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: "Nunito Sans", sans-serif;
 
   --color-primary: #2563eb;
   --color-primary-foreground: #ffffff;
@@ -51,12 +55,20 @@ a {
 
 /* Flat dot-grid texture for hero / feature panels */
 .bg-dotgrid {
-  background-image: radial-gradient(circle, var(--color-border) 1.5px, transparent 1.5px);
+  background-image: radial-gradient(
+    circle,
+    var(--color-border) 1.5px,
+    transparent 1.5px
+  );
   background-size: 24px 24px;
 }
 
 .bg-dotgrid-dark {
-  background-image: radial-gradient(circle, rgb(255 255 255 / 0.07) 1.5px, transparent 1.5px);
+  background-image: radial-gradient(
+    circle,
+    rgb(255 255 255 / 0.07) 1.5px,
+    transparent 1.5px
+  );
   background-size: 24px 24px;
 }
 

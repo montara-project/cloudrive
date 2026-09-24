@@ -2,6 +2,8 @@
 
 import type { SVGProps } from 'react'
 
+import Image from 'next/image'
+
 type IconProps = SVGProps<SVGSVGElement>
 
 function StrokeIcon({ children, ...props }: IconProps) {
@@ -23,16 +25,14 @@ function StrokeIcon({ children, ...props }: IconProps) {
 
 export function CloudriveLogo({ className }: { className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-2 ${className ?? ''}`}>
-      <svg aria-hidden="true" viewBox="0 0 32 32" className="size-7">
-        <rect width="32" height="32" rx="8" fill="#2563EB" />
-        <path
-          d="M10.5 22.5a4.6 4.6 0 0 1-.5-9.17A6.3 6.3 0 0 1 22.4 14.4a4.1 4.1 0 0 1-.9 8.1z"
-          fill="#fff"
-        />
-        <circle cx="16" cy="18.4" r="2.1" fill="#D97706" />
-      </svg>
-      <span className="text-lg font-bold tracking-tight">Cloudrive</span>
+    <span className={`inline-flex items-center gap-1 ${className ?? ''}`}>
+      <Image
+        src="/static/images/cloudrive-logo-transparant.png"
+        width={42}
+        height={42}
+        alt="brand logo"
+      />
+      <span className="text-2xl font-bold tracking-tight mt-1 text-[#1e6091]">Cloudrive</span>
     </span>
   )
 }
