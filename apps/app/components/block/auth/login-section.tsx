@@ -14,8 +14,8 @@ import { MagicLinkSchema, SignInSchema } from '@/lib/api/dtos/auth/schema'
 import { signInWithEmail, signInWithGoogle, signInWithMagicLink } from '@/lib/auth/email-auth'
 import { cn } from '@/lib/utils'
 
+import { CloudriveLogo } from '../common/brand'
 import { Icons } from '../common/icons'
-import BrandMark from './brand-mark'
 
 /** Which credential form the card is showing. Google is an action, not a mode. */
 type LoginMode = 'magic-link' | 'password'
@@ -186,8 +186,7 @@ export default function LoginSection({ className, ...props }: React.ComponentPro
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <div className="flex flex-col items-center gap-2 text-center">
-        <BrandMark className="size-10" />
-        <h1 className="text-2xl font-semibold">Welcome to Cloudrive</h1>
+        <CloudriveLogo size="lg" />
         <p className="text-sm text-muted-foreground">All your clouds. One drive.</p>
       </div>
 
@@ -221,8 +220,14 @@ export default function LoginSection({ className, ...props }: React.ComponentPro
 
       <FieldDescription className="px-6 text-center">
         By clicking continue, you agree to our{' '}
-        <Link href="https://cloudrive.us.ci/terms">Terms of Service</Link> and{' '}
-        <Link href="https://cloudrive.us.ci/privacy">Privacy Policy</Link>.
+        <Link href="https://cloudrive.us.ci/terms" target="_blank">
+          Terms of Service
+        </Link>{' '}
+        and{' '}
+        <Link href="https://cloudrive.us.ci/privacy" target="_blank">
+          Privacy Policy
+        </Link>
+        .
       </FieldDescription>
     </div>
   )

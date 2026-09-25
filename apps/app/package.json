@@ -58,6 +58,7 @@
     "react-dom": "latest",
     "react-number-format": "^5.4.5",
     "react-server-dom-webpack": "^19.3.0",
+    "slugify": "^1.6.9",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.3",

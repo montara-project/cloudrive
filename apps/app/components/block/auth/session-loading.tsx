@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils'
 
-import BrandMark from './brand-mark'
+import { CloudriveLogo } from '../common/brand'
 
 type SessionLoadingProps = {
   /** What the app is doing right now, shown under the app name. */
@@ -31,10 +31,8 @@ export default function SessionLoading({
         className
       )}
     >
-      <BrandMark className="size-12" />
-
       <div className="flex flex-col items-center gap-1 text-center">
-        <p className="font-semibold">Cloudrive</p>
+        <CloudriveLogo size="lg" />
         <p className="text-sm text-muted-foreground">{message}</p>
       </div>
 

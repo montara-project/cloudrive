@@ -12,7 +12,7 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
   return (
     <NextThemesProvider
       storageKey="cloudrive-theme"
-      defaultTheme="light"
+      defaultTheme="dark"
       attribute="class"
       disableTransitionOnChange
       enableColorScheme

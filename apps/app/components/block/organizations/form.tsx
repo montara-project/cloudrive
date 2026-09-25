@@ -1,6 +1,7 @@
 'use client'
 
 import { useMutation } from '@tanstack/react-query'
+import slugify from 'slugify'
 
 import { useAppForm } from '@/hooks/form'
 import { toastAxiosError } from '@/lib/api/axios-error'
@@ -51,6 +52,7 @@ function AbstractForm({
         toastAxiosError(error)
       } finally {
         form.reset()
+        onOpenChange(false)
       }
     },
   })
@@ -67,18 +69,31 @@ function AbstractForm({
       description="Organizations group workspaces, members and storage."
       confirmText={isEdit ? 'Update' : 'Save'}
       loading={mutation.isPending}
-      size="xl"
+      size="md"
     >
       <form.AppField
         name="name"
-        children={(field) => <field.TextField label="Name" placeholder="Acme Inc." asterisk />}
+        children={(field) => (
+          <field.TextField
+            label="Name"
+            placeholder="Acme Inc."
+            asterisk
+            onChange={(v) => {
+              if (v) {
+                const slug = slugify(v.toString(), {
+                  lower: true,
+                  strict: true,
+                })
+                form.setFieldValue('slug', slug)
+              }
+            }}
+          />
+        )}
       />
 
       <form.AppField
         name="slug"
-        children={(field) => (
-          <field.TextField label="Slug" placeholder="acme" asterisk disabled={!!isEdit} />
-        )}
+        children={(field) => <field.TextField label="Slug" placeholder="acme" asterisk disabled />}
       />
 
       <form.AppField
