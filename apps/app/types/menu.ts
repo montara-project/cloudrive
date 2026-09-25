@@ -34,7 +34,6 @@ export type SidebarMenuData = {
   user: UserInfo
   navMenu: {
     overview: NavMainItem[]
-    manage: NavMainItem[]
     storage: NavMainItem[]
   }
   navSetting: NavMainItem[]

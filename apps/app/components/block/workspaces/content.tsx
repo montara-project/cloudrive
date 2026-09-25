@@ -55,7 +55,7 @@ export default function WorkspaceContent() {
         {!orgId ? (
           <p className="py-10 text-center text-sm text-muted-foreground">
             Pick an organization in the sidebar, or{' '}
-            <Link href="/organizations" className="text-primary hover:underline">
+            <Link href="/settings?tab=organizations" className="text-primary hover:underline">
               create your first one
             </Link>
             .

@@ -1,19 +1,54 @@
 'use client'
 
+import { useQueryState } from 'nuqs'
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useSession, useSignOut } from '@/hooks/use-session'
 
 import SectionCard from '../common/section-card'
+import OrganizationContent from '../organizations/content'
+import WorkspaceContent from '../workspaces/content'
 
 export default function SettingContent() {
+  // Tab lives in `?tab=` so links can deep-link a panel; the default stays
+  // out of the URL to keep it clean.
+  const [tab, setTab] = useQueryState('tab')
+
+  return (
+    <Tabs
+      value={tab ?? 'account'}
+      onValueChange={(value) => setTab(value === 'account' ? null : value)}
+      className="flex flex-col gap-4"
+    >
+      <TabsList className="w-fit">
+        <TabsTrigger value="account">Account</TabsTrigger>
+        <TabsTrigger value="organizations">Organizations</TabsTrigger>
+        <TabsTrigger value="workspaces">Workspaces</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="account">
+        <AccountCard />
+      </TabsContent>
+      <TabsContent value="organizations" className="mt-0">
+        <OrganizationContent />
+      </TabsContent>
+      <TabsContent value="workspaces" className="mt-0">
+        <WorkspaceContent />
+      </TabsContent>
+    </Tabs>
+  )
+}
+
+function AccountCard() {
   const { data: session, isLoading } = useSession()
   const { signOut, isSigningOut } = useSignOut()
 
   const user = session?.user
 
   return (
-    <SectionCard title="Settings" description="Your account and session.">
+    <SectionCard title="Account" description="Your account and session.">
       {isLoading ? (
         <div className="py-10 text-center">
           <span className="inline-block size-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />

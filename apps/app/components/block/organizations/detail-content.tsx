@@ -37,7 +37,7 @@ export default function OrganizationDetailContent({ orgId }: { orgId: string }) 
     return (
       <div className="flex flex-col items-center gap-3 py-20 text-center">
         <p className="text-muted-foreground">Organization not found or unavailable.</p>
-        <Button variant="outline" onClick={() => router.push('/organizations')}>
+        <Button variant="outline" onClick={() => router.push('/settings?tab=organizations')}>
           <IconArrowLeft className="size-4" /> Back to organizations
         </Button>
       </div>
@@ -49,7 +49,7 @@ export default function OrganizationDetailContent({ orgId }: { orgId: string }) 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" className="size-8" asChild>
-            <Link href="/organizations">
+            <Link href="/settings?tab=organizations">
               <IconArrowLeft className="size-4" />
             </Link>
           </Button>
@@ -92,7 +92,7 @@ export default function OrganizationDetailContent({ orgId }: { orgId: string }) 
           try {
             await del.mutateAsync(orgId)
             toast.success('Organization deleted')
-            router.push('/organizations')
+            router.push('/settings?tab=organizations')
           } catch (error) {
             toastAxiosError(error)
           }

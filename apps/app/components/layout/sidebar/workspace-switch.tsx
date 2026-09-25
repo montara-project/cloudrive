@@ -108,7 +108,7 @@ export default function WorkspaceSwitch() {
             </DropdownMenuItem>
 
             <DropdownMenuItem className="gap-2 p-2" asChild>
-              <Link href="/workspaces">
+              <Link href="/settings?tab=workspaces">
                 <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
                   <LayoutGrid className="size-4" />
                 </div>

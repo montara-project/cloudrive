@@ -28,7 +28,7 @@ export default function DashboardContent() {
         <StatCard
           title="Organizations"
           value={orgs.data?.metadata?.total}
-          href="/organizations"
+          href="/settings?tab=organizations"
           icon={IconBuilding}
           loading={orgs.isLoading}
         />
@@ -58,7 +58,7 @@ export default function DashboardContent() {
         <CardHeader>
           <CardTitle>Recent organizations</CardTitle>
           <Link
-            href="/organizations"
+            href="/settings?tab=organizations"
             className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
           >
             View all <IconArrowRight className="size-3.5" />
@@ -72,7 +72,7 @@ export default function DashboardContent() {
           ) : (orgs.data?.data ?? []).length === 0 ? (
             <p className="py-4 text-sm text-muted-foreground">
               No organizations yet —{' '}
-              <Link href="/organizations" className="text-primary hover:underline">
+              <Link href="/settings?tab=organizations" className="text-primary hover:underline">
                 create your first one
               </Link>
               .

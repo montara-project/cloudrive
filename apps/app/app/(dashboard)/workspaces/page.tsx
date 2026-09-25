@@ -1,13 +1,7 @@
-import { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 
-import WorkspaceContent from '@/components/block/workspaces/content'
-import { META } from '@/lib/constants/meta'
-
-export const metadata: Metadata = {
-  ...META,
-  title: 'Workspaces | Cloudrive',
-}
-
+// Workspaces live under Settings → Workspaces now; keep the route as a
+// redirect so old links still land in the right place.
 export default function WorkspacesPage() {
-  return <WorkspaceContent />
+  redirect('/settings?tab=workspaces')
 }

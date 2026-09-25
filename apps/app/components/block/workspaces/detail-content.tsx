@@ -22,8 +22,7 @@ import { toastAxiosError } from '@/lib/api/axios-error'
 import { queries } from '@/lib/api/queries'
 
 import MemberDialog from '../common/member-dialog'
-import { features } from '../common/react-table'
-import ReactTable from '../common/react-table'
+import ReactTable, { features } from '../common/react-table'
 import SectionCard from '../common/section-card'
 import SimpleAlertDialog from '../common/simple-alert-dialog'
 import { EditWorkspaceForm } from './form'
@@ -58,7 +57,7 @@ export default function WorkspaceDetailContent({ wsId }: { wsId: string }) {
     return (
       <div className="flex flex-col items-center gap-3 py-20 text-center">
         <p className="text-muted-foreground">Workspace not found or unavailable.</p>
-        <Button variant="outline" onClick={() => router.push('/workspaces')}>
+        <Button variant="outline" onClick={() => router.push('/settings?tab=workspaces')}>
           <IconArrowLeft className="size-4" /> Back to workspaces
         </Button>
       </div>
@@ -160,7 +159,7 @@ export default function WorkspaceDetailContent({ wsId }: { wsId: string }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" className="size-8" asChild>
-            <Link href="/workspaces">
+            <Link href="/settings?tab=workspaces">
               <IconArrowLeft className="size-4" />
             </Link>
           </Button>
@@ -233,7 +232,7 @@ export default function WorkspaceDetailContent({ wsId }: { wsId: string }) {
           try {
             await del.mutateAsync(wsId)
             toast.success('Workspace deleted')
-            router.push('/workspaces')
+            router.push('/settings?tab=workspaces')
           } catch (error) {
             toastAxiosError(error)
           }

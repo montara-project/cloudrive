@@ -76,7 +76,6 @@ export default function AppSidebar(props: AppSidebarProps) {
         </SidebarHeader>
         <SidebarContent>
           <NavMain title="Overview" items={menu.navMenu.overview} />
-          <NavMain title="Manage" items={menu.navMenu.manage} />
           <NavMain title="Storage" items={menu.navMenu.storage} />
           {menu.navSetting.length > 0 && <NavMain title="Settings" items={menu.navSetting} />}
         </SidebarContent>
