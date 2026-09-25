@@ -5,10 +5,12 @@ import { useEffect } from 'react'
 
 import SessionLoading from '@/components/block/auth/session-loading'
 import SidebarLayout from '@/components/layout/sidebar/layout'
+import { useHydrated } from '@/hooks/use-hydrated'
 import { useSession } from '@/hooks/use-session'
 
 export default function DashboardGroupLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const hydrated = useHydrated()
   const { data: session, isPending } = useSession()
 
   useEffect(() => {
@@ -17,11 +19,12 @@ export default function DashboardGroupLayout({ children }: { children: React.Rea
     }
   }, [isPending, session, router])
 
-  // Mount as soon as any session exists — including the optimistic snapshot —
-  // so returning users skip the loading screen entirely. A real probe still
-  // runs in the background; if the credential is dead the query resolves null
-  // and the effect above bounces to /.
-  if (!session) {
+  // `!hydrated` keeps the hydration pass identical to the server render —
+  // the optimistic session only exists client-side. After hydration the
+  // snapshot is already in `data`, so the swap to the dashboard is instant;
+  // the real probe still runs in the background and bounces to / if the
+  // credential turns out to be dead.
+  if (!hydrated || !session) {
     return <SessionLoading />
   }
 

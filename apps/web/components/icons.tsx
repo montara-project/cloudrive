@@ -32,7 +32,7 @@ export function CloudriveLogo({ className }: { className?: string }) {
         height={42}
         alt="brand logo"
       />
-      <span className="text-2xl font-bold tracking-tight mt-1 text-[#1e6091]">Cloudrive</span>
+      <span className="text-2xl font-semibold tracking-tight mt-1 text-[#1e6091]">Cloudrive</span>
     </span>
   )
 }

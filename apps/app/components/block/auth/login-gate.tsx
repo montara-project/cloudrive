@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
 import SessionLoading from '@/components/block/auth/session-loading'
+import { useHydrated } from '@/hooks/use-hydrated'
 import { useSession } from '@/hooks/use-session'
 
 import LoginSection from './login-section'
@@ -17,6 +18,7 @@ import LoginSection from './login-section'
  */
 export default function LoginGate() {
   const router = useRouter()
+  const hydrated = useHydrated()
   const { data: session, isPending } = useSession()
 
   // A session — even the optimistic snapshot — means straight to the
@@ -27,8 +29,13 @@ export default function LoginGate() {
     }
   }, [session, router])
 
-  if (isPending || session) {
-    return <SessionLoading message={session ? 'Taking you to your drive…' : undefined} />
+  // `!hydrated` keeps the hydration pass identical to the server render (the
+  // optimistic session is client-only); the message is gated on `hydrated`
+  // for the same reason — its text must match what SSR emitted.
+  if (!hydrated || isPending || session) {
+    return (
+      <SessionLoading message={hydrated && session ? 'Taking you to your drive…' : undefined} />
+    )
   }
 
   return (
