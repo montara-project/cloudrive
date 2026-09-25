@@ -30,8 +30,11 @@ func routes(r *fiber.App, app *app.Application) {
 		Handler: app.Auth.Handler(),
 	}))
 
-	// Application routes that require a session.
+	// Application routes that require a bearer token.
 	r.Get("/v1/me", m.Authorization(), h.User.Me)
+
+	// Onboarding survey (one per user, upsert).
+	r.Post("/v1/onboarding/survey", m.Authorization(), h.Onboarding.Submit)
 
 	// Providers (catalog).
 	r.Get("/v1/providers", m.Authorization(), h.Provider.List)
@@ -75,6 +78,14 @@ func routes(r *fiber.App, app *app.Application) {
 	r.Patch("/v1/storage/accounts/:accountId", m.Authorization(), h.StorageAccount.Update)
 	r.Put("/v1/storage/accounts/:accountId/credentials", m.Authorization(), h.StorageAccount.Rotate)
 	r.Delete("/v1/storage/accounts/:accountId", m.Authorization(), h.StorageAccount.Disconnect)
+
+	// Storage provider OAuth connect flow. The callback is invoked by the
+	// provider (no bearer token); it is protected by the signed state
+	// parameter instead. Refresh/Quota require a bearer token.
+	r.Post("/v1/storage/oauth/:provider_slug/authorize", m.Authorization(), h.StorageAccountOAuth.Authorize)
+	r.Get("/v1/storage/oauth/:provider_slug/callback", h.StorageAccountOAuth.Callback)
+	r.Post("/v1/storage/accounts/:accountId/refresh", m.Authorization(), h.StorageAccountOAuth.Refresh)
+	r.Get("/v1/storage/accounts/:accountId/quota", m.Authorization(), h.StorageAccountOAuth.Quota)
 
 	// S3-compatible gateway management (SigV4 access keys and bucket
 	// mappings). Creation/revocation requires org owner or admin.

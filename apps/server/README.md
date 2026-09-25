@@ -28,7 +28,7 @@ make run                   # go run ./cmd/api with flags from .env
 
 The Dockerfile builds a minimal Alpine image (`api` + `migrate` binaries,
 migrations, templates, static assets) running as a non-root user. The API
-listens on 8080; the S3 gateway on 9000 when `S3_API_ADDR` is set.
+listens on 8080; the S3 gateway on `S3_API_PORT` (default 9000, `0` disables it).
 
 The binary is configured by CLI flags only, so the image entrypoint
 (`scripts/entrypoint.sh`) translates environment variables into flags —
@@ -47,7 +47,7 @@ Only set variables become flags, so compose `env_file` or `docker run -e`
 work directly; no `.env` is baked into the image.
 
 Auth endpoints are served by Authula under `/v1/auth`. Everything else under
-`/v1` requires a session.
+`/v1` requires a bearer token (`Authorization: Bearer <jwt>`).
 
 ## S3 gateway
 
@@ -55,15 +55,15 @@ The gateway has two surfaces:
 
 1. **Management API** — JSON endpoints on the main listener for issuing
    SigV4 credentials and mapping bucket names onto storage accounts.
-2. **S3-compatible API** — a dedicated Fiber app on `S3_API_ADDR` (e.g.
-   `:9000`; empty disables it) speaking the AWS S3 REST dialect: XML bodies,
+2. **S3-compatible API** — a dedicated Fiber app on `S3_API_PORT` (default
+   `9000`; `0` disables it) speaking the AWS S3 REST dialect: XML bodies,
    path-style addressing, SigV4 auth (header or presigned URL). Point any
    S3 client at it with the issued access key/secret.
 
 ### Management endpoints
 
 Registered in `cmd/api/routes.go`, implemented in
-`internal/handlers/s3_gateway.go`. All require a session; create/delete
+`internal/handlers/s3_gateway.go`. All require a bearer token; create/delete
 operations additionally require org `owner` or `admin` role.
 
 | Method   | Path                                                | Handler            | Description                                                                               |

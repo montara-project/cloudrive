@@ -1,4 +1,7 @@
+'use client'
+
 import { useMutation } from '@tanstack/react-query'
+import slugify from 'slugify'
 
 import { useAppForm } from '@/hooks/form'
 import { toastAxiosError } from '@/lib/api/axios-error'
@@ -20,8 +23,6 @@ type TDto = CreateOrganizationDto | UpdateOrganizationDto
 type TResponse = Models.Organization
 
 type AbstractFormProps = Omit<BaseAbstractForm<TModel, TMutation, TDto, TResponse>, 'mutation'> & {
-  // UpdateOrganizationDto omits slug — assignable from CreateOrganizationDto's shape,
-  // so a mutation taking either DTO accepts mutateAsync(value: TMutation).
   mutation: {
     mutateAsync: (value: TMutation) => Promise<unknown>
     isPending: boolean
@@ -51,6 +52,7 @@ function AbstractForm({
         toastAxiosError(error)
       } finally {
         form.reset()
+        onOpenChange(false)
       }
     },
   })
@@ -67,18 +69,31 @@ function AbstractForm({
       description="Organizations group workspaces, members and storage."
       confirmText={isEdit ? 'Update' : 'Save'}
       loading={mutation.isPending}
-      size="xl"
+      size="md"
     >
       <form.AppField
         name="name"
-        children={(field) => <field.TextField label="Name" placeholder="Acme Inc." asterisk />}
+        children={(field) => (
+          <field.TextField
+            label="Name"
+            placeholder="Acme Inc."
+            asterisk
+            onChange={(v) => {
+              if (v) {
+                const slug = slugify(v.toString(), {
+                  lower: true,
+                  strict: true,
+                })
+                form.setFieldValue('slug', slug)
+              }
+            }}
+          />
+        )}
       />
 
       <form.AppField
         name="slug"
-        children={(field) => (
-          <field.TextField label="Slug" placeholder="acme" asterisk disabled={!!isEdit} />
-        )}
+        children={(field) => <field.TextField label="Slug" placeholder="acme" asterisk disabled />}
       />
 
       <form.AppField
@@ -126,8 +141,7 @@ export function EditOrganizationForm({ open, onOpenChange, record }: EditOrganiz
       open={open}
       onOpenChange={onOpenChange}
       defaultValues={{
-        name: record.name,
-        slug: record.slug,
+        ...record,
         logo: record.logo ?? '',
       }}
       schema={UpdateOrganizationSchema}

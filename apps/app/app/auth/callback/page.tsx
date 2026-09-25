@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useRef, useState } from 'react'
 
+import SessionLoading from '@/components/block/auth/session-loading'
 import { exchangeMagicLinkToken } from '@/lib/auth/email-auth'
 import { getSession } from '@/lib/auth/handler'
 
@@ -11,8 +12,8 @@ import { getSession } from '@/lib/auth/handler'
  *
  * - Magic link: Authula's /magic-link/verify redirects here with `?token=…`;
  *   we exchange it for a JWT pair via /magic-link/exchange.
- * - OAuth2: the provider callback lands here with only the API-domain session
- *   cookie set, so we resolve the session via GET /v1/me instead.
+ * - OAuth2: the provider callback lands here with no credential (the server
+ *   is bearer-token only), so the session probe just fails to sign-in.
  */
 function CallbackInner() {
   const router = useRouter()
@@ -48,38 +49,27 @@ function CallbackInner() {
     })
   }, [router, searchParams])
 
-  return (
-    <div className="flex flex-col items-center gap-3 text-center">
-      {error ? (
-        <>
-          <p className="font-medium text-destructive">{error}</p>
-          <button
-            className="text-sm text-primary underline underline-offset-4"
-            onClick={() => router.replace('/login')}
-          >
-            Back to sign in
-          </button>
-        </>
-      ) : (
-        <>
-          <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Completing sign in…</p>
-        </>
-      )}
-    </div>
-  )
+  if (error) {
+    return (
+      <main className="flex min-h-svh flex-col items-center justify-center gap-3 bg-background p-6 text-center">
+        <p className="font-medium text-destructive">{error}</p>
+        <button
+          className="text-sm text-primary underline underline-offset-4"
+          onClick={() => router.replace('/')}
+        >
+          Back to sign in
+        </button>
+      </main>
+    )
+  }
+
+  return <SessionLoading message="Completing sign in…" />
 }
 
 export default function AuthCallbackPage() {
   return (
-    <main className="flex min-h-svh items-center justify-center bg-background p-6">
-      <Suspense
-        fallback={
-          <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        }
-      >
-        <CallbackInner />
-      </Suspense>
-    </main>
+    <Suspense fallback={<SessionLoading message="Completing sign in…" />}>
+      <CallbackInner />
+    </Suspense>
   )
 }

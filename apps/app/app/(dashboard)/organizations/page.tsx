@@ -1,13 +1,7 @@
-import { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 
-import OrganizationContent from '@/components/block/organizations/content'
-import { META } from '@/lib/constants/meta'
-
-export const metadata: Metadata = {
-  ...META,
-  title: 'Organizations | Cloudrive',
-}
-
+// Organizations live under Settings → Organizations now; keep the route as a
+// redirect so old links still land in the right place.
 export default function OrganizationsPage() {
-  return <OrganizationContent />
+  redirect('/settings?tab=organizations')
 }

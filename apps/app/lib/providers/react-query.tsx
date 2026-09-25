@@ -7,6 +7,8 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query'
 
+const STALE_TIME_QUERY = 5 * 60 * 1000 // 5 minutes
+
 /**
  * Make query client
  * @returns
@@ -15,7 +17,12 @@ function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 60 * 1000,
+        staleTime: STALE_TIME_QUERY,
+        // Revalidate stale queries when the tab regains focus. The session query
+        // sets `staleTime: 0`, so returning to a tab whose token has since
+        // expired re-probes /v1/me and the gate redirects, instead of leaving
+        // the user on a dashboard whose every request 401s.
+        refetchOnWindowFocus: true,
       },
       dehydrate: {
         // include pending queries in dehydration

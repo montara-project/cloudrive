@@ -1,16 +1,18 @@
 import {
   IconBucket,
-  IconBuilding,
   IconCloud,
   IconLayoutDashboard,
   IconPackages,
   IconSettings,
-  IconStack2,
 } from '@tabler/icons-react'
 
 import type { NavMainItem, SidebarMenuData } from '@/types/menu'
 
 // ── Sidebar menus — mapped to the API surface in apps/server routes.go ──
+//
+// `scope` marks entries that are meaningless without an active
+// organization/workspace; NavMain appends the current context to their links
+// so a click keeps the selection instead of dropping the user on an empty page.
 
 const NAV_OVERVIEW: NavMainItem[] = [
   {
@@ -18,23 +20,6 @@ const NAV_OVERVIEW: NavMainItem[] = [
     url: '/dashboard',
     icon: IconLayoutDashboard,
     isActive: true,
-    items: [],
-  },
-]
-
-const NAV_MANAGE: NavMainItem[] = [
-  {
-    title: 'Organizations',
-    url: '/organizations',
-    icon: IconBuilding,
-    isActive: false,
-    items: [],
-  },
-  {
-    title: 'Workspaces',
-    url: '/workspaces',
-    icon: IconStack2,
-    isActive: false,
     items: [],
   },
 ]
@@ -52,6 +37,7 @@ const NAV_STORAGE: NavMainItem[] = [
     url: '/storage',
     icon: IconCloud,
     isActive: false,
+    scope: 'workspace',
     items: [],
   },
   {
@@ -59,6 +45,7 @@ const NAV_STORAGE: NavMainItem[] = [
     url: '/s3',
     icon: IconBucket,
     isActive: false,
+    scope: 'workspace',
     items: [],
   },
 ]
@@ -73,23 +60,15 @@ const NAV_SETTINGS: NavMainItem[] = [
   },
 ]
 
-const SIDEBAR_MENU: SidebarMenuData = {
+export const SIDEBAR_MENU: SidebarMenuData = {
   user: {
     name: 'User',
     email: '',
     avatar: '',
   },
-  teams: [],
   navMenu: {
     overview: NAV_OVERVIEW,
-    manage: NAV_MANAGE,
     storage: NAV_STORAGE,
   },
   navSetting: NAV_SETTINGS,
-}
-
-// ── Lookup ─────────────────────────────────────────────────────────────
-
-export function getSidebarMenu(): SidebarMenuData {
-  return SIDEBAR_MENU
 }

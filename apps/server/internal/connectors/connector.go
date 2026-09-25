@@ -27,10 +27,10 @@ type Object struct {
 
 // ListPage is one page of ListObjects results.
 type ListPage struct {
-	Objects              []Object
+	Objects []Object
 	// CommonPrefixes holds "directory" prefixes when a delimiter is used.
-	CommonPrefixes       []string
-	IsTruncated          bool
+	CommonPrefixes        []string
+	IsTruncated           bool
 	NextContinuationToken string
 }
 

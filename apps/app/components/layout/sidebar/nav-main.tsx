@@ -15,7 +15,8 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
-import { type NavMainItem } from '@/types/menu'
+import { useWorkspaceContext } from '@/hooks/use-workspace-context'
+import { type NavMainItem, type NavScope } from '@/types/menu'
 
 type NavMainProps = {
   title: string
@@ -24,13 +25,30 @@ type NavMainProps = {
 
 export default function NavMain({ title, items }: NavMainProps) {
   const pathname = usePathname()
+  const { orgId, wsId } = useWorkspaceContext()
+
+  /**
+   * Keep the active organization/workspace in scoped links so navigating never
+   * resets the context the header displays.
+   */
+  const scopedHref = (url: string, scope?: NavScope) => {
+    const params = new URLSearchParams()
+
+    if ((scope === 'organization' || scope === 'workspace') && orgId) params.set('org', orgId)
+    if (scope === 'workspace' && wsId) params.set('ws', wsId)
+
+    const query = params.toString()
+    return query ? `${url}?${query}` : url
+  }
+
+  const isActive = (url: string) => pathname === url || pathname.startsWith(`${url}/`)
 
   const renderSidebarMenu = (item: NavMainItem) => {
     if (item.items.length === 0) {
       return (
         <SidebarMenuItem key={item.title}>
-          <SidebarMenuButton tooltip={item.title} asChild isActive={pathname.includes(item.url)}>
-            <Link href={item.url}>
+          <SidebarMenuButton tooltip={item.title} asChild isActive={isActive(item.url)}>
+            <Link href={scopedHref(item.url, item.scope)}>
               {item.icon && <item.icon />}
               <span>{item.title}</span>
             </Link>
@@ -39,45 +57,40 @@ export default function NavMain({ title, items }: NavMainProps) {
       )
     }
 
-    if (item.items.length > 0) {
-      return (
-        <Collapsible
-          key={item.title}
-          asChild
-          defaultOpen={item.isActive || item.items.some((sub) => pathname.includes(sub.url))}
-          className="group/collapsible"
-        >
-          <SidebarMenuItem>
-            <CollapsibleTrigger asChild>
-              <SidebarMenuButton
-                tooltip={item.title}
-                isActive={item.items.some((sub) => pathname.includes(sub.url))}
-              >
-                {item.icon && <item.icon />}
-                <span>{item.title}</span>
-                <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-              </SidebarMenuButton>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <SidebarMenuSub>
-                {item.items.map((subItem) => (
-                  <SidebarMenuSubItem key={subItem.title}>
-                    <SidebarMenuSubButton asChild isActive={pathname.includes(subItem.url)}>
-                      <Link href={subItem.url}>
-                        {subItem.icon && <subItem.icon />}
-                        <span>{subItem.title}</span>
-                      </Link>
-                    </SidebarMenuSubButton>
-                  </SidebarMenuSubItem>
-                ))}
-              </SidebarMenuSub>
-            </CollapsibleContent>
-          </SidebarMenuItem>
-        </Collapsible>
-      )
-    }
+    const groupActive = item.items.some((sub) => isActive(sub.url))
 
-    return null
+    return (
+      <Collapsible
+        key={item.title}
+        asChild
+        defaultOpen={item.isActive || groupActive}
+        className="group/collapsible"
+      >
+        <SidebarMenuItem>
+          <CollapsibleTrigger asChild>
+            <SidebarMenuButton tooltip={item.title} isActive={groupActive}>
+              {item.icon && <item.icon />}
+              <span>{item.title}</span>
+              <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+            </SidebarMenuButton>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <SidebarMenuSub>
+              {item.items.map((subItem) => (
+                <SidebarMenuSubItem key={subItem.title}>
+                  <SidebarMenuSubButton asChild isActive={isActive(subItem.url)}>
+                    <Link href={scopedHref(subItem.url, subItem.scope ?? item.scope)}>
+                      {subItem.icon && <subItem.icon />}
+                      <span>{subItem.title}</span>
+                    </Link>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              ))}
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </SidebarMenuItem>
+      </Collapsible>
+    )
   }
 
   return (
