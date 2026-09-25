@@ -6,8 +6,30 @@ import { getQueryClient } from '../providers/react-query'
 const isBrowser = typeof window !== 'undefined'
 
 // Access/id tokens are short lived; refresh token needs to outlive them.
-const DEFAULT_ACCESS_TOKEN_MAX_AGE = 60 * 60 // 1 hour
+// Matches the server's jwt plugin TTL (authula.go: ExpiresIn = 15m) — used
+// only when the response carries neither expires_in/expires_at nor a
+// decodable JWT exp claim.
+const DEFAULT_ACCESS_TOKEN_MAX_AGE = 15 * 60
 const REFRESH_TOKEN_MAX_AGE = 60 * 60 * 24 * 30 // 30 days
+
+/**
+ * Read the access token's `exp` claim as epoch milliseconds, without
+ * verifying the signature — the value only schedules proactive refreshes;
+ * the server re-verifies the signature on every request.
+ */
+function accessTokenExpiryHint(accessToken: string): number | undefined {
+  const parts = accessToken.split('.')
+  if (parts.length !== 3) return undefined
+
+  const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
+  try {
+    const payload = JSON.parse(atob(padded)) as { exp?: unknown }
+    return typeof payload.exp === 'number' ? payload.exp * 1000 : undefined
+  } catch {
+    return undefined
+  }
+}
 
 export interface AuthTokens {
   accessToken: string
@@ -138,11 +160,14 @@ export function rotateAuthTokens(tokens: AuthTokens) {
  * Accepts the current `expires_in` shape and the upcoming `expires_at` fields.
  */
 export function persistTokenPair(payload: TokenPairResponse) {
+  const hint = accessTokenExpiryHint(payload.access_token)
   setAuthTokens({
     accessToken: payload.access_token,
     refreshToken: payload.refresh_token,
-    expiresIn: payload.expires_in,
-    accessTokenExpiresAt: toEpochMs(payload.expires_at),
+    expiresIn:
+      payload.expires_in ??
+      (hint === undefined ? undefined : Math.max(0, Math.round((hint - Date.now()) / 1000))),
+    accessTokenExpiresAt: toEpochMs(payload.expires_at) ?? hint,
     refreshTokenExpiresAt: toEpochMs(payload.refresh_expires_at),
   })
 }
@@ -152,11 +177,14 @@ export function persistTokenPair(payload: TokenPairResponse) {
  * refresh rotations.
  */
 export function rotateTokenPair(payload: TokenPairResponse) {
+  const hint = accessTokenExpiryHint(payload.access_token)
   rotateAuthTokens({
     accessToken: payload.access_token,
     refreshToken: payload.refresh_token,
-    expiresIn: payload.expires_in,
-    accessTokenExpiresAt: toEpochMs(payload.expires_at),
+    expiresIn:
+      payload.expires_in ??
+      (hint === undefined ? undefined : Math.max(0, Math.round((hint - Date.now()) / 1000))),
+    accessTokenExpiresAt: toEpochMs(payload.expires_at) ?? hint,
     refreshTokenExpiresAt: toEpochMs(payload.refresh_expires_at),
   })
 }

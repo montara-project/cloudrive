@@ -3,7 +3,7 @@ import type { AuthSession } from '@/types/auth'
 import type { Models } from '../api/models'
 
 import { authClient } from './client'
-import { REFRESH_SKEW_MS, getValidAccessToken } from './refresh'
+import { REFRESH_SKEW_MS, getValidAccessToken, refreshTokens } from './refresh'
 import {
   clearAuthTokens,
   getRefreshTokenExpiresAt,
@@ -35,9 +35,27 @@ async function getBackendSession(): Promise<AuthSession | null> {
     const { data: user, error } = await authClient.me()
 
     if (error || !user) {
-      // A definitive 401 means the credential is dead — drop it so the
-      // optimistic snapshot stops vouching for a revoked session.
+      // A definitive 401 on a token we just considered fresh (key rotation,
+      // clock drift) gets one rotation + retry before the session is dropped.
       if (error?.status === 401) {
+        const refreshed = await refreshTokens()
+        if (refreshed) {
+          const retry = await authClient.me()
+          if (!retry.error && retry.data) {
+            setStoredUser(retry.data)
+            return {
+              user: retry.data,
+              session: { token: refreshed },
+              data: {
+                accessToken: refreshed,
+                refreshToken: getStoredRefreshToken() ?? undefined,
+                provider: 'custom',
+              },
+            }
+          }
+        }
+        // The credential is dead — drop it so the optimistic snapshot stops
+        // vouching for a revoked session.
         clearAuthTokens()
       }
       return null

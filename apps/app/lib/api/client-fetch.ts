@@ -1,7 +1,8 @@
-import axios, { AxiosError, type AxiosInstance } from 'axios'
+import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios'
 import { isEmpty } from 'lodash'
 
 import { getAccessToken } from '../auth/auth-client'
+import { refreshTokens } from '../auth/refresh'
 import { clearAuthTokens } from '../auth/token-storage'
 import { AUTH_STORAGE_KEYS } from '../constants/auth'
 import { ms } from '../date'
@@ -12,6 +13,9 @@ interface CreateAxiosProps {
   baseURL: string
   storageKey?: string
 }
+
+/** Marks a request that has already been replayed after a token rotation. */
+type RetriedConfig = InternalAxiosRequestConfig & { _authRetried?: boolean }
 
 /**
  * Create axios instance
@@ -53,6 +57,22 @@ function createAxios({ baseURL, storageKey }: CreateAxiosProps) {
 
       if (error.response?.status === 401) {
         if (storageKey === AUTH_STORAGE_KEYS.AUTH_STORAGE) {
+          // The access token we sent was rejected. Rotate once and replay the
+          // request with the fresh token before giving up — clearing the
+          // session here would sign the user out even though the refresh
+          // token may still be perfectly valid. Auth endpoints themselves are
+          // exempt: their 401 means bad credentials, not a stale token.
+          const config = error.config as RetriedConfig | undefined
+
+          if (config && !config._authRetried && !config.url?.includes('/v1/auth/')) {
+            config._authRetried = true
+            const accessToken = await refreshTokens()
+            if (accessToken) {
+              config.headers.Authorization = `Bearer ${accessToken}`
+              return axiosInstance.request(config)
+            }
+          }
+
           clearAuthTokens()
           window.location.href = '/'
         }

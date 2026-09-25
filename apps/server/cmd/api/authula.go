@@ -179,11 +179,16 @@ func newAuthula(application *app.Application, authulaDB *bun.DB) *authula.Auth {
 		application.Logger.Warn("google oauth2 disabled: set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable it")
 	}
 
-	return authula.New(&authula.AuthConfig{
+	auth := authula.New(&authula.AuthConfig{
 		Config:  config,
 		Plugins: plugins,
 		DB:      authulaDB,
 	})
+	// Every token-issuing response carries expires_in/expires_at, so clients
+	// can schedule proactive refreshes from the real lifetime.
+	auth.RegisterHooks([]authulamodels.Hook{newTokenResponseExpiryHook()})
+
+	return auth
 }
 
 // routeMappings protects Authula's own routes. Auth endpoints that establish
