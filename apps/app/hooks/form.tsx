@@ -2,12 +2,14 @@ import { createFormHook } from '@tanstack/react-form'
 import dynamic from 'next/dynamic'
 
 import CheckboxField from '@/components/block/form/checkbox-field'
+import CheckboxGroupField from '@/components/block/form/checkbox-group-field'
 import ComboboxField from '@/components/block/form/combobox-field'
 import DatePickerField from '@/components/block/form/date-picker-field'
 import DateRangePickerField from '@/components/block/form/date-range-picker-field'
 import GalleryUploadField from '@/components/block/form/gallery-upload-field'
 import NumberField from '@/components/block/form/number-field'
 import PasswordField from '@/components/block/form/password-field'
+import RadioGroupField from '@/components/block/form/radio-group-field'
 import RatingField from '@/components/block/form/rating-field'
 import SelectField from '@/components/block/form/select-field'
 import SelectGroupField from '@/components/block/form/select-group-field'
@@ -48,6 +50,8 @@ export const { useAppForm } = createFormHook({
     GalleryUploadField,
     RichTextEditorField,
     CheckboxField,
+    CheckboxGroupField,
+    RadioGroupField,
   },
   formComponents: {
     SubmitButton,

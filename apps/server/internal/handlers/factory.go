@@ -17,6 +17,7 @@ type Handlers struct {
 	StorageAccount         storageAccountHandler
 	StorageAccountOAuth    storageAccountOAuthHandler
 	S3Gateway              s3GatewayHandler
+	Onboarding             onboardingHandler
 }
 
 func New(app *app.Application) Handlers {
@@ -32,5 +33,6 @@ func New(app *app.Application) Handlers {
 		StorageAccount:         storageAccountHandler{app: app},
 		StorageAccountOAuth:    storageAccountOAuthHandler{app: app},
 		S3Gateway:              s3GatewayHandler{app: app},
+		Onboarding:             onboardingHandler{app: app},
 	}
 }

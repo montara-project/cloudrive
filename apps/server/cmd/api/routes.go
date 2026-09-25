@@ -33,6 +33,9 @@ func routes(r *fiber.App, app *app.Application) {
 	// Application routes that require a bearer token.
 	r.Get("/v1/me", m.Authorization(), h.User.Me)
 
+	// Onboarding survey (one per user, upsert).
+	r.Post("/v1/onboarding/survey", m.Authorization(), h.Onboarding.Submit)
+
 	// Providers (catalog).
 	r.Get("/v1/providers", m.Authorization(), h.Provider.List)
 

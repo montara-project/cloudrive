@@ -1,3 +1,4 @@
+import { onboardingServices } from './onboarding'
 import { organizationServices } from './organization'
 import { providerServices } from './provider'
 import { s3Services } from './s3'
@@ -10,4 +11,5 @@ export const services = {
   provider: providerServices,
   storageAccount: storageAccountServices,
   s3: s3Services,
+  onboarding: onboardingServices,
 } as const

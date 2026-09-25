@@ -1,3 +1,4 @@
+import { onboardingQueries } from './onboarding'
 import { organizationQueries } from './organization'
 import { organizationInvitationQueries } from './organization_invitation'
 import { organizationMemberQueries } from './organization_member'
@@ -24,4 +25,5 @@ export const queries = {
     credentials: s3CredentialQueries,
     buckets: s3BucketQueries,
   },
+  onboarding: onboardingQueries,
 }
