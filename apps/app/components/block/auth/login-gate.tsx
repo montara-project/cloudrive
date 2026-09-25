@@ -19,19 +19,21 @@ export default function LoginGate() {
   const router = useRouter()
   const { data: session, isPending } = useSession()
 
+  // A session — even the optimistic snapshot — means straight to the
+  // dashboard; the dashboard's own probe bounces back here if it's stale.
   useEffect(() => {
-    if (!isPending && session) {
+    if (session) {
       router.replace('/dashboard')
     }
-  }, [isPending, session, router])
+  }, [session, router])
 
   if (isPending || session) {
     return <SessionLoading message={session ? 'Taking you to your drive…' : undefined} />
   }
 
   return (
-    <main className="flex min-h-svh items-center justify-center bg-background p-6">
-      <div className="animate-in fade-in-0 slide-in-from-bottom-1 w-full max-w-sm rounded-xl border border-border bg-card p-8 shadow-xs duration-300">
+    <main className="flex min-h-svh items-center justify-center p-6">
+      <div className="animate-in fade-in-0 slide-in-from-bottom-1 w-full max-w-lg p-8 duration-300">
         <LoginSection />
       </div>
     </main>

@@ -13,14 +13,15 @@ export default function DashboardGroupLayout({ children }: { children: React.Rea
 
   useEffect(() => {
     if (!isPending && !session) {
-      router.replace('/login')
+      router.replace('/')
     }
   }, [isPending, session, router])
 
-  // One layer covers both "still checking" and "checked, bouncing to /login" —
-  // the dashboard never mounts without a session, so no chrome is ever shown
-  // and then swapped out.
-  if (isPending || !session) {
+  // Mount as soon as any session exists — including the optimistic snapshot —
+  // so returning users skip the loading screen entirely. A real probe still
+  // runs in the background; if the credential is dead the query resolves null
+  // and the effect above bounces to /.
+  if (!session) {
     return <SessionLoading />
   }
 

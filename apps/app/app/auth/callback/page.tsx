@@ -12,8 +12,8 @@ import { getSession } from '@/lib/auth/handler'
  *
  * - Magic link: Authula's /magic-link/verify redirects here with `?token=…`;
  *   we exchange it for a JWT pair via /magic-link/exchange.
- * - OAuth2: the provider callback lands here with only the API-domain session
- *   cookie set, so we resolve the session via GET /v1/me instead.
+ * - OAuth2: the provider callback lands here with no credential (the server
+ *   is bearer-token only), so the session probe just fails to sign-in.
  */
 function CallbackInner() {
   const router = useRouter()
@@ -55,7 +55,7 @@ function CallbackInner() {
         <p className="font-medium text-destructive">{error}</p>
         <button
           className="text-sm text-primary underline underline-offset-4"
-          onClick={() => router.replace('/login')}
+          onClick={() => router.replace('/')}
         >
           Back to sign in
         </button>

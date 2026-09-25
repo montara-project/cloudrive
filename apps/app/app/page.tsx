@@ -1,5 +1,11 @@
-import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 
-export default function HomePage() {
-  redirect('/dashboard')
+import LoginGate from '@/components/block/auth/login-gate'
+
+export const metadata: Metadata = {
+  title: 'Sign in — Cloudrive',
+}
+
+export default function LoginPage() {
+  return <LoginGate />
 }

@@ -8,8 +8,9 @@ import { toast } from 'sonner'
 import type { AuthSession } from '@/types/auth'
 
 import { signOut } from '@/lib/auth/email-auth'
-import { getSession } from '@/lib/auth/handler'
+import { getOptimisticSession, getSession } from '@/lib/auth/handler'
 import { clearAuthTokens } from '@/lib/auth/token-storage'
+import { SESSION_POLL_INTERVAL_MS } from '@/lib/constants/auth'
 
 export const SESSION_QUERY_KEY = ['session'] as const
 
@@ -27,6 +28,15 @@ export const SESSION_QUERY_KEY = ['session'] as const
  * window refocus, so expiry surfaces as a redirect instead of a page of failed
  * requests. The extra probe is cheap (`GET /v1/me`) and the cache still dedupes
  * concurrent readers within a single render.
+ *
+ * While signed in the query also re-probes every `SESSION_POLL_INTERVAL_MS`.
+ * Each run goes through `getSession` → `getValidAccessToken`, so the access
+ * token is rotated via the refresh token before it can ever expire — periodic
+ * server-side validation and proactive refresh in one probe.
+ *
+ * `placeholderData` answers from the locally stored credential snapshot, so
+ * returning users paint instantly instead of waiting on `/v1/me` — the real
+ * probe still runs in the background and overrides it.
  */
 export const sessionQuery = () =>
   queryOptions({
@@ -34,6 +44,8 @@ export const sessionQuery = () =>
     queryFn: getSession,
     retry: false,
     staleTime: 0,
+    refetchInterval: (query) => (query.state.data ? SESSION_POLL_INTERVAL_MS : false),
+    placeholderData: getOptimisticSession,
   })
 
 /**
@@ -47,7 +59,7 @@ export function useSession() {
 }
 
 /**
- * Sign out and return to /login.
+ * Sign out and return to /.
  *
  * The cached session is dropped before navigating so no gate can briefly
  * re-render as authenticated on the way out.
@@ -65,7 +77,7 @@ export function useSignOut() {
       clearAuthTokens()
       queryClient.clear()
       toast.success('Signed out')
-      router.replace('/login')
+      router.replace('/')
       setIsSigningOut(false)
     }
   }

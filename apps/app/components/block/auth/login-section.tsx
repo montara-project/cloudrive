@@ -1,12 +1,13 @@
 'use client'
 
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
-import { Field } from '@/components/ui/field'
+import { Field, FieldDescription } from '@/components/ui/field'
 import { Separator } from '@/components/ui/separator'
 import { useAppForm } from '@/hooks/form'
 import { MagicLinkSchema, SignInSchema } from '@/lib/api/dtos/auth/schema'
@@ -74,7 +75,7 @@ function PasswordForm() {
       />
 
       <Field>
-        <Button type="submit" variant="primary" className="w-full" disabled={isLoading}>
+        <Button type="submit" disabled={isLoading} className="h-10 w-full text-base">
           {isLoading ? 'Signing in...' : 'Sign in'}
         </Button>
       </Field>
@@ -139,7 +140,7 @@ function MagicLinkForm() {
       />
 
       <Field>
-        <Button type="submit" variant="primary" className="w-full" disabled={isLoading}>
+        <Button type="submit" disabled={isLoading} className="h-10 w-full text-base">
           {isLoading ? 'Sending link...' : 'Email me a sign-in link'}
         </Button>
       </Field>
@@ -186,7 +187,7 @@ export default function LoginSection({ className, ...props }: React.ComponentPro
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <div className="flex flex-col items-center gap-2 text-center">
         <BrandMark className="size-10" />
-        <h1 className="text-xl font-bold">Welcome to Cloudrive</h1>
+        <h1 className="text-2xl font-semibold">Welcome to Cloudrive</h1>
         <p className="text-sm text-muted-foreground">All your clouds. One drive.</p>
       </div>
 
@@ -208,7 +209,7 @@ export default function LoginSection({ className, ...props }: React.ComponentPro
             key={item.id}
             type="button"
             variant="outline"
-            className="w-full h-10 flex items-center justify-center text-center"
+            className="h-10 w-full text-base flex items-center justify-center text-center"
             aria-pressed={item.id === 'google' ? undefined : false}
             onClick={() => handleAlternative(item.id)}
           >
@@ -217,6 +218,12 @@ export default function LoginSection({ className, ...props }: React.ComponentPro
           </Button>
         ))}
       </div>
+
+      <FieldDescription className="px-6 text-center">
+        By clicking continue, you agree to our{' '}
+        <Link href="https://cloudrive.us.ci/terms">Terms of Service</Link> and{' '}
+        <Link href="https://cloudrive.us.ci/privacy">Privacy Policy</Link>.
+      </FieldDescription>
     </div>
   )
 }

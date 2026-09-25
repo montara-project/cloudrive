@@ -19,9 +19,9 @@ interface CreateAxiosProps {
  * @returns
  */
 function createAxios({ baseURL, storageKey }: CreateAxiosProps) {
-  // withCredentials lets the Authula session cookie flow alongside Bearer
-  // tokens — required for OAuth2 sign-ins, which mint no JWT.
-  const axiosInstance = axios.create({ baseURL, timeout, withCredentials: true })
+  // Bearer tokens only — the server does not issue session cookies, so no
+  // credentials flag is needed.
+  const axiosInstance = axios.create({ baseURL, timeout })
 
   // Interceptor Request
   if (storageKey && !isEmpty(storageKey)) {
@@ -54,7 +54,7 @@ function createAxios({ baseURL, storageKey }: CreateAxiosProps) {
       if (error.response?.status === 401) {
         if (storageKey === AUTH_STORAGE_KEYS.AUTH_STORAGE) {
           clearAuthTokens()
-          window.location.href = '/login'
+          window.location.href = '/'
         }
         throw new Error('Unauthorized')
       }

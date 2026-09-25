@@ -1,12 +1,28 @@
 import { env } from '@/config/env'
 
-import { throwAxiosError } from '../api/axios-error'
-import { services } from '../api/services'
-import { setAuthTokens } from './token-storage'
+import { authClient } from './client'
+import { persistTokenPair } from './token-storage'
 
 interface SignInWithEmailParams {
   email: string
   password: string
+}
+
+/**
+ * Normalize a better-fetch `{ error }` into a thrown Error with a readable
+ * message, matching what callers used to get from the axios path. The server's
+ * error body (e.g. `{"message": "Invalid credentials"}`) rides on
+ * `error.error`.
+ */
+function throwAuthError(error: {
+  status?: number
+  statusText?: string
+  message?: string
+  error?: { message?: string }
+}): never {
+  throw new Error(
+    error.error?.message || error.message || error.statusText || 'Authentication request failed'
+  )
 }
 
 /**
@@ -19,24 +35,18 @@ interface SignInWithEmailParams {
  * re-probes instead of reusing the "signed out" answer from the login page.
  */
 export async function signInWithEmail({ email, password }: SignInWithEmailParams) {
-  try {
-    const res = await services.auth.signIn({ email, password })
-    const payload = res?.data
+  const { data, error } = await authClient.signInEmail({ email, password })
 
-    if (!payload?.access_token) {
-      throw new Error('Sign-in response did not include an access token')
-    }
-
-    setAuthTokens({
-      accessToken: payload.access_token,
-      refreshToken: payload.refresh_token,
-      expiresIn: payload.expires_in,
-    })
-
-    return payload
-  } catch (error) {
-    throwAxiosError(error as Error)
+  if (error) {
+    throwAuthError(error)
   }
+
+  if (!data?.access_token) {
+    throw new Error('Sign-in response did not include an access token')
+  }
+
+  persistTokenPair(data)
+  return data
 }
 
 /**
@@ -46,9 +56,7 @@ export async function signInWithEmail({ email, password }: SignInWithEmailParams
  */
 export function signInWithGoogle() {
   const redirectTo = `${window.location.origin}/auth/callback`
-  window.location.assign(
-    `${env.NEXT_PUBLIC_API_URL}/v1/auth/oauth2/authorize/google?redirect_to=${encodeURIComponent(redirectTo)}`
-  )
+  window.location.href = `${env.NEXT_PUBLIC_API_URL}/v1/auth/oauth2/authorize/google?redirect_to=${encodeURIComponent(redirectTo)}`
 }
 
 /**
@@ -56,12 +64,14 @@ export function signInWithGoogle() {
  * the link is verified — it should point at the app's /auth/callback page.
  */
 export async function signInWithMagicLink({ email }: { email: string }) {
-  try {
-    const callbackUrl = `${window.location.origin}/auth/callback`
-    return await services.auth.magicLinkSignIn({ email, callback_url: callbackUrl })
-  } catch (error) {
-    throwAxiosError(error as Error)
+  const callbackUrl = `${window.location.origin}/auth/callback`
+  const { data, error } = await authClient.magicLinkSignIn({ email, callback_url: callbackUrl })
+
+  if (error) {
+    throwAuthError(error)
   }
+
+  return data
 }
 
 /**
@@ -69,29 +79,23 @@ export async function signInWithMagicLink({ email }: { email: string }) {
  * for a JWT pair and store it.
  */
 export async function exchangeMagicLinkToken(token: string) {
-  try {
-    const res = await services.auth.magicLinkExchange({ token })
-    const payload = res?.data
+  const { data, error } = await authClient.magicLinkExchange({ token })
 
-    if (!payload?.access_token) {
-      throw new Error('Exchange response did not include an access token')
-    }
-
-    setAuthTokens({
-      accessToken: payload.access_token,
-      refreshToken: payload.refresh_token,
-      expiresIn: payload.expires_in,
-    })
-
-    return payload
-  } catch (error) {
-    throwAxiosError(error as Error)
+  if (error) {
+    throwAuthError(error)
   }
+
+  if (!data?.access_token) {
+    throw new Error('Exchange response did not include an access token')
+  }
+
+  persistTokenPair(data)
+  return data
 }
 
 export async function signOut() {
   try {
-    await services.auth.signOut()
+    await authClient.authSignOut()
   } catch {
     // Session may already be gone server-side; local cleanup still proceeds.
   }
