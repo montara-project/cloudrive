@@ -54,7 +54,7 @@ export const features = tableFeatures({
   sortedRowModel: createSortedRowModel(),
 })
 
-interface ReactTableProps<T extends RowData> {
+export interface ReactTableProps<T extends RowData> {
   columns: ColumnDef<typeof features, T, unknown>[]
   data: T[]
   pageSize?: number
@@ -65,6 +65,8 @@ interface ReactTableProps<T extends RowData> {
   onPageSizeChange?: (pageSize: number) => void
   globalFilterFn?: FilterFnOption<typeof features, T>
   getRowId?: (row: T) => string
+  onRowClick?: (row: T) => void
+  empty?: React.ReactNode
 }
 
 export default function ReactTable<T extends RowData>({
@@ -76,6 +78,8 @@ export default function ReactTable<T extends RowData>({
   columnSort = [],
   globalFilterFn,
   getRowId,
+  onRowClick,
+  empty,
   onPageChange,
   onPageSizeChange,
 }: ReactTableProps<T>) {
@@ -124,8 +128,10 @@ export default function ReactTable<T extends RowData>({
 
   return (
     <DataGrid
-      table={table as unknown as ReactTable<any, any>}
+      table={table as unknown as ReactTable<any, T>}
       recordCount={total}
+      onRowClick={onRowClick}
+      emptyMessage={empty}
       tableLayout={{
         columnsVisibility: true,
         columnsResizable: true,

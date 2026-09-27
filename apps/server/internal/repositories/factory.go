@@ -18,6 +18,7 @@ type Repositories struct {
 	StorageAccount         StorageAccountRepository
 	S3Credential           S3CredentialRepository
 	S3Bucket               S3BucketRepository
+	OnboardingSurvey       OnboardingSurveyRepository
 }
 
 func New(db *sql.DB, cfg *config.ConfigApp, box *secretbox.SecretBox) Repositories {
@@ -65,6 +66,10 @@ func New(db *sql.DB, cfg *config.ConfigApp, box *secretbox.SecretBox) Repositori
 		S3Bucket: S3BucketRepository{BaseRepository: BaseRepository{
 			DB:        db,
 			TableName: "s3_buckets",
+		}},
+		OnboardingSurvey: OnboardingSurveyRepository{BaseRepository: BaseRepository{
+			DB:        db,
+			TableName: "onboarding_surveys",
 		}},
 	}
 }

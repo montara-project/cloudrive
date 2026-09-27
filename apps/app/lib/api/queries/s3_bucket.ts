@@ -10,6 +10,10 @@ export const LIST_S3_BUCKET_QUERY_KEY = (wsId: string, params?: PaginateDto) => 
   return ['s3/buckets', wsId, params]
 }
 
+export const RECENT_S3_FILES_QUERY_KEY = (wsId: string, params?: PaginateDto) => {
+  return ['s3/recent-files', wsId, params]
+}
+
 const list = (wsId: string, params?: PaginateDto) =>
   queryOptions({
     queryKey: LIST_S3_BUCKET_QUERY_KEY(wsId, params),
@@ -27,6 +31,24 @@ const list = (wsId: string, params?: PaginateDto) =>
     enabled: !!wsId,
   })
 
+// recentFiles powers the dashboard's "Recent files" section — it is a
+// live provider aggregation (not a DB listing), so a short staleTime keeps
+// revisits cheap without feeling stale.
+const recentFiles = (wsId: string, params?: PaginateDto) =>
+  queryOptions({
+    queryKey: RECENT_S3_FILES_QUERY_KEY(wsId, params),
+    queryFn: async () => {
+      const res = await services.s3.buckets.recentFiles(wsId, {
+        offset: 0,
+        limit: params?.limit ?? 8,
+      })
+      return res.data
+    },
+    enabled: !!wsId,
+    staleTime: 60 * 1000,
+    retry: false,
+  })
+
 const create = (wsId: string) =>
   mutationOptions({
     mutationFn: async (reqBody: {
@@ -39,6 +61,7 @@ const create = (wsId: string) =>
     },
     onSuccess: () => {
       getQueryClient().invalidateQueries({ queryKey: ['s3/buckets', wsId] })
+      getQueryClient().invalidateQueries({ queryKey: ['s3/recent-files', wsId] })
     },
   })
 
@@ -50,11 +73,13 @@ const del = (wsId: string) =>
     },
     onSuccess: () => {
       getQueryClient().invalidateQueries({ queryKey: ['s3/buckets', wsId] })
+      getQueryClient().invalidateQueries({ queryKey: ['s3/recent-files', wsId] })
     },
   })
 
 export const s3BucketQueries = {
   list,
+  recentFiles,
   create,
   delete: del,
 } as const

@@ -40,7 +40,7 @@ COPY --chmod=0755 scripts/entrypoint.sh /app/entrypoint.sh
 
 USER cloudrive
 
-# 8080 = REST API; 9000 = S3-compatible gateway (enabled via S3_API_ADDR)
+# 8080 = REST API; 9000 = S3-compatible gateway (enabled via S3_API_PORT)
 EXPOSE 8080 9000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \

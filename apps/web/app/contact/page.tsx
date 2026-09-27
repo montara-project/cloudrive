@@ -25,7 +25,7 @@ const channels = [
   {
     Icon: GlobeIcon,
     title: 'General support',
-    email: 'support@cloudrive.app',
+    email: 'support@cloudrive.us.ci',
     note: 'Product questions and troubleshooting · replies within 1 business day',
     tile: 'bg-primary/10 text-primary',
     hoverBorder: 'hover:border-primary/40',
@@ -33,7 +33,7 @@ const channels = [
   {
     Icon: UsersIcon,
     title: 'Sales & teams',
-    email: 'sales@cloudrive.app',
+    email: 'hello@cloudrive.us.ci',
     note: 'Team plans, SSO/SCIM, volume pricing · replies within 1 business day',
     tile: 'bg-emerald-500/10 text-emerald-600',
     hoverBorder: 'hover:border-emerald-500/40',
@@ -41,7 +41,7 @@ const channels = [
   {
     Icon: LockIcon,
     title: 'Security & privacy',
-    email: 'security@cloudrive.app',
+    email: 'support@cloudrive.us.ci',
     note: 'Vulnerability reports, DPO requests, data-subject access · treated confidentially',
     tile: 'bg-accent/15 text-accent',
     hoverBorder: 'hover:border-accent/50',
@@ -49,7 +49,7 @@ const channels = [
   {
     Icon: SparklesIcon,
     title: 'Press & partnerships',
-    email: 'press@cloudrive.app',
+    email: 'hello@cloudrive.us.ci',
     note: 'Media inquiries, brand assets, integrations · replies within 2 business days',
     tile: 'bg-primary/10 text-primary',
     hoverBorder: 'hover:border-primary/40',
@@ -77,11 +77,9 @@ const infoCards = [
     title: 'Headquarters',
     body: (
       <>
-        Cloudrive, Inc.
+        Montara Project
         <br />
-        548 Market Street
-        <br />
-        San Francisco, CA 94104, USA
+        Semarang, Indonesia
       </>
     ),
   },
@@ -89,7 +87,13 @@ const infoCards = [
     Icon: ClockIcon,
     tone: 'bg-emerald-500/10 text-emerald-600',
     title: 'Support hours',
-    body: <>Monday–Friday, 9:00–18:00 PT. Security reports are monitored around the clock.</>,
+    body: (
+      <>
+        Monday-Friday, 9:00-18:00 WIB.
+        <br />
+        Security reports are monitored around the clock.
+      </>
+    ),
   },
 ]
 

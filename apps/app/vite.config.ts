@@ -1,6 +1,5 @@
 import { cloudflare } from '@cloudflare/vite-plugin'
 import { cdnAdapter } from '@vinext/cloudflare/cache/cdn-adapter'
-import { kvDataAdapter } from '@vinext/cloudflare/cache/kv-data-adapter'
 import { imagesOptimizer } from '@vinext/cloudflare/images/images-optimizer'
 import vinext from 'vinext'
 import { defineConfig } from 'vite'
@@ -11,7 +10,7 @@ export default defineConfig({
   },
   plugins: [
     vinext({
-      cache: { data: kvDataAdapter(), cdn: cdnAdapter() },
+      cache: { cdn: cdnAdapter() },
       images: { optimizer: imagesOptimizer() },
     }),
     cloudflare({
@@ -19,6 +18,7 @@ export default defineConfig({
         name: 'rsc',
         childEnvironments: ['ssr'],
       },
+      inspectorPort: false,
     }),
   ],
 })

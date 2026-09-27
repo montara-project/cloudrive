@@ -3,7 +3,7 @@ import { Metadata } from 'next'
 export const META_URL = 'https://cloudrive.us.ci'
 export const META_TITLE = `Cloudrive - All your clouds. One drive.`
 export const META_DESCRIPTION = `Cloudrive centers every file from Google Drive, Dropbox, OneDrive, S3, and 12+ other services into a single searchable, syncable drive.`
-export const META_IMAGE = '/static/images/brand-logo.png'
+export const META_IMAGE = '/static/images/cloudrive-logo-full.png'
 export const META_KEYWORDS = `cloud storage, file sync, unified drive, Google Drive, Dropbox, S3`
 
 const SITE_NAME = 'Cloudrive'

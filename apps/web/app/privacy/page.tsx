@@ -196,7 +196,7 @@ const sections: LegalSection[] = [
     blocks: [
       {
         kind: 'p',
-        text: 'For privacy questions or to contact our Data Protection Officer: privacy@cloudrive.app, or Cloudrive, Inc., 548 Market Street, San Francisco, CA 94104, USA.',
+        text: 'For privacy questions or to contact our Data Protection Officer: support@cloudrive.us.ci, Semarang, Indonesia',
       },
     ],
   },

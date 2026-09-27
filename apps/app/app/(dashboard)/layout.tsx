@@ -1,33 +1,57 @@
 'use client'
 
+import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 
-import type { AuthSession } from '@/types/auth'
-
-import GuardSkeleton from '@/components/block/dashboard/guard-skeleton'
+import SessionLoading from '@/components/block/auth/session-loading'
 import SidebarLayout from '@/components/layout/sidebar/layout'
-import { getSession } from '@/lib/auth/handler'
+import { useHydrated } from '@/hooks/use-hydrated'
+import { useSession } from '@/hooks/use-session'
+import { queries } from '@/lib/api/queries'
 
 export default function DashboardGroupLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
-  const [session, setSession] = useState<AuthSession | null>(null)
-  const [checked, setChecked] = useState(false)
+  const hydrated = useHydrated()
+  const { data: session, isPending } = useSession()
 
   useEffect(() => {
-    getSession().then((s) => {
-      if (!s) {
-        router.replace('/login')
-        return
-      }
-      setSession(s)
-      setChecked(true)
-    })
-  }, [router])
+    if (!isPending && !session) {
+      router.replace('/')
+    }
+  }, [isPending, session, router])
 
-  if (!checked) {
-    return <GuardSkeleton />
+  // First-run gate: a user without any organization is mid-onboarding — the
+  // dashboard would scope every query to an empty id (`orgId ?? ''` in
+  // use-workspace-context), so route them to the wizard instead. Shares the
+  // query key with use-workspace-context, so the render below reuses this
+  // fetch. Only a *successful* empty list triggers the redirect — a failed
+  // request falls through to the dashboard's own empty states.
+  const organizations = useQuery({
+    ...queries.organizations.list({ limit: 100 }),
+    enabled: !!session,
+  })
+  const hasNoOrganization =
+    !!session && organizations.isSuccess && (organizations.data?.data?.length ?? 0) === 0
+
+  useEffect(() => {
+    if (hasNoOrganization) {
+      router.replace('/onboarding')
+    }
+  }, [hasNoOrganization, router])
+
+  // `!hydrated` keeps the hydration pass identical to the server render —
+  // the optimistic session only exists client-side. After hydration the
+  // snapshot is already in `data`, so the swap to the dashboard is instant;
+  // the real probe still runs in the background and bounces to / if the
+  // credential turns out to be dead.
+  if (!hydrated || !session || organizations.isPending) {
+    return <SessionLoading />
   }
 
-  return <SidebarLayout auth={session}>{children}</SidebarLayout>
+  if (hasNoOrganization) {
+    return <SessionLoading message="Preparing your onboarding…" />
+  }
+
+  return <SidebarLayout>{children}</SidebarLayout>
 }

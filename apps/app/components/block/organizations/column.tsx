@@ -14,6 +14,7 @@ import { BaseColumnProps } from '@/types/column'
 import { features } from '../common/react-table'
 import RowColumnAction from '../common/row-column-action'
 import SimpleAlertDialog from '../common/simple-alert-dialog'
+import { EditOrganizationForm } from './form'
 
 type ColumnType = ColumnDef<typeof features, Models.Organization, unknown>
 
@@ -71,6 +72,7 @@ interface ActionCellProps {
 }
 
 function ActionCell({ record }: ActionCellProps) {
+  const [openEdit, setOpenEdit] = useState(false)
   const [openDelete, setOpenDelete] = useState(false)
 
   const mutation = useMutation(queries.organizations.delete())
@@ -86,7 +88,7 @@ function ActionCell({ record }: ActionCellProps) {
 
   return (
     <React.Fragment>
-      <RowColumnAction onEdit={() => console.log('edit')} onDelete={() => setOpenDelete(true)} />
+      <RowColumnAction onEdit={() => setOpenEdit(true)} onDelete={() => setOpenDelete(true)} />
 
       <SimpleAlertDialog
         title="Do you want to delete this chain?"
@@ -97,6 +99,8 @@ function ActionCell({ record }: ActionCellProps) {
         confirmText="Delete"
         variant="destructive"
       />
+
+      <EditOrganizationForm open={openEdit} onOpenChange={setOpenEdit} record={record} />
     </React.Fragment>
   )
 }

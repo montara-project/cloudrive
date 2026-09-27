@@ -2,14 +2,12 @@
 
 import { IconDotsVertical, IconPlus, IconTrash } from '@tabler/icons-react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { ColumnDef } from '@tanstack/react-table'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import type { Models } from '@/lib/api/models'
 
-import DataTable, { type DataTableColumn } from '@/components/block/common/data-table'
-import SimpleAlertDialog from '@/components/block/common/simple-alert-dialog'
-import SimpleDialog from '@/components/block/common/simple-dialog'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -18,10 +16,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Field } from '@/components/ui/field'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useAppForm } from '@/hooks/form'
 import { toastAxiosError } from '@/lib/api/axios-error'
 import { CreateS3BucketSchema } from '@/lib/api/dtos/s3/schema'
 import { queries } from '@/lib/api/queries'
+
+import { features } from '../common/react-table'
+import ReactTable from '../common/react-table'
+import SimpleAlertDialog from '../common/simple-alert-dialog'
+import SimpleDialog from '../common/simple-dialog'
+
+type ColumnType = ColumnDef<typeof features, Models.S3Bucket, unknown>
 
 function BucketDialog({
   wsId,
@@ -126,48 +132,90 @@ export default function BucketsTab({ wsId }: { wsId: string }) {
   const [creating, setCreating] = useState(false)
   const [deleting, setDeleting] = useState<Models.S3Bucket | null>(null)
 
-  const accountName = (id: string) =>
-    accounts.data?.data.find((a) => a.id === id)?.display_name ?? id
+  const isLoading = buckets.isLoading || buckets.isFetching || buckets.isPending
 
-  const columns: DataTableColumn<Models.S3Bucket>[] = [
-    { header: 'Name', cell: (b) => <span className="font-medium">{b.name}</span> },
-    {
-      header: 'Storage account',
-      cell: (b) => (
-        <span className="text-muted-foreground">{accountName(b.storage_account_id)}</span>
-      ),
-    },
-    {
-      header: 'Root prefix',
-      cell: (b) => (
-        <span className="font-mono text-xs text-muted-foreground">{b.root_prefix || '/'}</span>
-      ),
-    },
-    {
-      header: 'Created',
-      cell: (b) => (
-        <span className="text-muted-foreground">{new Date(b.created_at).toLocaleDateString()}</span>
-      ),
-    },
-    {
-      header: '',
-      className: 'w-12 text-right',
-      cell: (b) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-8">
-              <IconDotsVertical className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem variant="destructive" onClick={() => setDeleting(b)}>
-              <IconTrash className="size-4" /> Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
-    },
-  ]
+  const columns = useMemo<ColumnType[]>(() => {
+    return [
+      {
+        accessorKey: 'name',
+        header: 'Name',
+        cell: (info) => {
+          const value = info.getValue() as string
+          return isLoading ? (
+            <Skeleton className="h-5 w-full" />
+          ) : (
+            <span className="font-medium">{value}</span>
+          )
+        },
+      },
+      {
+        accessorKey: 'storage_account_id',
+        header: 'Storage account',
+        cell: ({ row }) => {
+          const b = row.original
+          const displayName =
+            accounts.data?.data.find((a) => a.id === b.storage_account_id)?.display_name ??
+            b.storage_account_id
+          return isLoading ? (
+            <Skeleton className="h-5 w-full" />
+          ) : (
+            <span className="text-muted-foreground">{displayName}</span>
+          )
+        },
+      },
+      {
+        accessorKey: 'root_prefix',
+        header: 'Root prefix',
+        cell: (info) => {
+          const value = info.getValue() as string
+          return isLoading ? (
+            <Skeleton className="h-5 w-full" />
+          ) : (
+            <span className="font-mono text-xs text-muted-foreground">{value || '/'}</span>
+          )
+        },
+      },
+      {
+        accessorKey: 'created_at',
+        header: 'Created',
+        cell: (info) => {
+          const value = info.getValue() as string
+          return isLoading ? (
+            <Skeleton className="h-5 w-full" />
+          ) : (
+            <span className="text-muted-foreground">
+              {value ? new Date(value).toLocaleDateString() : '—'}
+            </span>
+          )
+        },
+      },
+      {
+        id: 'actions',
+        header: '',
+        size: 50,
+        meta: { cellClassName: 'w-12 text-right' },
+        cell: ({ row }) => {
+          const b = row.original
+          return isLoading ? (
+            <Skeleton className="h-5 w-full" />
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-8">
+                  <IconDotsVertical className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem variant="destructive" onClick={() => setDeleting(b)}>
+                  <IconTrash className="size-4" /> Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )
+        },
+      },
+    ]
+  }, [isLoading, accounts.data])
 
   return (
     <div className="flex flex-col gap-4">
@@ -176,10 +224,11 @@ export default function BucketsTab({ wsId }: { wsId: string }) {
           <IconPlus className="size-4" /> New bucket
         </Button>
       </div>
-      <DataTable
+      <ReactTable
         columns={columns}
-        rows={buckets.data?.data ?? []}
-        loading={buckets.isLoading}
+        data={buckets.data?.data ?? []}
+        total={buckets.data?.metadata?.total ?? buckets.data?.data?.length ?? 0}
+        pageSize={100}
         empty="No buckets yet."
       />
 

@@ -156,7 +156,7 @@ func (r StorageAccountRepository) Get(id uuid.UUID) (*models.StorageAccount, err
 func (r StorageAccountRepository) GetWithProvider(id uuid.UUID) (*models.StorageAccount, *models.Provider, error) {
 	query := `
 		SELECT a."id", a."organization_id", a."workspace_id", a."provider_id", a."owner_user_id",
-		       a."display_name", a."account_email", a."external_account_id", a."settings",
+		       a."display_name", a."account_email", a."external_account_id", COALESCE(a."settings", '{}'::jsonb) AS "settings",
 		       a."status", a."last_synced_at", a."deleted_at", a."created_at", a."updated_at",
 		       p."id", p."slug", p."name", p."protocol", p."auth_type", p."capabilities",
 		       p."is_active", p."deleted_at", p."created_at", p."updated_at"
@@ -213,7 +213,7 @@ func (r StorageAccountRepository) GetWithProvider(id uuid.UUID) (*models.Storage
 func (r StorageAccountRepository) getExec(exc Executor, id uuid.UUID) (*models.StorageAccount, error) {
 	query := `
 		SELECT "id", "organization_id", "workspace_id", "provider_id", "owner_user_id",
-		       "display_name", "account_email", "external_account_id", "settings",
+		       "display_name", "account_email", "external_account_id", COALESCE("settings", '{}'::jsonb) AS "settings",
 		       "status", "last_synced_at", "deleted_at", "created_at", "updated_at"
 		FROM "storage_accounts"
 		WHERE "id" = $1;
@@ -260,7 +260,7 @@ func (r StorageAccountRepository) GetByExternalAccount(workspaceID uuid.UUID, pr
 func (r StorageAccountRepository) getByExternalAccountExec(exc Executor, workspaceID uuid.UUID, providerID uuid.UUID, externalAccountID string) (*models.StorageAccount, error) {
 	query := `
 		SELECT "id", "organization_id", "workspace_id", "provider_id", "owner_user_id",
-		       "display_name", "account_email", "external_account_id", "settings",
+		       "display_name", "account_email", "external_account_id", COALESCE("settings", '{}'::jsonb) AS "settings",
 		       "status", "last_synced_at", "deleted_at", "created_at", "updated_at"
 		FROM "storage_accounts"
 		WHERE "workspace_id" = $1 AND "provider_id" = $2 AND "external_account_id" = $3;
@@ -307,7 +307,7 @@ func (r StorageAccountRepository) ListByWorkspace(workspaceID uuid.UUID, opts *Q
 func (r StorageAccountRepository) listByWorkspaceExec(exc Executor, workspaceID uuid.UUID, opts *QueryOptions) ([]*models.StorageAccount, PaginationMetadata, error) {
 	baseQuery := `
 		SELECT "id", "organization_id", "workspace_id", "provider_id", "owner_user_id",
-		       "display_name", "account_email", "external_account_id", "settings",
+		       "display_name", "account_email", "external_account_id", COALESCE("settings", '{}'::jsonb) AS "settings",
 		       "status", "last_synced_at", "deleted_at", "created_at", "updated_at"
 		FROM "storage_accounts"
 		WHERE "workspace_id" = $1 AND "deleted_at" IS NULL

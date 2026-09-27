@@ -39,3 +39,4 @@ pnpm-debug.log*
 /graft/
 .omc/
 VERSION
+*.pyc

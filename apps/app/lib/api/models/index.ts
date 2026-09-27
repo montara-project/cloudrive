@@ -9,4 +9,5 @@ export namespace Models {
   export type Provider = import('./provider').Provider
   export type S3Credential = import('./s3').S3Credential
   export type S3Bucket = import('./s3').S3Bucket
+  export type OnboardingSurvey = import('./onboarding-survey').OnboardingSurvey
 }

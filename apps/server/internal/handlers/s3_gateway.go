@@ -1,14 +1,21 @@
 package handlers
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
+	"sort"
 	"strings"
+	"sync"
+	"time"
 
 	"cloudrive/server/internal/app"
+	"cloudrive/server/internal/connectors"
 	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/models"
+	"cloudrive/server/internal/repositories"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -290,4 +297,343 @@ func randomToken(n int) string {
 		panic(err) // crypto/rand failure is unrecoverable
 	}
 	return strings.TrimRight(base64.RawURLEncoding.EncodeToString(b), "=")
+}
+
+// --- Recent files ---
+
+// RecentFile is one object aggregated across the workspace's gateway buckets.
+// Key is relative to the bucket's root prefix, so it reads like the path the
+// uploader used.
+type RecentFile struct {
+	Key              string    `json:"key"`
+	Bucket           string    `json:"bucket"`
+	Size             int64     `json:"size"`
+	ContentType      string    `json:"content_type,omitempty"`
+	LastModified     time.Time `json:"last_modified"`
+	StorageAccountID string    `json:"storage_account_id"`
+	ProviderSlug     string    `json:"provider_slug,omitempty"`
+}
+
+// recentFilesBucketCap bounds how many objects are fetched per bucket before
+// the cross-bucket merge — enough to surface recent activity without walking
+// large providers.
+const recentFilesBucketCap = 100
+
+// RecentFiles aggregates the most recently modified objects across the
+// workspace's gateway buckets. Each bucket's backing connector is asked for
+// its newest objects; provider failures degrade to partial results so one
+// offline account cannot empty the section.
+func (h *s3GatewayHandler) RecentFiles(c fiber.Ctx) error {
+	userID, err := currentUser(c)
+	if err != nil {
+		return err
+	}
+
+	wsID, err := lib.ContextParamUUID(c, "wsId")
+	if err != nil {
+		return badRequest(c, "Invalid workspace id")
+	}
+
+	workspace, err := h.app.Repositories.Workspace.Get(wsID)
+	if err != nil {
+		return respondError(c, err)
+	}
+
+	if _, err := requireOrgMember(c, h.app, workspace.OrganizationID, userID); err != nil {
+		return err
+	}
+
+	q := &dtos.ListQuery{}
+	if err := lib.ValidateRequestQuery(c, q); err != nil {
+		return requestError(c, err, "Invalid pagination parameters")
+	}
+	limit := q.Limit
+	if limit <= 0 || limit > 50 {
+		limit = 10
+	}
+
+	buckets, _, err := h.app.Repositories.S3Bucket.ListByWorkspace(
+		wsID, &repositories.QueryOptions{Limit: 100},
+	)
+	if err != nil {
+		return respondError(c, err)
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 15*time.Second)
+	defer cancel()
+
+	var (
+		mu    sync.Mutex
+		wg    sync.WaitGroup
+		files = make([]RecentFile, 0, len(buckets))
+	)
+	for _, bucket := range buckets {
+		wg.Add(1)
+		go func(bucket *models.S3Bucket) {
+			defer wg.Done()
+			recent, err := h.recentFilesForBucket(ctx, bucket, limit)
+			if err != nil {
+				return // degraded: skip this bucket's contribution
+			}
+			mu.Lock()
+			files = append(files, recent...)
+			mu.Unlock()
+		}(bucket)
+	}
+	wg.Wait()
+
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].LastModified.After(files[j].LastModified)
+	})
+	if len(files) > limit {
+		files = files[:limit]
+	}
+
+	return listResponse(c, q, int64(len(files)), files)
+}
+
+// recentFilesForBucket lists the bucket's newest objects through its backing
+// connector and maps them to relative keys.
+func (h *s3GatewayHandler) recentFilesForBucket(
+	ctx context.Context, bucket *models.S3Bucket, limit int,
+) ([]RecentFile, error) {
+	account, provider, err := h.app.Repositories.StorageAccount.GetWithProvider(bucket.StorageAccountID)
+	if err != nil {
+		return nil, err
+	}
+	if account.Status != "active" {
+		return nil, errors.New("storage account is not active")
+	}
+
+	credsJSON, err := h.app.Repositories.StorageAccount.Credentials(bucket.StorageAccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	conn, err := h.app.Connectors.Registry.New(
+		connectors.AccountInput{ID: account.ID, Settings: account.Settings},
+		provider,
+		string(credsJSON),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	page, err := conn.ListObjects(ctx, "", "", "", recentFilesBucketCap)
+	if err != nil {
+		return nil, err
+	}
+
+	// Connector keys are already relative to the account's root prefix, so
+	// they read exactly like the paths uploaders used.
+	files := make([]RecentFile, 0, len(page.Objects))
+	for _, object := range page.Objects {
+		// Directory markers and empty keys are not files.
+		if object.Key == "" || strings.HasSuffix(object.Key, "/") {
+			continue
+		}
+		files = append(files, RecentFile{
+			Key:              object.Key,
+			Bucket:           bucket.Name,
+			Size:             object.Size,
+			ContentType:      object.ContentType,
+			LastModified:     object.LastModified,
+			StorageAccountID: account.ID.String(),
+			ProviderSlug:     provider.Slug,
+		})
+	}
+
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].LastModified.After(files[j].LastModified)
+	})
+	if len(files) > limit {
+		files = files[:limit]
+	}
+	return files, nil
+}
+
+// --- My Drive ---
+
+// DriveEntry is one folder or file at a prefix inside a provider account's
+// drive, the shape the My Drive browser renders per row.
+type DriveEntry struct {
+	Name         string    `json:"name"`
+	Type         string    `json:"type"` // "folder" | "file"
+	Size         int64     `json:"size"`
+	ContentType  string    `json:"content_type,omitempty"`
+	LastModified time.Time `json:"last_modified"`
+	AccountID    string    `json:"account_id"`
+	AccountName  string    `json:"account_name"`
+	ProviderSlug string    `json:"provider_slug,omitempty"`
+}
+
+// driveListCap bounds entries fetched per account before the merge.
+const driveListCap = 200
+
+// Drive browses provider accounts' drives like a file manager: with no
+// `account` param it merges one level of every active account in the
+// workspace (folders via the "/" delimiter, then files); with `account` it
+// browses that single account. `prefix` navigates into folders.
+func (h *s3GatewayHandler) Drive(c fiber.Ctx) error {
+	userID, err := currentUser(c)
+	if err != nil {
+		return err
+	}
+
+	wsID, err := lib.ContextParamUUID(c, "wsId")
+	if err != nil {
+		return badRequest(c, "Invalid workspace id")
+	}
+
+	workspace, err := h.app.Repositories.Workspace.Get(wsID)
+	if err != nil {
+		return respondError(c, err)
+	}
+
+	if _, err := requireOrgMember(c, h.app, workspace.OrganizationID, userID); err != nil {
+		return err
+	}
+
+	q := &dtos.ListQuery{}
+	if err := lib.ValidateRequestQuery(c, q); err != nil {
+		return requestError(c, err, "Invalid pagination parameters")
+	}
+	limit := q.Limit
+	if limit <= 0 || limit > 500 {
+		limit = 200
+	}
+
+	prefix := strings.TrimPrefix(c.Query("prefix"), "/")
+	if prefix != "" && !strings.HasSuffix(prefix, "/") {
+		prefix += "/"
+	}
+
+	accounts, _, err := h.app.Repositories.StorageAccount.ListByWorkspace(
+		wsID, &repositories.QueryOptions{Limit: 100},
+	)
+	if err != nil {
+		return respondError(c, err)
+	}
+
+	// An explicit account param scopes the browse to one provider account.
+	if accountParam := c.Query("account"); accountParam != "" {
+		accountID, err := uuid.Parse(accountParam)
+		if err != nil {
+			return badRequest(c, "Invalid account id")
+		}
+		filtered := accounts[:0]
+		for _, account := range accounts {
+			if account.ID == accountID {
+				filtered = append(filtered, account)
+			}
+		}
+		accounts = filtered
+	}
+
+	ctx, cancel := context.WithTimeout(c.Context(), 15*time.Second)
+	defer cancel()
+
+	var (
+		mu      sync.Mutex
+		wg      sync.WaitGroup
+		entries = make([]DriveEntry, 0, len(accounts))
+	)
+	for _, account := range accounts {
+		if account.Status != "active" {
+			continue
+		}
+		wg.Add(1)
+		go func(account *models.StorageAccount) {
+			defer wg.Done()
+			list, err := h.driveEntriesForAccount(ctx, account, prefix, driveListCap)
+			if err != nil {
+				return // degraded: skip this account's contribution
+			}
+			mu.Lock()
+			entries = append(entries, list...)
+			mu.Unlock()
+		}(account)
+	}
+	wg.Wait()
+
+	// Folders first (alphabetical), then newest files — the file-manager order.
+	sort.Slice(entries, func(i, j int) bool {
+		fi, fj := entries[i].Type == "folder", entries[j].Type == "folder"
+		if fi != fj {
+			return fi
+		}
+		if fi && fj {
+			return strings.ToLower(entries[i].Name) < strings.ToLower(entries[j].Name)
+		}
+		return entries[i].LastModified.After(entries[j].LastModified)
+	})
+	total := int64(len(entries))
+	if len(entries) > limit {
+		entries = entries[:limit]
+	}
+
+	return listResponse(c, q, total, entries)
+}
+
+// driveEntriesForAccount lists one level of the account's drive at prefix.
+func (h *s3GatewayHandler) driveEntriesForAccount(
+	ctx context.Context, account *models.StorageAccount, prefix string, limit int,
+) ([]DriveEntry, error) {
+	_, provider, err := h.app.Repositories.StorageAccount.GetWithProvider(account.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	credsJSON, err := h.app.Repositories.StorageAccount.Credentials(account.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	conn, err := h.app.Connectors.Registry.New(
+		connectors.AccountInput{ID: account.ID, Settings: account.Settings},
+		provider,
+		string(credsJSON),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	page, err := conn.ListObjects(ctx, prefix, "/", "", limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// Connector keys/prefixes are relative to the account's root prefix.
+	displayName := func(raw string) string {
+		return strings.TrimSuffix(strings.TrimPrefix(raw, prefix), "/")
+	}
+
+	accountName := account.DisplayName
+	if account.AccountEmail != nil && *account.AccountEmail != "" {
+		accountName = *account.AccountEmail
+	}
+
+	entries := make([]DriveEntry, 0, len(page.CommonPrefixes)+len(page.Objects))
+	for _, folder := range page.CommonPrefixes {
+		name := displayName(folder)
+		if name == "" {
+			continue
+		}
+		entries = append(entries, DriveEntry{
+			Name: name, Type: "folder", LastModified: time.Time{},
+			AccountID: account.ID.String(), AccountName: accountName, ProviderSlug: provider.Slug,
+		})
+	}
+	for _, object := range page.Objects {
+		name := displayName(object.Key)
+		if name == "" || strings.HasSuffix(object.Key, "/") {
+			continue // directory marker
+		}
+		entries = append(entries, DriveEntry{
+			Name: name, Type: "file", Size: object.Size, ContentType: object.ContentType,
+			LastModified: object.LastModified,
+			AccountID:    account.ID.String(), AccountName: accountName, ProviderSlug: provider.Slug,
+		})
+	}
+	return entries, nil
 }

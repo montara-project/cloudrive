@@ -19,10 +19,10 @@ S3 Client ──SigV4──▶ S3 Gateway (listener terpisah, path-style, XML)
                  └── oauth2_cloud  → Google Drive (multipart di-staging lokal)
 ```
 
-- **Listener terpisah** (`S3_API_ADDR`, default `:9000`): dialek S3 (XML,
+- **Listener terpisah** (`S3_API_PORT`, default `:9000`): dialek S3 (XML,
   path-style, SigV4) berbeda dari REST JSON API (`PORT`, default `:8080`),
   sehingga middleware CORS/limiter REST tidak diterapkan di gateway.
-  Kosongkan `S3_API_ADDR` untuk menonaktifkan gateway.
+  Kosongkan `S3_API_PORT` untuk menonaktifkan gateway.
 - **Kredensial SigV4** yang diterbitkan Cloudrive tersimpan terenkripsi di
   tabel `s3_credentials` (vault yang sama dengan kredensial provider);
   secret hanya ditampilkan **sekali** saat dibuat.
