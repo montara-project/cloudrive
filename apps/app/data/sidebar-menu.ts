@@ -1,6 +1,7 @@
 import {
   IconBucket,
   IconCloud,
+  IconFolder,
   IconLayoutDashboard,
   IconPackages,
   IconSettings,
@@ -25,6 +26,14 @@ const NAV_OVERVIEW: NavMainItem[] = [
 ]
 
 const NAV_STORAGE: NavMainItem[] = [
+  {
+    title: 'My Drive',
+    url: '/drive',
+    icon: IconFolder,
+    isActive: false,
+    scope: 'workspace',
+    items: [],
+  },
   {
     title: 'Providers',
     url: '/providers',

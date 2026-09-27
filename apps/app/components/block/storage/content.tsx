@@ -1,20 +1,14 @@
 'use client'
 
-import { IconPlug } from '@tabler/icons-react'
-import { useQuery } from '@tanstack/react-query'
-import { useEffect, useMemo, useState } from 'react'
+import { IconPlugConnected } from '@tabler/icons-react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
-import ReactTable from '@/components/block/common/react-table'
 import { Button } from '@/components/ui/button'
-import { usePaginationQuery } from '@/hooks/use-pagination-query'
 import { useWorkspaceContext } from '@/hooks/use-workspace-context'
-import { queries } from '@/lib/api/queries'
-import { getTotal } from '@/lib/constants/paginate'
 
-import SectionCard from '../common/section-card'
-import { StorageAccountColumn } from './column'
 import { ConnectStorageAccountForm } from './form'
+import StorageOverview from './overview'
 
 // OAuthCallbackToast reads the server callback's query result
 // (?connected=<slug>&status=ok|error&reason=…), surfaces it, and strips the
@@ -70,57 +64,31 @@ export default function StorageContent() {
   useOAuthCallbackToast()
   const { workspace, wsId } = useWorkspaceContext()
 
-  const { offset, limit, pageIndex } = usePaginationQuery()
-  const defaultQueryParams = useMemo(() => ({ offset, limit }), [offset, limit])
-
-  const {
-    data: accounts,
-    isLoading,
-    isFetching,
-    isPending,
-  } = useQuery(queries.storageAccounts.list(wsId, defaultQueryParams))
-
-  const total = getTotal(accounts)
-  const columns = StorageAccountColumn({
-    loading: isLoading || isFetching || isPending,
-    wsId,
-  })
-  const rows = useMemo(
-    () => (accounts?.data && accounts?.data?.length > 0 ? accounts.data : []),
-    [accounts]
-  )
-
   return (
-    <>
-      <SectionCard
-        title="Storage Accounts"
-        description={
-          workspace
-            ? `Cloud provider accounts connected to ${workspace.name}.`
-            : 'Cloud provider accounts connected to the selected workspace.'
-        }
-        toolbar={
-          <Button variant="primary" size="sm" disabled={!wsId} onClick={() => setOpenAdd(true)}>
-            <IconPlug className="size-4" /> Connect account
-          </Button>
-        }
-      >
-        {!wsId ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">
-            Pick a workspace in the sidebar to manage its storage accounts.
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Storage</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {workspace
+              ? `View all cloud accounts connected to ${workspace.name}, then connect or disconnect accounts.`
+              : 'View all cloud accounts, their quotas, then connect or disconnect accounts.'}
           </p>
-        ) : (
-          <ReactTable
-            total={total}
-            data={rows}
-            pageIndex={pageIndex}
-            pageSize={limit}
-            columns={columns}
-          />
-        )}
+        </div>
+        <Button
+          variant="primary"
+          size="md"
+          className="rounded-full"
+          disabled={!wsId}
+          onClick={() => setOpenAdd(true)}
+        >
+          <IconPlugConnected className="size-4" /> Connect
+        </Button>
+      </div>
 
-        {wsId && <ConnectStorageAccountForm wsId={wsId} open={openAdd} onOpenChange={setOpenAdd} />}
-      </SectionCard>
-    </>
+      <StorageOverview onConnect={() => setOpenAdd(true)} />
+
+      {wsId && <ConnectStorageAccountForm wsId={wsId} open={openAdd} onOpenChange={setOpenAdd} />}
+    </div>
   )
 }

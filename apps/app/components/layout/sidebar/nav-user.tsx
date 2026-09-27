@@ -84,7 +84,7 @@ export default function NavUser({ user }: NavUserProps) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => router.push('/settings')}>
+              <DropdownMenuItem onClick={() => router.push('/settings?tab=account')}>
                 <BadgeCheck />
                 Account
               </DropdownMenuItem>

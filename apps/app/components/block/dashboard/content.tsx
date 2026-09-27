@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { queries } from '@/lib/api/queries'
 
+import RecentFilesSection from './recent-files'
 import StatCard from './stat-card'
 
 export default function DashboardContent() {
@@ -94,6 +95,8 @@ export default function DashboardContent() {
           )}
         </CardContent>
       </Card>
+
+      <RecentFilesSection />
     </div>
   )
 }

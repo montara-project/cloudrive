@@ -22,6 +22,7 @@ import { SIDEBAR_MENU } from '@/data/sidebar-menu'
 import { useSession } from '@/hooks/use-session'
 
 import NavMain from './nav-main'
+import NavStorageCard from './nav-storage-card'
 import NavUser from './nav-user'
 import OrganizationRail from './organization-rail'
 import WorkspaceSwitch from './workspace-switch'
@@ -79,6 +80,9 @@ export default function AppSidebar(props: AppSidebarProps) {
           <NavMain title="Storage" items={menu.navMenu.storage} />
           {menu.navSetting.length > 0 && <NavMain title="Settings" items={menu.navSetting} />}
         </SidebarContent>
+        <SidebarFooter className="p-3 pb-4">
+          <NavStorageCard />
+        </SidebarFooter>
       </Sidebar>
     </Sidebar>
   )

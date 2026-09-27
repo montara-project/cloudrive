@@ -19,4 +19,37 @@ export type S3BucketResources = {
     reqBody: { name: string; storage_account_id: string; root_prefix?: string }
   ) => Promise<AxiosItemResponse<Models.S3Bucket>>
   delete: (wsId: string, bucketId: string) => Promise<AxiosDeleteResponse>
+  recentFiles: (wsId: string, params?: PaginateDto) => Promise<AxiosListResponse<S3RecentFile>>
+}
+
+// S3RecentFile is one object aggregated across the workspace's gateway
+// buckets, keyed relative to the bucket's root prefix.
+export type S3RecentFile = {
+  key: string
+  bucket: string
+  size: number
+  content_type?: string
+  last_modified: string
+  storage_account_id: string
+  provider_slug?: string
+}
+
+// DriveEntry is one folder or file at a prefix inside a provider account's
+// drive, the shape the My Drive browser renders per row.
+export type DriveEntry = {
+  name: string
+  type: 'folder' | 'file'
+  size: number
+  content_type?: string
+  last_modified: string
+  account_id: string
+  account_name: string
+  provider_slug?: string
+}
+
+export type DriveResources = {
+  list: (
+    wsId: string,
+    params?: { prefix?: string; account?: string; offset?: number; limit?: number }
+  ) => Promise<AxiosListResponse<DriveEntry>>
 }

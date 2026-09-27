@@ -95,4 +95,6 @@ func routes(r *fiber.App, app *app.Application) {
 	r.Post("/v1/workspaces/:wsId/s3/buckets", m.Authorization(), h.S3Gateway.CreateBucket)
 	r.Get("/v1/workspaces/:wsId/s3/buckets", m.Authorization(), h.S3Gateway.ListBuckets)
 	r.Delete("/v1/workspaces/:wsId/s3/buckets/:bucketId", m.Authorization(), h.S3Gateway.DeleteBucket)
+	r.Get("/v1/workspaces/:wsId/s3/recent-files", m.Authorization(), h.S3Gateway.RecentFiles)
+	r.Get("/v1/workspaces/:wsId/drive", m.Authorization(), h.S3Gateway.Drive)
 }

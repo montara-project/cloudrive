@@ -10,6 +10,7 @@ import { useSession, useSignOut } from '@/hooks/use-session'
 import SectionCard from '../common/section-card'
 import OrganizationContent from '../organizations/content'
 import WorkspaceContent from '../workspaces/content'
+import StorageSettingsPanel from './storage-panel'
 
 export default function SettingContent() {
   // Tab lives in `?tab=` so links can deep-link a panel; the default stays
@@ -18,16 +19,20 @@ export default function SettingContent() {
 
   return (
     <Tabs
-      value={tab ?? 'account'}
-      onValueChange={(value) => setTab(value === 'account' ? null : value)}
+      value={tab ?? 'storage'}
+      onValueChange={(value) => setTab(value === 'storage' ? null : value)}
       className="flex flex-col gap-4"
     >
       <TabsList className="w-fit">
+        <TabsTrigger value="storage">Storage</TabsTrigger>
         <TabsTrigger value="account">Account</TabsTrigger>
         <TabsTrigger value="organizations">Organizations</TabsTrigger>
         <TabsTrigger value="workspaces">Workspaces</TabsTrigger>
       </TabsList>
 
+      <TabsContent value="storage" className="mt-0">
+        <StorageSettingsPanel />
+      </TabsContent>
       <TabsContent value="account">
         <AccountCard />
       </TabsContent>

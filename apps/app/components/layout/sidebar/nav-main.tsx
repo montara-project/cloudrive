@@ -47,7 +47,12 @@ export default function NavMain({ title, items }: NavMainProps) {
     if (item.items.length === 0) {
       return (
         <SidebarMenuItem key={item.title}>
-          <SidebarMenuButton tooltip={item.title} asChild isActive={isActive(item.url)}>
+          <SidebarMenuButton
+            tooltip={item.title}
+            asChild
+            isActive={isActive(item.url)}
+            className="h-9! gap-3 rounded-lg! text-[13.5px] data-active:bg-primary/10! data-active:text-primary! data-active:hover:bg-primary/15!"
+          >
             <Link href={scopedHref(item.url, item.scope)}>
               {item.icon && <item.icon />}
               <span>{item.title}</span>
@@ -68,7 +73,11 @@ export default function NavMain({ title, items }: NavMainProps) {
       >
         <SidebarMenuItem>
           <CollapsibleTrigger asChild>
-            <SidebarMenuButton tooltip={item.title} isActive={groupActive}>
+            <SidebarMenuButton
+              tooltip={item.title}
+              isActive={groupActive}
+              className="h-9! gap-3 rounded-lg! text-[13.5px] data-active:bg-primary/10! data-active:text-primary! data-active:hover:bg-primary/15!"
+            >
               {item.icon && <item.icon />}
               <span>{item.title}</span>
               <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
@@ -78,7 +87,11 @@ export default function NavMain({ title, items }: NavMainProps) {
             <SidebarMenuSub>
               {item.items.map((subItem) => (
                 <SidebarMenuSubItem key={subItem.title}>
-                  <SidebarMenuSubButton asChild isActive={isActive(subItem.url)}>
+                  <SidebarMenuSubButton
+                    asChild
+                    isActive={isActive(subItem.url)}
+                    className="data-active:text-primary! data-active:[&>svg]:text-primary!"
+                  >
                     <Link href={scopedHref(subItem.url, subItem.scope ?? item.scope)}>
                       {subItem.icon && <subItem.icon />}
                       <span>{subItem.title}</span>
@@ -95,7 +108,9 @@ export default function NavMain({ title, items }: NavMainProps) {
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel className="text-muted-foreground text-xs">{title}</SidebarGroupLabel>
+      <SidebarGroupLabel className="text-[11px]! font-semibold tracking-wider text-muted-foreground/70! uppercase">
+        {title}
+      </SidebarGroupLabel>
       <SidebarMenu>{items.map((item) => renderSidebarMenu(item))}</SidebarMenu>
     </SidebarGroup>
   )

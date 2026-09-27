@@ -14,6 +14,7 @@ import {
 } from '@/lib/api/dtos/storage-account/schema'
 import { Models } from '@/lib/api/models'
 import { queries } from '@/lib/api/queries'
+import { PROVIDER } from '@/lib/constants/provider'
 
 import SimpleAlertScrollableDialogForm from '../common/simple-alert-scrollable-dialog-form'
 
@@ -45,7 +46,7 @@ export function ConnectStorageAccountForm({
 
   const defaultValues: ConnectFormValues = {
     workspace_id: wsId,
-    provider_id: '',
+    provider_id: PROVIDER.S3,
     display_name: '',
     account_email: '',
     external_account_id: '',
