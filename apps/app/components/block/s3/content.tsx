@@ -1,5 +1,7 @@
 'use client'
 
+import { useQueryState } from 'nuqs'
+
 import SectionCard from '@/components/block/common/section-card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useWorkspaceContext } from '@/hooks/use-workspace-context'
@@ -9,6 +11,10 @@ import CredentialsTab from './credentials-tab'
 
 export default function S3Content() {
   const { workspace, wsId } = useWorkspaceContext()
+  // The active tab lives in `?view=` so the Recent / Starred / Shared listings
+  // can link a row straight to the bucket it lives in instead of dropping the
+  // user on the credentials tab.
+  const [view, setView] = useQueryState('view')
 
   return (
     <SectionCard
@@ -24,7 +30,10 @@ export default function S3Content() {
           Pick a workspace in the sidebar to manage the S3 gateway.
         </p>
       ) : (
-        <Tabs defaultValue="credentials">
+        <Tabs
+          value={view === 'buckets' ? 'buckets' : 'credentials'}
+          onValueChange={(value) => setView(value === 'credentials' ? null : value)}
+        >
           <TabsList className="mb-4">
             <TabsTrigger value="credentials">Credentials</TabsTrigger>
             <TabsTrigger value="buckets">Buckets</TabsTrigger>

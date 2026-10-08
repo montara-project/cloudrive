@@ -30,23 +30,29 @@ export default function NavStorageCard() {
   return (
     <Link
       href={href}
-      className="block rounded-xl border border-sidebar-border bg-background/70 p-3 transition-colors hover:bg-background"
+      className="block rounded-2xl border border-sidebar-border bg-sidebar p-3.5 shadow-xs transition-colors hover:bg-sidebar-accent/40"
     >
       <div className="flex items-center gap-2.5">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <IconCloud className="size-4.5" />
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <IconCloud className="size-5" />
         </div>
-        <span className="flex-1 truncate text-sm font-medium text-sidebar-foreground">Storage</span>
-        <span className="rounded-full bg-sidebar-accent px-2 py-0.5 text-[11px] font-medium tabular-nums text-sidebar-accent-foreground">
+        <span className="flex-1 truncate text-sm font-semibold text-sidebar-foreground">
+          Storage
+        </span>
+        <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-primary">
           {isLoading ? '…' : hasUsage ? `${percent}%` : accounts.length}
         </span>
       </div>
 
       {isLoading ? (
-        <Skeleton className="mt-3 h-1.5 w-full rounded-full" />
-      ) : hasUsage ? (
-        <Progress value={percent} className="mt-3 h-1.5 bg-sidebar-accent" />
-      ) : null}
+        <Skeleton className="mt-3.5 h-1.5 w-full rounded-full" />
+      ) : (
+        <Progress
+          value={hasUsage ? percent : 0}
+          className="mt-3.5 h-1.5 bg-sidebar-accent"
+          indicatorClassName="bg-primary"
+        />
+      )}
 
       <p className="mt-2.5 truncate text-xs text-muted-foreground">
         {isLoading

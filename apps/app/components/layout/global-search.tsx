@@ -2,11 +2,15 @@
 
 import {
   IconBucket,
+  IconClock,
   IconCloud,
-  IconLayoutDashboard,
+  IconFolder,
+  IconHome,
   IconPackages,
   IconSearch,
   IconSettings,
+  IconStar,
+  IconUsers,
 } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
@@ -23,10 +27,16 @@ import {
 import { useWorkspaceContext } from '@/hooks/use-workspace-context'
 import { queries } from '@/lib/api/queries'
 
+// Mirrors the sidebar so the palette never advertises a destination the
+// sidebar dropped.
 const NAV_ITEMS = [
-  { title: 'Dashboard', url: '/dashboard', icon: IconLayoutDashboard },
+  { title: 'Home', url: '/dashboard', icon: IconHome },
+  { title: 'My Drive', url: '/drive', icon: IconFolder },
+  { title: 'Shared', url: '/shared', icon: IconUsers },
+  { title: 'Recent', url: '/recent', icon: IconClock },
+  { title: 'Starred', url: '/starred', icon: IconStar },
+  { title: 'Storage', url: '/storage', icon: IconCloud },
   { title: 'Providers', url: '/providers', icon: IconPackages },
-  { title: 'Storage Accounts', url: '/storage', icon: IconCloud },
   { title: 'S3 Gateway', url: '/s3', icon: IconBucket },
   { title: 'Settings', url: '/settings', icon: IconSettings },
 ]
@@ -94,7 +104,7 @@ export default function GlobalSearch() {
 
           <CommandGroup heading="Navigation">
             {NAV_ITEMS.map((item) => (
-              <CommandItem key={item.url} onSelect={() => navigate(item.url)}>
+              <CommandItem key={item.title} value={item.title} onSelect={() => navigate(item.url)}>
                 <item.icon />
                 <span>{item.title}</span>
               </CommandItem>

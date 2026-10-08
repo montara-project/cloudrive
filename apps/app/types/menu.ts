@@ -19,6 +19,10 @@ export type NavMainItem = {
   title: string
   url: string
   icon: typeof IconCheck
+  /**
+   * Force the row's tinted "selected" style. Left unset for entries that
+   * derive it from the current pathname.
+   */
   isActive?: boolean
   items: NavSubItem[]
   scope?: NavScope
@@ -32,9 +36,8 @@ export type UserInfo = {
 
 export type SidebarMenuData = {
   user: UserInfo
-  navMenu: {
-    overview: NavMainItem[]
-    storage: NavMainItem[]
-  }
+  /** Primary navigation — rendered under the "Drive" group heading. */
+  navDrive: NavMainItem[]
+  /** Secondary destinations, rendered under their own heading. */
   navSetting: NavMainItem[]
 }

@@ -71,14 +71,13 @@ export default function AppSidebar(props: AppSidebarProps) {
       {/* This is the second sidebar */}
       {/* We disable collapsible and let it fill remaining space */}
       <Sidebar collapsible="none" className="hidden flex-1 md:flex">
-        <SidebarHeader className="gap-3.5 border-b p-4">
+        <SidebarHeader className="gap-3.5 p-4">
           <WorkspaceSwitch />
           <SidebarInput placeholder="Type to search..." />
         </SidebarHeader>
         <SidebarContent>
-          <NavMain title="Overview" items={menu.navMenu.overview} />
-          <NavMain title="Storage" items={menu.navMenu.storage} />
-          {menu.navSetting.length > 0 && <NavMain title="Settings" items={menu.navSetting} />}
+          <NavMain title="Drive" items={menu.navDrive} />
+          {menu.navSetting.length > 0 && <NavMain title="More" items={menu.navSetting} />}
         </SidebarContent>
         <SidebarFooter className="p-3 pb-4">
           <NavStorageCard />

@@ -16,6 +16,7 @@ import {
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
 import { useWorkspaceContext } from '@/hooks/use-workspace-context'
+import { cn } from '@/lib/utils'
 import { type NavMainItem, type NavScope } from '@/types/menu'
 
 type NavMainProps = {
@@ -23,6 +24,11 @@ type NavMainProps = {
   items: NavMainItem[]
 }
 
+/**
+ * NavMain renders one sidebar section. Rows are flat by default; an entry with
+ * `items` becomes a collapsible parent instead, kept because a nested entry's
+ * own URL is not a destination the user can land on.
+ */
 export default function NavMain({ title, items }: NavMainProps) {
   const pathname = usePathname()
   const { orgId, wsId } = useWorkspaceContext()
@@ -50,7 +56,7 @@ export default function NavMain({ title, items }: NavMainProps) {
           <SidebarMenuButton
             tooltip={item.title}
             asChild
-            isActive={isActive(item.url)}
+            isActive={item.isActive || isActive(item.url)}
             className="h-9! gap-3 rounded-lg! text-[13.5px] data-active:bg-primary/10! data-active:text-primary! data-active:hover:bg-primary/15!"
           >
             <Link href={scopedHref(item.url, item.scope)}>
@@ -107,11 +113,11 @@ export default function NavMain({ title, items }: NavMainProps) {
   }
 
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel className="text-[11px]! font-semibold tracking-wider text-muted-foreground/70! uppercase">
+    <SidebarGroup className={cn('gap-1 px-3 py-1.5')}>
+      <SidebarGroupLabel className="h-7 px-2 text-[11px]! font-semibold tracking-wider text-muted-foreground/70! uppercase">
         {title}
       </SidebarGroupLabel>
-      <SidebarMenu>{items.map((item) => renderSidebarMenu(item))}</SidebarMenu>
+      <SidebarMenu className="gap-0.5">{items.map((item) => renderSidebarMenu(item))}</SidebarMenu>
     </SidebarGroup>
   )
 }

@@ -1,10 +1,13 @@
 import {
   IconBucket,
+  IconClock,
   IconCloud,
   IconFolder,
-  IconLayoutDashboard,
+  IconHome,
   IconPackages,
   IconSettings,
+  IconStar,
+  IconUsers,
 } from '@tabler/icons-react'
 
 import type { NavMainItem, SidebarMenuData } from '@/types/menu'
@@ -15,17 +18,23 @@ import type { NavMainItem, SidebarMenuData } from '@/types/menu'
 // organization/workspace; NavMain appends the current context to their links
 // so a click keeps the selection instead of dropping the user on an empty page.
 
-const NAV_OVERVIEW: NavMainItem[] = [
+/**
+ * The Drive group: Home is the workspace overview, the middle four are ways of
+ * slicing the same merged drive (everything, shared, recent, starred), and
+ * Storage covers the connected accounts and their quotas.
+ *
+ * Every entry but Home is workspace-scoped — the drive and its listings are a
+ * provider fan-out per workspace, so a link without `ws` would land on an
+ * empty page.
+ */
+const NAV_DRIVE: NavMainItem[] = [
   {
-    title: 'Dashboard',
+    title: 'Home',
     url: '/dashboard',
-    icon: IconLayoutDashboard,
-    isActive: true,
+    icon: IconHome,
+    isActive: false,
     items: [],
   },
-]
-
-const NAV_STORAGE: NavMainItem[] = [
   {
     title: 'My Drive',
     url: '/drive',
@@ -35,18 +44,50 @@ const NAV_STORAGE: NavMainItem[] = [
     items: [],
   },
   {
-    title: 'Providers',
-    url: '/providers',
-    icon: IconPackages,
+    title: 'Shared',
+    url: '/shared',
+    icon: IconUsers,
     isActive: false,
+    scope: 'workspace',
     items: [],
   },
   {
-    title: 'Storage Accounts',
+    title: 'Recent',
+    url: '/recent',
+    icon: IconClock,
+    isActive: false,
+    scope: 'workspace',
+    items: [],
+  },
+  {
+    title: 'Starred',
+    url: '/starred',
+    icon: IconStar,
+    isActive: false,
+    scope: 'workspace',
+    items: [],
+  },
+  {
+    title: 'Storage',
     url: '/storage',
     icon: IconCloud,
     isActive: false,
     scope: 'workspace',
+    items: [],
+  },
+]
+
+/**
+ * Secondary destinations. Providers and the S3 gateway are configuration
+ * rather than places to browse, so they sit outside the Drive group — but they
+ * keep their entries so no routed page disappears from the sidebar.
+ */
+const NAV_SETTINGS: NavMainItem[] = [
+  {
+    title: 'Providers',
+    url: '/providers',
+    icon: IconPackages,
+    isActive: false,
     items: [],
   },
   {
@@ -57,9 +98,6 @@ const NAV_STORAGE: NavMainItem[] = [
     scope: 'workspace',
     items: [],
   },
-]
-
-const NAV_SETTINGS: NavMainItem[] = [
   {
     title: 'Settings',
     url: '/settings',
@@ -75,9 +113,6 @@ export const SIDEBAR_MENU: SidebarMenuData = {
     email: '',
     avatar: '',
   },
-  navMenu: {
-    overview: NAV_OVERVIEW,
-    storage: NAV_STORAGE,
-  },
+  navDrive: NAV_DRIVE,
   navSetting: NAV_SETTINGS,
 }

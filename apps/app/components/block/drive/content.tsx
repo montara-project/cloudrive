@@ -33,6 +33,8 @@ import { queries } from '@/lib/api/queries'
 import { formatBytes } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
+import StarToggle, { starredId, useStarred } from './starred-store'
+
 type TypeFilter = 'all' | 'folders' | FileCategory
 type TimeFilter = 'all' | 'today' | '7d' | '30d'
 
@@ -80,6 +82,9 @@ export default function DriveContent() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('all')
   const [search, setSearch] = useState('')
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc')
+  // Stars are a view concern: the listing is the source of truth for what
+  // exists, and this browser only says which of those rows are bookmarked.
+  const { ids: starred, toggle: toggleStar } = useStarred(wsId)
 
   const entriesQuery = useQuery(queries.drive.list(wsId, prefix ?? undefined))
   // Memoized on the query data so the array identity is stable across renders.
@@ -345,6 +350,18 @@ export default function DriveContent() {
                 <span className="w-20 text-right text-muted-foreground tabular-nums">
                   {entry.type === 'folder' ? '—' : formatBytes(entry.size)}
                 </span>
+
+                {/* Folders are prefixes, not objects, so there is nothing
+                    stable to bookmark — only files get a star. */}
+                <span className="w-8">
+                  {entry.type === 'file' && (
+                    <StarToggle
+                      active={starred.includes(starredId(entry.account_id, entry.name))}
+                      label={entry.name}
+                      onToggle={() => toggleStar(starredId(entry.account_id, entry.name))}
+                    />
+                  )}
+                </span>
               </div>
             ))}
           </div>
@@ -354,13 +371,22 @@ export default function DriveContent() {
               <div
                 key={`${entry.account_id}/${entry.name}`}
                 className={cn(
-                  'rounded-xl border p-3 transition-colors',
+                  'group relative rounded-xl border p-3 transition-colors',
                   entry.type === 'folder' &&
                     'cursor-pointer hover:border-primary/40 hover:bg-muted/40'
                 )}
                 onClick={entry.type === 'folder' ? () => openFolder(entry.name) : undefined}
                 role={entry.type === 'folder' ? 'button' : undefined}
               >
+                {entry.type === 'file' && (
+                  <span className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                    <StarToggle
+                      active={starred.includes(starredId(entry.account_id, entry.name))}
+                      label={entry.name}
+                      onToggle={() => toggleStar(starredId(entry.account_id, entry.name))}
+                    />
+                  </span>
+                )}
                 {entry.type === 'folder' ? (
                   <div className="flex size-9 items-center justify-center rounded-lg bg-muted">
                     <IconFolder className="size-4.5 text-muted-foreground" />
