@@ -93,12 +93,7 @@ function SidebarLogo() {
       <SidebarMenuItem>
         <SidebarMenuButton size="lg" asChild className="md:h-8 md:p-0">
           <Link href="https://cloudrive.us.ci">
-            <Image
-              src="/static/images/cloudrive.png"
-              width={40}
-              height={40}
-              alt="brand logo"
-            />
+            <Image src="/static/images/cloudrive.png" width={40} height={40} alt="brand logo" />
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">Cloudrive</span>
               <span className="truncate text-xs">Enterprise</span>
