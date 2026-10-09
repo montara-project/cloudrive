@@ -29,6 +29,7 @@ export function WorkspaceColumn({ loading }: BaseColumnProps) {
           const value = info.getValue() as string
           return loading ? <Skeleton className="h-5 w-full" /> : <span>{value}</span>
         },
+        size: 120,
       },
       {
         accessorKey: 'slug',
@@ -37,6 +38,7 @@ export function WorkspaceColumn({ loading }: BaseColumnProps) {
           const value = info.getValue() as string
           return loading ? <Skeleton className="h-5 w-full" /> : <span>{value}</span>
         },
+        size: 60,
       },
       {
         accessorKey: 'description',
@@ -49,6 +51,7 @@ export function WorkspaceColumn({ loading }: BaseColumnProps) {
             <span className="line-clamp-1 max-w-64 text-muted-foreground">{value || '—'}</span>
           )
         },
+        size: 120,
       },
       {
         accessorKey: 'created_at',
@@ -61,6 +64,7 @@ export function WorkspaceColumn({ loading }: BaseColumnProps) {
             <span>{value ? new Date(value).toLocaleDateString() : '—'}</span>
           )
         },
+        size: 50,
       },
       {
         accessorKey: 'actions',

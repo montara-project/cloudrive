@@ -29,13 +29,13 @@ export function CloudriveLogo({ size = 'md', className }: CloudriveLogoProps) {
   return (
     <span className={`inline-flex items-center gap-1 ${className ?? ''}`}>
       <Image
-        src="/static/images/cloudrive-logo-transparant.png"
+        src="/static/images/cloudrive.png"
         width={sizeMap[size]}
         height={sizeMap[size]}
         alt="brand logo"
       />
-      <span className={cn(textSize[size], 'font-semibold tracking-tight mt-1 text-[#1e6091]')}>
-        Cloudrive
+      <span className={cn(textSize[size], 'font-semibold tracking-tight mt-1 text-neutral-900')}>
+        Cloud<span className="text-blue-600">rive</span>
       </span>
     </span>
   )

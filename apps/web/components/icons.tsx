@@ -27,12 +27,14 @@ export function CloudriveLogo({ className }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-1 ${className ?? ''}`}>
       <Image
-        src="/static/images/cloudrive-logo-transparant.png"
+        src="/static/images/cloudrive.png"
         width={42}
         height={42}
         alt="brand logo"
       />
-      <span className="text-2xl font-semibold tracking-tight mt-1 text-[#1e6091]">Cloudrive</span>
+      <span className="text-2xl font-semibold tracking-tight mt-1 text-neutral-900">
+        Cloud<span className="text-blue-600">rive</span>
+      </span>
     </span>
   )
 }
