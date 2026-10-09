@@ -2,21 +2,27 @@
 
 import { IconCopy, IconPlus, IconTrash } from '@tabler/icons-react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { ColumnDef } from '@tanstack/react-table'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import type { Models } from '@/lib/api/models'
 
-import DataTable, { type DataTableColumn } from '@/components/block/common/data-table'
-import SimpleAlertDialog from '@/components/block/common/simple-alert-dialog'
-import SimpleDialog from '@/components/block/common/simple-dialog'
-import StatusBadge from '@/components/block/common/status-badge'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useAppForm } from '@/hooks/form'
 import { toastAxiosError } from '@/lib/api/axios-error'
 import { queries } from '@/lib/api/queries'
+
+import { features } from '../common/react-table'
+import ReactTable from '../common/react-table'
+import SimpleAlertDialog from '../common/simple-alert-dialog'
+import SimpleDialog from '../common/simple-dialog'
+import StatusBadge from '../common/status-badge'
+
+type ColumnType = ColumnDef<typeof features, Models.S3Credential, unknown>
 
 export default function CredentialsTab({ wsId }: { wsId: string }) {
   const credentials = useQuery(queries.s3.credentials.list(wsId))
@@ -50,45 +56,97 @@ export default function CredentialsTab({ wsId }: { wsId: string }) {
     toast.success(`${label} copied`)
   }
 
-  const columns: DataTableColumn<Models.S3Credential>[] = [
-    {
-      header: 'Access key ID',
-      cell: (c) => <span className="font-mono text-xs">{c.access_key_id}</span>,
-    },
-    {
-      header: 'Label',
-      cell: (c) => <span className="text-muted-foreground">{c.label || '—'}</span>,
-    },
-    { header: 'Status', cell: (c) => <StatusBadge value={c.status} /> },
-    {
-      header: 'Last used',
-      cell: (c) => (
-        <span className="text-muted-foreground">
-          {c.last_used_at ? new Date(c.last_used_at).toLocaleString() : 'Never'}
-        </span>
-      ),
-    },
-    {
-      header: 'Created',
-      cell: (c) => (
-        <span className="text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</span>
-      ),
-    },
-    {
-      header: '',
-      className: 'w-12 text-right',
-      cell: (c) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-8 text-destructive"
-          onClick={() => setRevoking(c)}
-        >
-          <IconTrash className="size-4" />
-        </Button>
-      ),
-    },
-  ]
+  const isTableLoading = credentials.isLoading || credentials.isFetching || credentials.isPending
+
+  const columns = useMemo<ColumnType[]>(() => {
+    return [
+      {
+        accessorKey: 'access_key_id',
+        header: 'Access key ID',
+        cell: (info) => {
+          const value = info.getValue() as string
+          return isTableLoading ? (
+            <Skeleton className="h-5 w-full" />
+          ) : (
+            <span className="font-mono text-xs">{value}</span>
+          )
+        },
+      },
+      {
+        accessorKey: 'label',
+        header: 'Label',
+        cell: (info) => {
+          const value = info.getValue() as string
+          return isTableLoading ? (
+            <Skeleton className="h-5 w-full" />
+          ) : (
+            <span className="text-muted-foreground">{value || '—'}</span>
+          )
+        },
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        cell: ({ row }) => {
+          const c = row.original
+          return isTableLoading ? (
+            <Skeleton className="h-5 w-full" />
+          ) : (
+            <StatusBadge value={c.status} />
+          )
+        },
+      },
+      {
+        accessorKey: 'last_used_at',
+        header: 'Last used',
+        cell: (info) => {
+          const value = info.getValue() as string | null
+          return isTableLoading ? (
+            <Skeleton className="h-5 w-full" />
+          ) : (
+            <span className="text-muted-foreground">
+              {value ? new Date(value).toLocaleString() : 'Never'}
+            </span>
+          )
+        },
+      },
+      {
+        accessorKey: 'created_at',
+        header: 'Created',
+        cell: (info) => {
+          const value = info.getValue() as string
+          return isTableLoading ? (
+            <Skeleton className="h-5 w-full" />
+          ) : (
+            <span className="text-muted-foreground">
+              {value ? new Date(value).toLocaleDateString() : '—'}
+            </span>
+          )
+        },
+      },
+      {
+        id: 'actions',
+        header: '',
+        size: 50,
+        meta: { cellClassName: 'w-12 text-right' },
+        cell: ({ row }) => {
+          const c = row.original
+          return isTableLoading ? (
+            <Skeleton className="h-5 w-full" />
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 text-destructive"
+              onClick={() => setRevoking(c)}
+            >
+              <IconTrash className="size-4" />
+            </Button>
+          )
+        },
+      },
+    ]
+  }, [isTableLoading])
 
   return (
     <div className="flex flex-col gap-4">
@@ -97,10 +155,11 @@ export default function CredentialsTab({ wsId }: { wsId: string }) {
           <IconPlus className="size-4" /> New credential
         </Button>
       </div>
-      <DataTable
+      <ReactTable
         columns={columns}
-        rows={credentials.data?.data ?? []}
-        loading={credentials.isLoading}
+        data={credentials.data?.data ?? []}
+        total={credentials.data?.metadata?.total ?? credentials.data?.data?.length ?? 0}
+        pageSize={100}
         empty="No S3 credentials yet. Create one to access the gateway."
       />
 

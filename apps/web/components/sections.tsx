@@ -106,7 +106,7 @@ export function Hero() {
             <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <a
                 href="#waitlist"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-7 py-3.5 text-sm font-semibold text-primary-foreground shadow-[0_4px_0_0_#1e40af] transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 active:translate-y-0 active:shadow-none sm:w-auto"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-7 py-3.5 text-sm font-semibold text-white! shadow-[0_4px_0_0_#1e40af] transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 active:translate-y-0 active:shadow-none sm:w-auto"
               >
                 Get early access
                 <ArrowRightIcon className="size-4" />

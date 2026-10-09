@@ -188,7 +188,7 @@ const sections: LegalSection[] = [
     blocks: [
       {
         kind: 'p',
-        text: 'Questions about these Terms can be sent to legal@cloudrive.app or through our contact page. Cloudrive, Inc., 548 Market Street, San Francisco, CA 94104, USA.',
+        text: 'Questions about these Terms can be sent to support@cloudrive.us.ci, Semarang, Indonesia',
       },
     ],
   },

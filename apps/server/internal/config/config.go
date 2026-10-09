@@ -3,13 +3,15 @@ package config
 import "time"
 
 type Config struct {
-	App     ConfigApp
-	DB      ConfigDB
-	Resend  ConfigResend
-	Google  ConfigGoogle
-	S3      ConfigS3
-	Storage ConfigStorage
-	Diag    ConfigDiag
+	App      ConfigApp
+	DB       ConfigDB
+	Resend   ConfigResend
+	Google   ConfigGoogle
+	OneDrive ConfigOneDrive
+	Dropbox  ConfigDropbox
+	S3       ConfigS3
+	Storage  ConfigStorage
+	Diag     ConfigDiag
 }
 
 type ConfigApp struct {
@@ -51,15 +53,28 @@ type ConfigGoogle struct {
 	ClientSecret string
 }
 
+type ConfigOneDrive struct {
+	ClientID     string
+	ClientSecret string
+	// Tenant is the Microsoft authority tenant: "common" (default),
+	// "consumers", "organizations", or a directory UUID.
+	Tenant string
+}
+
+type ConfigDropbox struct {
+	ClientID     string
+	ClientSecret string
+}
+
 type ConfigS3 struct {
 	ClientID     string
 	ClientSecret string
 	Region       string
 	Endpoint     string
 	Token        string
-	// APIAddr is the S3 gateway's dedicated listen address; empty disables
-	// the gateway listener.
-	APIAddr string
+	// APIPort is the S3 gateway's dedicated listen port; 0 disables the
+	// gateway listener.
+	APIPort int
 	// StagingDir buffers multipart parts for backends without native
 	// multipart support (e.g. Google Drive). Empty falls back to os.TempDir.
 	StagingDir string

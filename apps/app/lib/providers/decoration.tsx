@@ -2,12 +2,16 @@
 
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
 
+import { TooltipProvider } from '@/components/ui/tooltip'
+
 import ThemeProvider from './themes'
 
 export default function DecorationProvider({ children }: { children: React.ReactNode }) {
   return (
     <NuqsAdapter>
-      <ThemeProvider>{children}</ThemeProvider>
+      <ThemeProvider>
+        <TooltipProvider>{children}</TooltipProvider>
+      </ThemeProvider>
     </NuqsAdapter>
   )
 }

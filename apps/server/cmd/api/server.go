@@ -121,8 +121,8 @@ func serve(app *app.Application) error {
 	// S3-compatible gateway: a separate Fiber app with its own listener —
 	// different dialect (XML, path-style, SigV4) from the JSON REST API, so
 	// middlewares like CORS/limiter/compress must not apply. Disabled when
-	// S3_API_ADDR is empty.
-	if app.Config.S3.APIAddr != "" {
+	// S3_API_PORT is 0.
+	if app.Config.S3.APIPort != 0 {
 		gateway := fiber.New(fiber.Config{
 			BodyLimit: 5 * 1024 * 1024 * 1024, // 5GB: object PUT streams through
 			// Body must be a stream, not a buffered copy: object PUTs are
@@ -149,15 +149,23 @@ func serve(app *app.Application) error {
 				StorageAccount: app.Repositories.StorageAccount,
 			},
 			Registry: connectors.Registry{
-				GoogleClientID:     app.Config.Google.ClientID,
-				GoogleClientSecret: app.Config.Google.ClientSecret,
-				StagingDir:         app.Config.S3.StagingDir,
+				GoogleClientID:       app.Config.Google.ClientID,
+				GoogleClientSecret:   app.Config.Google.ClientSecret,
+				OneDriveClientID:     app.Config.OneDrive.ClientID,
+				OneDriveClientSecret: app.Config.OneDrive.ClientSecret,
+				OneDriveTenant:       app.Config.OneDrive.Tenant,
+				DropboxClientID:      app.Config.Dropbox.ClientID,
+				DropboxClientSecret:  app.Config.Dropbox.ClientSecret,
+				ServerURL:            app.Config.App.ServerURL,
+				StagingDir:           app.Config.S3.StagingDir,
 			},
 		})
 
 		go func() {
-			app.Logger.Info("s3 gateway started", "addr", app.Config.S3.APIAddr)
-			if err := gateway.Listen(app.Config.S3.APIAddr); err != nil {
+			app.Logger.Info("s3 gateway started", "addr", app.Config.S3.APIPort)
+			listenPort := fmt.Sprintf(":%d", app.Config.S3.APIPort)
+
+			if err := gateway.Listen(listenPort); err != nil {
 				app.Logger.Error("failed to start s3 gateway", "error", err)
 			}
 		}()
@@ -176,9 +184,9 @@ func serve(app *app.Application) error {
 	// Start server in a goroutine
 	go func() {
 		app.Logger.Info("server started on port", "port", app.Config.App.Port)
-		listerPort := fmt.Sprintf(":%d", app.Config.App.Port)
+		listenPort := fmt.Sprintf(":%d", app.Config.App.Port)
 
-		if err := server.Listen(listerPort); err != nil {
+		if err := server.Listen(listenPort); err != nil {
 			app.Logger.Error("failed to start server", "error", err)
 		}
 	}()

@@ -52,6 +52,16 @@ func (dto UpdateCredentialsRequest) Validate(v *validator.MapValidator) {
 	v.Field("credentials").Required()
 }
 
+// AuthorizeStorageOAuthRequest binds the body of the OAuth authorize
+// endpoint: the workspace the provider account will be connected to.
+type AuthorizeStorageOAuthRequest struct {
+	WorkspaceID string `json:"workspace_id"`
+}
+
+func (dto AuthorizeStorageOAuthRequest) Validate(v *validator.MapValidator) {
+	v.Field("workspace_id").Required().UUID()
+}
+
 // ListStorageAccountsQuery binds the query params of the account list
 // endpoint.
 type ListStorageAccountsQuery struct {

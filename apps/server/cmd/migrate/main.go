@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 
@@ -56,14 +57,14 @@ func main() {
 
 func migrateUp(m *migrate.Migrate) {
 	fmt.Println("Running up migrations...")
-	if err := m.Up(); err != nil {
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		log.Fatalf("failed to run up migrations: %v", err)
 	}
 }
 
 func migrateDown(m *migrate.Migrate) {
 	fmt.Println("Running down migrations...")
-	if err := m.Down(); err != nil {
+	if err := m.Down(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		log.Fatalf("failed to run down migrations: %v", err)
 	}
 }

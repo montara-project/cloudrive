@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { ArrowRightIcon, CloudriveLogo, CloseIcon, MenuIcon } from './icons'
+import { ArrowRightIcon, CloseIcon, CloudriveLogo, MenuIcon } from './icons'
 
 const links = [
   { href: '/#features', label: 'Features' },
@@ -41,7 +41,7 @@ export function Navbar() {
         <div className="hidden md:block">
           <a
             href="/#waitlist"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 active:translate-y-0"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white! transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 active:translate-y-0"
           >
             Get early access
             <ArrowRightIcon className="size-4" />
@@ -78,7 +78,7 @@ export function Navbar() {
               <a
                 href="/#waitlist"
                 onClick={() => setOpen(false)}
-                className="flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-colors duration-200 hover:bg-blue-700"
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white! transition-colors duration-200 hover:bg-blue-700"
               >
                 Get early access
                 <ArrowRightIcon className="size-4" />

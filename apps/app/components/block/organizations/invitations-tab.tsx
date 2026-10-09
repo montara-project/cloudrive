@@ -2,17 +2,15 @@
 
 import { IconMail, IconTrash } from '@tabler/icons-react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { ColumnDef } from '@tanstack/react-table'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import type { Models } from '@/lib/api/models'
 
-import DataTable, { type DataTableColumn } from '@/components/block/common/data-table'
-import SimpleAlertDialog from '@/components/block/common/simple-alert-dialog'
-import SimpleDialog from '@/components/block/common/simple-dialog'
-import StatusBadge from '@/components/block/common/status-badge'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useAppForm } from '@/hooks/form'
 import { toastAxiosError } from '@/lib/api/axios-error'
 import {
@@ -20,6 +18,14 @@ import {
   type CreateInvitationDto,
 } from '@/lib/api/dtos/organization/schema'
 import { queries } from '@/lib/api/queries'
+
+import { features } from '../common/react-table'
+import ReactTable from '../common/react-table'
+import SimpleAlertDialog from '../common/simple-alert-dialog'
+import SimpleDialog from '../common/simple-dialog'
+import StatusBadge from '../common/status-badge'
+
+type ColumnType = ColumnDef<typeof features, Models.OrganizationInvitation, unknown>
 
 function InvitationDialog({
   orgId,
@@ -113,35 +119,79 @@ export default function InvitationsTab({ orgId }: { orgId: string }) {
   const [revoking, setRevoking] = useState<Models.OrganizationInvitation | null>(null)
   const del = useMutation(queries.organizations.invitations.delete(orgId))
 
-  const columns: DataTableColumn<Models.OrganizationInvitation>[] = [
-    {
-      header: 'Email',
-      cell: (i) => <span className="font-medium">{i.email}</span>,
-    },
-    { header: 'Role', cell: (i) => <span className="capitalize">{i.role}</span> },
-    { header: 'Status', cell: (i) => <StatusBadge value={i.status} /> },
-    {
-      header: 'Expires',
-      cell: (i) => (
-        <span className="text-muted-foreground">{new Date(i.expires_at).toLocaleDateString()}</span>
-      ),
-    },
-    {
-      header: '',
-      className: 'w-12 text-right',
-      cell: (i) =>
-        i.status === 'pending' ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8 text-destructive"
-            onClick={() => setRevoking(i)}
-          >
-            <IconTrash className="size-4" />
-          </Button>
-        ) : null,
-    },
-  ]
+  const isLoading = invitations.isLoading || invitations.isFetching || invitations.isPending
+
+  const columns = useMemo<ColumnType[]>(() => {
+    return [
+      {
+        accessorKey: 'email',
+        header: 'Email',
+        cell: (info) => {
+          const value = info.getValue() as string
+          return isLoading ? (
+            <Skeleton className="h-5 w-full" />
+          ) : (
+            <span className="font-medium">{value}</span>
+          )
+        },
+      },
+      {
+        accessorKey: 'role',
+        header: 'Role',
+        cell: (info) => {
+          const value = info.getValue() as string
+          return isLoading ? (
+            <Skeleton className="h-5 w-full" />
+          ) : (
+            <span className="capitalize">{value}</span>
+          )
+        },
+      },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        cell: ({ row }) => {
+          const i = row.original
+          return isLoading ? <Skeleton className="h-5 w-full" /> : <StatusBadge value={i.status} />
+        },
+      },
+      {
+        accessorKey: 'expires_at',
+        header: 'Expires',
+        cell: (info) => {
+          const value = info.getValue() as string
+          return isLoading ? (
+            <Skeleton className="h-5 w-full" />
+          ) : (
+            <span className="text-muted-foreground">
+              {value ? new Date(value).toLocaleDateString() : '—'}
+            </span>
+          )
+        },
+      },
+      {
+        id: 'actions',
+        header: '',
+        size: 50,
+        meta: { cellClassName: 'w-12 text-right' },
+        cell: ({ row }) => {
+          const i = row.original
+          return isLoading ? (
+            <Skeleton className="h-5 w-full" />
+          ) : i.status === 'pending' ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 text-destructive"
+              onClick={() => setRevoking(i)}
+            >
+              <IconTrash className="size-4" />
+            </Button>
+          ) : null
+        },
+      },
+    ]
+  }, [isLoading])
 
   return (
     <div className="flex flex-col gap-4">
@@ -150,10 +200,11 @@ export default function InvitationsTab({ orgId }: { orgId: string }) {
           <IconMail className="size-4" /> Invite member
         </Button>
       </div>
-      <DataTable
+      <ReactTable
         columns={columns}
-        rows={invitations.data?.data ?? []}
-        loading={invitations.isLoading}
+        data={invitations.data?.data ?? []}
+        total={invitations.data?.metadata?.total ?? invitations.data?.data?.length ?? 0}
+        pageSize={100}
         empty="No invitations sent."
       />
 

@@ -32,6 +32,17 @@ const storageAccountResources = (): StorageAccountResources => {
     disconnect: (accountId) => {
       return api.delete(`/v1/storage/accounts/${accountId}`)
     },
+    authorizeOAuth: (providerSlug, workspaceId) => {
+      return api.post(`/v1/storage/oauth/${providerSlug}/authorize`, {
+        workspace_id: workspaceId,
+      })
+    },
+    refreshOAuth: (accountId) => {
+      return api.post(`/v1/storage/accounts/${accountId}/refresh`)
+    },
+    quota: (accountId) => {
+      return api.get(`/v1/storage/accounts/${accountId}/quota`)
+    },
   }
 }
 

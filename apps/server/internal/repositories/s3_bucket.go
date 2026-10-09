@@ -132,8 +132,8 @@ func (r S3BucketRepository) ListByWorkspace(workspaceID uuid.UUID, opts *QueryOp
 
 	// Whitelist of allowed columns for ORDER BY to prevent SQL injection
 	allowedOrderByColumns := map[string]bool{
-		"id":      true,
-		"name":    true,
+		"id":         true,
+		"name":       true,
 		"created_at": true,
 		"updated_at": true,
 	}

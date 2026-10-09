@@ -15,6 +15,7 @@ export const CreateWorkspaceSchema = z.object({
 
 export const UpdateWorkspaceSchema = z.object({
   name: requiredString('name'),
+  slug,
   description: z.string(),
 })
 

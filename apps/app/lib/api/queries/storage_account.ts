@@ -102,6 +102,41 @@ const disconnect = (wsId: string) =>
     },
   })
 
+// authorizeOAuth calls the server-side authorize endpoint and sends the
+// browser to the provider's consent screen. The provider redirects back to
+// the server's callback, which 302s to /storage?connected=…&status=….
+const authorizeOAuth = () =>
+  mutationOptions({
+    mutationFn: async ({ providerSlug, wsId }: { providerSlug: string; wsId: string }) => {
+      const res = await services.storageAccount.authorizeOAuth(providerSlug, wsId)
+      return res.data
+    },
+    onSuccess: (payload) => {
+      window.location.href = payload.authorization_url
+    },
+  })
+
+const refreshOAuth = (wsId: string) =>
+  mutationOptions({
+    mutationFn: async (accountId: string) => {
+      const res = await services.storageAccount.refreshOAuth(accountId)
+      return res.data
+    },
+    onSuccess: () => {
+      getQueryClient().invalidateQueries({ queryKey: ['storage/accounts', wsId] })
+    },
+  })
+
+const quota = (accountId: string) =>
+  queryOptions({
+    queryKey: ['storage/accounts/quota', accountId],
+    queryFn: async () => {
+      const res = await services.storageAccount.quota(accountId)
+      return res.data
+    },
+    enabled: !!accountId,
+  })
+
 export const storageAccountQueries = {
   list,
   get,
@@ -109,4 +144,7 @@ export const storageAccountQueries = {
   update,
   rotate,
   disconnect,
+  authorizeOAuth,
+  refreshOAuth,
+  quota,
 } as const
