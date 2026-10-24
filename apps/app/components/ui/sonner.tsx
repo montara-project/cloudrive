@@ -12,11 +12,15 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       theme={theme as ToasterProps['theme']}
-      className="group toaster [&_[data-type=success]>[data-icon]]:text-success [&_[data-type=success]_[data-title]]:text-success [&_[data-type=info]_[data-title]]:text-info [&_[data-type=error]>[data-icon]]:text-destructive [&_[data-type=error]_[data-title]]:text-destructive"
+      // Sonner v2 inverts toasts by default (black card on light theme), which
+      // collides with the forced foreground color below — unreadable in light
+      // mode. Pin toasts to the app's own surface in both themes instead.
+      invert={false}
+      className="group toaster [&_[data-type=success]>[data-icon]]:text-emerald-600 [&_[data-type=info]>[data-icon]]:text-sky-600 [&_[data-type=error]>[data-icon]]:text-destructive dark:[&_[data-type=success]>[data-icon]]:text-emerald-400 dark:[&_[data-type=info]>[data-icon]]:text-sky-400"
       toastOptions={{
         classNames: {
           toast:
-            'group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground! group-[.toaster]:border-border group-[.toaster]:shadow-lg has-[[role=alert]]:border-0! has-[[role=alert]]:shadow-none! has-[[role=alert]]:bg-transparent!',
+            'group toast group-[.toaster]:bg-background! group-[.toaster]:text-foreground! group-[.toaster]:border-border! group-[.toaster]:shadow-lg',
           description: 'group-[.toast]:text-muted-foreground',
           actionButton:
             'group-[.toast]:rounded-md! group-[.toast]:bg-primary group-[.toast]:text-primary-foreground',
