@@ -1,6 +1,11 @@
 import { useState } from 'react'
 
-import { ArrowRightIcon, CloseIcon, CloudriveLogo, MenuIcon } from '@/components/block/common/icons'
+import {
+  ArrowRightIcon,
+  CloseIcon,
+  CloudriveLogo,
+  MenuIcon,
+} from '@/components/block/landing/icons'
 
 const links = [
   { href: '/#features', label: 'Features' },

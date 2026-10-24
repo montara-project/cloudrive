@@ -40,7 +40,7 @@
   "settings": {},
   "overrides": [
     {
-      "files": ["apps/admin/**", "apps/app/**", "apps/main/**", "apps/web/**"],
+      "files": ["apps/web/**"],
       "plugins": ["typescript", "unicorn", "react", "react-perf", "jsx-a11y", "promise", "import"],
       "env": {
         "browser": true,

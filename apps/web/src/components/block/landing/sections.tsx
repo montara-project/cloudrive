@@ -1,3 +1,4 @@
+import { Reveal } from '@/components/block/common/reveal'
 import {
   ArrowRightIcon,
   BoxMark,
@@ -27,8 +28,7 @@ import {
   WebdavMark,
   ZapIcon,
   ZipFileIcon,
-} from '@/components/block/common/icons'
-import { Reveal } from '@/components/block/common/reveal'
+} from '@/components/block/landing/icons'
 
 import { WaitlistForm } from './waitlist-form'
 

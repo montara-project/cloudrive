@@ -1,10 +1,13 @@
+import { env } from '@/config/env'
+
 import type { ContactDto } from '../dtos/contact/schema'
 import type { Models } from '../models'
 
-import { api } from '../client-fetch'
+import { ClientFetchApi } from '../client-fetch'
 
-const path = '/v1/contact'
+// Public endpoint: no storageKey, so no bearer token is attached.
+const api = new ClientFetchApi({ baseURL: String(env.VITE_API_URL) }).default
 
 export const contactServices = {
-  send: (data: ContactDto) => api.post<Models.ContactTicket>(path, data),
+  send: (data: ContactDto) => api.post<Models.ContactTicket>('/v1/contact', data),
 } as const

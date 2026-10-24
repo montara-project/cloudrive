@@ -1,8 +1,8 @@
 import { useMutation } from '@tanstack/react-query'
-import { isAxiosError } from 'axios'
 import { useId, useState } from 'react'
 
-import { CheckIcon } from '@/components/block/common/icons'
+import { CheckIcon } from '@/components/block/landing/icons'
+import { errorResponse } from '@/lib/api/axios-error'
 import { contactSchema } from '@/lib/api/dtos/contact/schema'
 import { queries } from '@/lib/api/queries'
 
@@ -45,10 +45,9 @@ export function ContactForm() {
     } catch (error) {
       setStatus({
         state: 'error',
-        message:
-          isAxiosError(error) && error.response
-            ? 'Something went wrong. Please try again.'
-            : 'Could not reach the server. Please try again.',
+        message: errorResponse(error)
+          ? 'Something went wrong. Please try again.'
+          : 'Could not reach the server. Please try again.',
       })
     }
   }

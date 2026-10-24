@@ -1,5 +1,5 @@
-import { ArrowRightIcon, ChevronDownIcon } from '@/components/block/common/icons'
 import { Reveal } from '@/components/block/common/reveal'
+import { ArrowRightIcon, ChevronDownIcon } from '@/components/block/landing/icons'
 import { Footer } from '@/components/block/landing/sections'
 import { Navbar } from '@/components/layout/navbar'
 

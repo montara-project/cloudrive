@@ -5,13 +5,9 @@
   "scripts": {
     "dev": "pnpm -r --parallel run dev",
     "dev:web": "pnpm --filter @cloudrive/web dev",
-    "dev:app": "pnpm --filter @cloudrive/app dev",
     "dev:server": "pnpm --filter @cloudrive/server dev",
     "build:web": "pnpm --filter @cloudrive/web build",
-    "build:app": "pnpm --filter @cloudrive/app build",
     "build:server": "pnpm --filter @cloudrive/server build",
-    "start:app": "pnpm --filter @cloudrive/app start",
-    "deploy:app": "pnpm --filter @cloudrive/app deploy",
     "prebuild": "npm-run-all format lint",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",

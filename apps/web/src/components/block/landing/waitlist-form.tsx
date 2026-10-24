@@ -1,10 +1,10 @@
 import { useMutation } from '@tanstack/react-query'
-import { isAxiosError } from 'axios'
 import { useId, useState } from 'react'
 
 import type { Models } from '@/lib/api/models'
 
-import { CheckIcon } from '@/components/block/common/icons'
+import { CheckIcon } from '@/components/block/landing/icons'
+import { errorResponse } from '@/lib/api/axios-error'
 import { EMAIL_MESSAGE } from '@/lib/api/dtos/email'
 import { waitlistSchema } from '@/lib/api/dtos/waitlist/schema'
 import { queries } from '@/lib/api/queries'
@@ -47,7 +47,7 @@ export function WaitlistForm() {
       }
       setStatus({ state: 'success', position: data.position ?? 0, email: parsed.data.email })
     } catch (error) {
-      const res = isAxiosError<Models.WaitlistEntry>(error) ? error.response : undefined
+      const res = errorResponse<Models.WaitlistEntry>(error)
       if (res) {
         failed(res.data)
       } else {

@@ -3,7 +3,7 @@
 > Page-specific rules. These **override** `design-system/cloudrive/MASTER.md`
 > for the first-run onboarding wizard (`/onboarding`).
 
-**Route:** `/onboarding` — `apps/app/app/(onboarding)/onboarding/page.tsx`
+**Route:** `/onboarding` — `apps/web/src/routes/onboarding/index.tsx`
 **Trigger:** authenticated user whose organization list is empty (gate lives in
 `app/(dashboard)/layout.tsx` and the page itself).
 
@@ -48,7 +48,7 @@
 ## Tokens & components
 
 - Colors, radii and shadows come from the semantic tokens in
-  `apps/app/app/globals.css` (light + `.dark`); Primary `#2563EB` via
+  `apps/web/src/styles.css` (light + `.dark`); Primary `#2563EB` via
   `bg-primary`, no hardcoded hex in JSX.
 - Font: Poppins (root layout `--font-poppins`).
 - Icons: lucide only, one per option card, `size-5 text-primary`,

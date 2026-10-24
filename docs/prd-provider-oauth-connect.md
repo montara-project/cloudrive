@@ -40,7 +40,7 @@ Non-goal (v1): upload/download via unified tree, `storage_nodes` indexing, Mega,
 
 ```mermaid
 sequenceDiagram
-    participant FE as Frontend (apps/app)
+    participant FE as Frontend (apps/web)
     participant API as Fiber API (apps/server)
     participant Prov as Google/MS/Dropbox
     participant DB as Postgres

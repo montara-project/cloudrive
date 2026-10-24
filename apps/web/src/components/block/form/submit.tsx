@@ -1,0 +1,43 @@
+import type { IconDeviceFloppy } from '@tabler/icons-react'
+import type { ButtonHTMLAttributes } from 'react'
+
+import { IconLoader2 } from '@tabler/icons-react'
+
+import { Button } from '@/components/ui/button'
+import { useFormContext } from '@/hooks/form-context'
+import { cn } from '@/lib/utils'
+
+interface SubmitButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  label: string
+  icon?: typeof IconDeviceFloppy
+  className?: string
+}
+
+export default function SubmitButton({
+  label,
+  icon: Icon,
+  className,
+  ...props
+}: SubmitButtonProps) {
+  const form = useFormContext()
+
+  return (
+    <form.Subscribe selector={(state) => state.isSubmitting}>
+      {(isSubmitting) => (
+        <Button
+          type="submit"
+          className={cn(
+            'bg-primary text-primary-foreground hover:bg-primary/90 h-10 rounded-lg px-6 transition-colors',
+            className
+          )}
+          disabled={isSubmitting}
+          {...props}
+        >
+          {isSubmitting ? <IconLoader2 className="size-4 animate-spin" /> : null}
+          {Icon ? <Icon className="size-4" /> : null}
+          {label}
+        </Button>
+      )}
+    </form.Subscribe>
+  )
+}

@@ -1,10 +1,13 @@
+import { env } from '@/config/env'
+
 import type { WaitlistDto } from '../dtos/waitlist/schema'
 import type { Models } from '../models'
 
-import { api } from '../client-fetch'
+import { ClientFetchApi } from '../client-fetch'
 
-const path = '/v1/waitlist'
+// Public endpoint: no storageKey, so no bearer token is attached.
+const api = new ClientFetchApi({ baseURL: String(env.VITE_API_URL) }).default
 
 export const waitlistServices = {
-  join: (data: WaitlistDto) => api.post<Models.WaitlistEntry>(path, data),
+  join: (data: WaitlistDto) => api.post<Models.WaitlistEntry>('/v1/waitlist', data),
 } as const

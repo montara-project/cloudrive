@@ -12,6 +12,8 @@ import {
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 
 import StatusPage from '@/components/block/common/status-page'
+import { Toaster } from '@/components/ui/sonner'
+import DecorationProvider from '@/lib/providers/decoration'
 
 /**
  * Root layout component that serves as the main wrapper for the application.
@@ -24,10 +26,11 @@ import StatusPage from '@/components/block/common/status-page'
  * @see https://tanstack.com/router/latest/docs/framework/react/routing/routing-concepts
  */
 const RootLayout = () => (
-  <>
+  <DecorationProvider>
     {/* SPA: index.html holds the site defaults; a route's `head` adds its own */}
     <HeadContent />
     <Outlet />
+    <Toaster />
 
     {/* declare devtools panel */}
     {import.meta.env.DEV && (
@@ -47,7 +50,7 @@ const RootLayout = () => (
         ]}
       />
     )}
-  </>
+  </DecorationProvider>
 )
 
 export interface RouterContext {

@@ -9,104 +9,529 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as ContactIndexRouteImport } from './routes/contact/index'
-import { Route as PrivacyIndexRouteImport } from './routes/privacy/index'
-import { Route as TermsIndexRouteImport } from './routes/terms/index'
+import { Route as dashboardRouteRouteImport } from './routes/(dashboard)/route'
+import { Route as marketingRouteRouteImport } from './routes/(marketing)/route'
+import { Route as marketingIndexRouteImport } from './routes/(marketing)/index'
+import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
+import { Route as OnboardingIndexRouteImport } from './routes/onboarding/index'
+import { Route as PreviewIndexRouteImport } from './routes/preview/index'
+import { Route as SignInIndexRouteImport } from './routes/sign-in/index'
+import { Route as dashboardDashboardIndexRouteImport } from './routes/(dashboard)/dashboard/index'
+import { Route as dashboardDriveIndexRouteImport } from './routes/(dashboard)/drive/index'
+import { Route as dashboardOrganizationsIndexRouteImport } from './routes/(dashboard)/organizations/index'
+import { Route as dashboardOrganizationsOrgIdRouteImport } from './routes/(dashboard)/organizations/$orgId'
+import { Route as dashboardProvidersIndexRouteImport } from './routes/(dashboard)/providers/index'
+import { Route as dashboardRecentIndexRouteImport } from './routes/(dashboard)/recent/index'
+import { Route as dashboardS3IndexRouteImport } from './routes/(dashboard)/s3/index'
+import { Route as dashboardSettingsIndexRouteImport } from './routes/(dashboard)/settings/index'
+import { Route as dashboardSharedIndexRouteImport } from './routes/(dashboard)/shared/index'
+import { Route as dashboardStarredIndexRouteImport } from './routes/(dashboard)/starred/index'
+import { Route as dashboardStorageIndexRouteImport } from './routes/(dashboard)/storage/index'
+import { Route as dashboardWorkspacesIndexRouteImport } from './routes/(dashboard)/workspaces/index'
+import { Route as dashboardWorkspacesWsIdRouteImport } from './routes/(dashboard)/workspaces/$wsId'
+import { Route as marketingContactIndexRouteImport } from './routes/(marketing)/contact/index'
+import { Route as marketingPrivacyIndexRouteImport } from './routes/(marketing)/privacy/index'
+import { Route as marketingTermsIndexRouteImport } from './routes/(marketing)/terms/index'
 
-const IndexRoute = IndexRouteImport.update({
+const dashboardRouteRoute = dashboardRouteRouteImport.update({
+  id: '/(dashboard)',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const marketingRouteRoute = marketingRouteRouteImport.update({
+  id: '/(marketing)',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const marketingIndexRoute = marketingIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => marketingRouteRoute,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ContactIndexRoute = ContactIndexRouteImport.update({
+const OnboardingIndexRoute = OnboardingIndexRouteImport.update({
+  id: '/onboarding/',
+  path: '/onboarding/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PreviewIndexRoute = PreviewIndexRouteImport.update({
+  id: '/preview/',
+  path: '/preview/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignInIndexRoute = SignInIndexRouteImport.update({
+  id: '/sign-in/',
+  path: '/sign-in/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const dashboardDashboardIndexRoute = dashboardDashboardIndexRouteImport.update({
+  id: '/dashboard/',
+  path: '/dashboard/',
+  getParentRoute: () => dashboardRouteRoute,
+} as any)
+const dashboardDriveIndexRoute = dashboardDriveIndexRouteImport.update({
+  id: '/drive/',
+  path: '/drive/',
+  getParentRoute: () => dashboardRouteRoute,
+} as any)
+const dashboardOrganizationsIndexRoute =
+  dashboardOrganizationsIndexRouteImport.update({
+    id: '/organizations/',
+    path: '/organizations/',
+    getParentRoute: () => dashboardRouteRoute,
+  } as any)
+const dashboardOrganizationsOrgIdRoute =
+  dashboardOrganizationsOrgIdRouteImport.update({
+    id: '/organizations/$orgId',
+    path: '/organizations/$orgId',
+    getParentRoute: () => dashboardRouteRoute,
+  } as any)
+const dashboardProvidersIndexRoute = dashboardProvidersIndexRouteImport.update({
+  id: '/providers/',
+  path: '/providers/',
+  getParentRoute: () => dashboardRouteRoute,
+} as any)
+const dashboardRecentIndexRoute = dashboardRecentIndexRouteImport.update({
+  id: '/recent/',
+  path: '/recent/',
+  getParentRoute: () => dashboardRouteRoute,
+} as any)
+const dashboardS3IndexRoute = dashboardS3IndexRouteImport.update({
+  id: '/s3/',
+  path: '/s3/',
+  getParentRoute: () => dashboardRouteRoute,
+} as any)
+const dashboardSettingsIndexRoute = dashboardSettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => dashboardRouteRoute,
+} as any)
+const dashboardSharedIndexRoute = dashboardSharedIndexRouteImport.update({
+  id: '/shared/',
+  path: '/shared/',
+  getParentRoute: () => dashboardRouteRoute,
+} as any)
+const dashboardStarredIndexRoute = dashboardStarredIndexRouteImport.update({
+  id: '/starred/',
+  path: '/starred/',
+  getParentRoute: () => dashboardRouteRoute,
+} as any)
+const dashboardStorageIndexRoute = dashboardStorageIndexRouteImport.update({
+  id: '/storage/',
+  path: '/storage/',
+  getParentRoute: () => dashboardRouteRoute,
+} as any)
+const dashboardWorkspacesIndexRoute =
+  dashboardWorkspacesIndexRouteImport.update({
+    id: '/workspaces/',
+    path: '/workspaces/',
+    getParentRoute: () => dashboardRouteRoute,
+  } as any)
+const dashboardWorkspacesWsIdRoute = dashboardWorkspacesWsIdRouteImport.update({
+  id: '/workspaces/$wsId',
+  path: '/workspaces/$wsId',
+  getParentRoute: () => dashboardRouteRoute,
+} as any)
+const marketingContactIndexRoute = marketingContactIndexRouteImport.update({
   id: '/contact/',
   path: '/contact/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => marketingRouteRoute,
 } as any)
-const PrivacyIndexRoute = PrivacyIndexRouteImport.update({
+const marketingPrivacyIndexRoute = marketingPrivacyIndexRouteImport.update({
   id: '/privacy/',
   path: '/privacy/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => marketingRouteRoute,
 } as any)
-const TermsIndexRoute = TermsIndexRouteImport.update({
+const marketingTermsIndexRoute = marketingTermsIndexRouteImport.update({
   id: '/terms/',
   path: '/terms/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => marketingRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/contact/': typeof ContactIndexRoute
-  '/privacy/': typeof PrivacyIndexRoute
-  '/terms/': typeof TermsIndexRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/': typeof marketingIndexRoute
+  '/onboarding/': typeof OnboardingIndexRoute
+  '/preview/': typeof PreviewIndexRoute
+  '/sign-in/': typeof SignInIndexRoute
+  '/organizations/$orgId': typeof dashboardOrganizationsOrgIdRoute
+  '/workspaces/$wsId': typeof dashboardWorkspacesWsIdRoute
+  '/dashboard/': typeof dashboardDashboardIndexRoute
+  '/drive/': typeof dashboardDriveIndexRoute
+  '/organizations/': typeof dashboardOrganizationsIndexRoute
+  '/providers/': typeof dashboardProvidersIndexRoute
+  '/recent/': typeof dashboardRecentIndexRoute
+  '/s3/': typeof dashboardS3IndexRoute
+  '/settings/': typeof dashboardSettingsIndexRoute
+  '/shared/': typeof dashboardSharedIndexRoute
+  '/starred/': typeof dashboardStarredIndexRoute
+  '/storage/': typeof dashboardStorageIndexRoute
+  '/workspaces/': typeof dashboardWorkspacesIndexRoute
+  '/contact/': typeof marketingContactIndexRoute
+  '/privacy/': typeof marketingPrivacyIndexRoute
+  '/terms/': typeof marketingTermsIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/contact': typeof ContactIndexRoute
-  '/privacy': typeof PrivacyIndexRoute
-  '/terms': typeof TermsIndexRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/': typeof marketingIndexRoute
+  '/onboarding': typeof OnboardingIndexRoute
+  '/preview': typeof PreviewIndexRoute
+  '/sign-in': typeof SignInIndexRoute
+  '/organizations/$orgId': typeof dashboardOrganizationsOrgIdRoute
+  '/workspaces/$wsId': typeof dashboardWorkspacesWsIdRoute
+  '/dashboard': typeof dashboardDashboardIndexRoute
+  '/drive': typeof dashboardDriveIndexRoute
+  '/organizations': typeof dashboardOrganizationsIndexRoute
+  '/providers': typeof dashboardProvidersIndexRoute
+  '/recent': typeof dashboardRecentIndexRoute
+  '/s3': typeof dashboardS3IndexRoute
+  '/settings': typeof dashboardSettingsIndexRoute
+  '/shared': typeof dashboardSharedIndexRoute
+  '/starred': typeof dashboardStarredIndexRoute
+  '/storage': typeof dashboardStorageIndexRoute
+  '/workspaces': typeof dashboardWorkspacesIndexRoute
+  '/contact': typeof marketingContactIndexRoute
+  '/privacy': typeof marketingPrivacyIndexRoute
+  '/terms': typeof marketingTermsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/contact/': typeof ContactIndexRoute
-  '/privacy/': typeof PrivacyIndexRoute
-  '/terms/': typeof TermsIndexRoute
+  '/(dashboard)': typeof dashboardRouteRouteWithChildren
+  '/(marketing)': typeof marketingRouteRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
+  '/(marketing)/': typeof marketingIndexRoute
+  '/onboarding/': typeof OnboardingIndexRoute
+  '/preview/': typeof PreviewIndexRoute
+  '/sign-in/': typeof SignInIndexRoute
+  '/(dashboard)/organizations/$orgId': typeof dashboardOrganizationsOrgIdRoute
+  '/(dashboard)/workspaces/$wsId': typeof dashboardWorkspacesWsIdRoute
+  '/(dashboard)/dashboard/': typeof dashboardDashboardIndexRoute
+  '/(dashboard)/drive/': typeof dashboardDriveIndexRoute
+  '/(dashboard)/organizations/': typeof dashboardOrganizationsIndexRoute
+  '/(dashboard)/providers/': typeof dashboardProvidersIndexRoute
+  '/(dashboard)/recent/': typeof dashboardRecentIndexRoute
+  '/(dashboard)/s3/': typeof dashboardS3IndexRoute
+  '/(dashboard)/settings/': typeof dashboardSettingsIndexRoute
+  '/(dashboard)/shared/': typeof dashboardSharedIndexRoute
+  '/(dashboard)/starred/': typeof dashboardStarredIndexRoute
+  '/(dashboard)/storage/': typeof dashboardStorageIndexRoute
+  '/(dashboard)/workspaces/': typeof dashboardWorkspacesIndexRoute
+  '/(marketing)/contact/': typeof marketingContactIndexRoute
+  '/(marketing)/privacy/': typeof marketingPrivacyIndexRoute
+  '/(marketing)/terms/': typeof marketingTermsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/contact/' | '/privacy/' | '/terms/'
+  fullPaths:
+    | '/auth/callback'
+    | '/'
+    | '/onboarding/'
+    | '/preview/'
+    | '/sign-in/'
+    | '/organizations/$orgId'
+    | '/workspaces/$wsId'
+    | '/dashboard/'
+    | '/drive/'
+    | '/organizations/'
+    | '/providers/'
+    | '/recent/'
+    | '/s3/'
+    | '/settings/'
+    | '/shared/'
+    | '/starred/'
+    | '/storage/'
+    | '/workspaces/'
+    | '/contact/'
+    | '/privacy/'
+    | '/terms/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/contact' | '/privacy' | '/terms'
-  id: '__root__' | '/' | '/contact/' | '/privacy/' | '/terms/'
+  to:
+    | '/auth/callback'
+    | '/'
+    | '/onboarding'
+    | '/preview'
+    | '/sign-in'
+    | '/organizations/$orgId'
+    | '/workspaces/$wsId'
+    | '/dashboard'
+    | '/drive'
+    | '/organizations'
+    | '/providers'
+    | '/recent'
+    | '/s3'
+    | '/settings'
+    | '/shared'
+    | '/starred'
+    | '/storage'
+    | '/workspaces'
+    | '/contact'
+    | '/privacy'
+    | '/terms'
+  id:
+    | '__root__'
+    | '/(dashboard)'
+    | '/(marketing)'
+    | '/auth/callback'
+    | '/(marketing)/'
+    | '/onboarding/'
+    | '/preview/'
+    | '/sign-in/'
+    | '/(dashboard)/organizations/$orgId'
+    | '/(dashboard)/workspaces/$wsId'
+    | '/(dashboard)/dashboard/'
+    | '/(dashboard)/drive/'
+    | '/(dashboard)/organizations/'
+    | '/(dashboard)/providers/'
+    | '/(dashboard)/recent/'
+    | '/(dashboard)/s3/'
+    | '/(dashboard)/settings/'
+    | '/(dashboard)/shared/'
+    | '/(dashboard)/starred/'
+    | '/(dashboard)/storage/'
+    | '/(dashboard)/workspaces/'
+    | '/(marketing)/contact/'
+    | '/(marketing)/privacy/'
+    | '/(marketing)/terms/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  ContactIndexRoute: typeof ContactIndexRoute
-  PrivacyIndexRoute: typeof PrivacyIndexRoute
-  TermsIndexRoute: typeof TermsIndexRoute
+  dashboardRouteRoute: typeof dashboardRouteRouteWithChildren
+  marketingRouteRoute: typeof marketingRouteRouteWithChildren
+  AuthCallbackRoute: typeof AuthCallbackRoute
+  OnboardingIndexRoute: typeof OnboardingIndexRoute
+  PreviewIndexRoute: typeof PreviewIndexRoute
+  SignInIndexRoute: typeof SignInIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/(dashboard)': {
+      id: '/(dashboard)'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof dashboardRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(marketing)': {
+      id: '/(marketing)'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof marketingRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(marketing)/': {
+      id: '/(marketing)/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof marketingIndexRouteImport
+      parentRoute: typeof marketingRouteRoute
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/contact/': {
-      id: '/contact/'
+    '/onboarding/': {
+      id: '/onboarding/'
+      path: '/onboarding'
+      fullPath: '/onboarding/'
+      preLoaderRoute: typeof OnboardingIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/preview/': {
+      id: '/preview/'
+      path: '/preview'
+      fullPath: '/preview/'
+      preLoaderRoute: typeof PreviewIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sign-in/': {
+      id: '/sign-in/'
+      path: '/sign-in'
+      fullPath: '/sign-in/'
+      preLoaderRoute: typeof SignInIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(dashboard)/dashboard/': {
+      id: '/(dashboard)/dashboard/'
+      path: '/dashboard'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof dashboardDashboardIndexRouteImport
+      parentRoute: typeof dashboardRouteRoute
+    }
+    '/(dashboard)/drive/': {
+      id: '/(dashboard)/drive/'
+      path: '/drive'
+      fullPath: '/drive/'
+      preLoaderRoute: typeof dashboardDriveIndexRouteImport
+      parentRoute: typeof dashboardRouteRoute
+    }
+    '/(dashboard)/organizations/': {
+      id: '/(dashboard)/organizations/'
+      path: '/organizations'
+      fullPath: '/organizations/'
+      preLoaderRoute: typeof dashboardOrganizationsIndexRouteImport
+      parentRoute: typeof dashboardRouteRoute
+    }
+    '/(dashboard)/organizations/$orgId': {
+      id: '/(dashboard)/organizations/$orgId'
+      path: '/organizations/$orgId'
+      fullPath: '/organizations/$orgId'
+      preLoaderRoute: typeof dashboardOrganizationsOrgIdRouteImport
+      parentRoute: typeof dashboardRouteRoute
+    }
+    '/(dashboard)/providers/': {
+      id: '/(dashboard)/providers/'
+      path: '/providers'
+      fullPath: '/providers/'
+      preLoaderRoute: typeof dashboardProvidersIndexRouteImport
+      parentRoute: typeof dashboardRouteRoute
+    }
+    '/(dashboard)/recent/': {
+      id: '/(dashboard)/recent/'
+      path: '/recent'
+      fullPath: '/recent/'
+      preLoaderRoute: typeof dashboardRecentIndexRouteImport
+      parentRoute: typeof dashboardRouteRoute
+    }
+    '/(dashboard)/s3/': {
+      id: '/(dashboard)/s3/'
+      path: '/s3'
+      fullPath: '/s3/'
+      preLoaderRoute: typeof dashboardS3IndexRouteImport
+      parentRoute: typeof dashboardRouteRoute
+    }
+    '/(dashboard)/settings/': {
+      id: '/(dashboard)/settings/'
+      path: '/settings'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof dashboardSettingsIndexRouteImport
+      parentRoute: typeof dashboardRouteRoute
+    }
+    '/(dashboard)/shared/': {
+      id: '/(dashboard)/shared/'
+      path: '/shared'
+      fullPath: '/shared/'
+      preLoaderRoute: typeof dashboardSharedIndexRouteImport
+      parentRoute: typeof dashboardRouteRoute
+    }
+    '/(dashboard)/starred/': {
+      id: '/(dashboard)/starred/'
+      path: '/starred'
+      fullPath: '/starred/'
+      preLoaderRoute: typeof dashboardStarredIndexRouteImport
+      parentRoute: typeof dashboardRouteRoute
+    }
+    '/(dashboard)/storage/': {
+      id: '/(dashboard)/storage/'
+      path: '/storage'
+      fullPath: '/storage/'
+      preLoaderRoute: typeof dashboardStorageIndexRouteImport
+      parentRoute: typeof dashboardRouteRoute
+    }
+    '/(dashboard)/workspaces/': {
+      id: '/(dashboard)/workspaces/'
+      path: '/workspaces'
+      fullPath: '/workspaces/'
+      preLoaderRoute: typeof dashboardWorkspacesIndexRouteImport
+      parentRoute: typeof dashboardRouteRoute
+    }
+    '/(dashboard)/workspaces/$wsId': {
+      id: '/(dashboard)/workspaces/$wsId'
+      path: '/workspaces/$wsId'
+      fullPath: '/workspaces/$wsId'
+      preLoaderRoute: typeof dashboardWorkspacesWsIdRouteImport
+      parentRoute: typeof dashboardRouteRoute
+    }
+    '/(marketing)/contact/': {
+      id: '/(marketing)/contact/'
       path: '/contact'
       fullPath: '/contact/'
-      preLoaderRoute: typeof ContactIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof marketingContactIndexRouteImport
+      parentRoute: typeof marketingRouteRoute
     }
-    '/privacy/': {
-      id: '/privacy/'
+    '/(marketing)/privacy/': {
+      id: '/(marketing)/privacy/'
       path: '/privacy'
       fullPath: '/privacy/'
-      preLoaderRoute: typeof PrivacyIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof marketingPrivacyIndexRouteImport
+      parentRoute: typeof marketingRouteRoute
     }
-    '/terms/': {
-      id: '/terms/'
+    '/(marketing)/terms/': {
+      id: '/(marketing)/terms/'
       path: '/terms'
       fullPath: '/terms/'
-      preLoaderRoute: typeof TermsIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof marketingTermsIndexRouteImport
+      parentRoute: typeof marketingRouteRoute
     }
   }
 }
 
+interface dashboardRouteRouteChildren {
+  dashboardOrganizationsOrgIdRoute: typeof dashboardOrganizationsOrgIdRoute
+  dashboardWorkspacesWsIdRoute: typeof dashboardWorkspacesWsIdRoute
+  dashboardDashboardIndexRoute: typeof dashboardDashboardIndexRoute
+  dashboardDriveIndexRoute: typeof dashboardDriveIndexRoute
+  dashboardOrganizationsIndexRoute: typeof dashboardOrganizationsIndexRoute
+  dashboardProvidersIndexRoute: typeof dashboardProvidersIndexRoute
+  dashboardRecentIndexRoute: typeof dashboardRecentIndexRoute
+  dashboardS3IndexRoute: typeof dashboardS3IndexRoute
+  dashboardSettingsIndexRoute: typeof dashboardSettingsIndexRoute
+  dashboardSharedIndexRoute: typeof dashboardSharedIndexRoute
+  dashboardStarredIndexRoute: typeof dashboardStarredIndexRoute
+  dashboardStorageIndexRoute: typeof dashboardStorageIndexRoute
+  dashboardWorkspacesIndexRoute: typeof dashboardWorkspacesIndexRoute
+}
+
+const dashboardRouteRouteChildren: dashboardRouteRouteChildren = {
+  dashboardOrganizationsOrgIdRoute: dashboardOrganizationsOrgIdRoute,
+  dashboardWorkspacesWsIdRoute: dashboardWorkspacesWsIdRoute,
+  dashboardDashboardIndexRoute: dashboardDashboardIndexRoute,
+  dashboardDriveIndexRoute: dashboardDriveIndexRoute,
+  dashboardOrganizationsIndexRoute: dashboardOrganizationsIndexRoute,
+  dashboardProvidersIndexRoute: dashboardProvidersIndexRoute,
+  dashboardRecentIndexRoute: dashboardRecentIndexRoute,
+  dashboardS3IndexRoute: dashboardS3IndexRoute,
+  dashboardSettingsIndexRoute: dashboardSettingsIndexRoute,
+  dashboardSharedIndexRoute: dashboardSharedIndexRoute,
+  dashboardStarredIndexRoute: dashboardStarredIndexRoute,
+  dashboardStorageIndexRoute: dashboardStorageIndexRoute,
+  dashboardWorkspacesIndexRoute: dashboardWorkspacesIndexRoute,
+}
+
+const dashboardRouteRouteWithChildren = dashboardRouteRoute._addFileChildren(
+  dashboardRouteRouteChildren,
+)
+
+interface marketingRouteRouteChildren {
+  marketingIndexRoute: typeof marketingIndexRoute
+  marketingContactIndexRoute: typeof marketingContactIndexRoute
+  marketingPrivacyIndexRoute: typeof marketingPrivacyIndexRoute
+  marketingTermsIndexRoute: typeof marketingTermsIndexRoute
+}
+
+const marketingRouteRouteChildren: marketingRouteRouteChildren = {
+  marketingIndexRoute: marketingIndexRoute,
+  marketingContactIndexRoute: marketingContactIndexRoute,
+  marketingPrivacyIndexRoute: marketingPrivacyIndexRoute,
+  marketingTermsIndexRoute: marketingTermsIndexRoute,
+}
+
+const marketingRouteRouteWithChildren = marketingRouteRoute._addFileChildren(
+  marketingRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  ContactIndexRoute: ContactIndexRoute,
-  PrivacyIndexRoute: PrivacyIndexRoute,
-  TermsIndexRoute: TermsIndexRoute,
+  dashboardRouteRoute: dashboardRouteRouteWithChildren,
+  marketingRouteRoute: marketingRouteRouteWithChildren,
+  AuthCallbackRoute: AuthCallbackRoute,
+  OnboardingIndexRoute: OnboardingIndexRoute,
+  PreviewIndexRoute: PreviewIndexRoute,
+  SignInIndexRoute: SignInIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
