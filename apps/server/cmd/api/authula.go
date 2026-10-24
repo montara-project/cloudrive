@@ -34,8 +34,8 @@ import (
 
 // authBasePath is the prefix under which Authula serves every auth endpoint
 // (sign-up, sign-in, magic link, OAuth2, /me, sign-out, ...) — every Authula
-// endpoint must carry the /v1/auth prefix.
-const authBasePath = "/v1/auth"
+// endpoint must carry the /api/v1/auth prefix.
+const authBasePath = "/api/v1/auth"
 
 // authulaSchema keeps Authula's tables (its own users, sessions, accounts,
 // verifications) out of the application's public schema, whose users/sessions

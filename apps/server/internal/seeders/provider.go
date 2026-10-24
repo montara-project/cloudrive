@@ -26,8 +26,8 @@ func (s ProviderSeeder) Seed() error {
 	return runSeed(s.DB, func(ctx context.Context, tx *sql.Tx) error {
 		for _, p := range providers {
 			if _, err := tx.ExecContext(ctx,
-				`INSERT INTO "providers" ("slug", "name", "protocol", "auth_type", "capabilities")
-				VALUES ($1, $2, $3, $4, $5::jsonb) ON CONFLICT ("slug") DO NOTHING`,
+				`INSERT INTO "providers" ("slug", "name", "protocol", "auth_type", "capabilities", "is_active")
+				VALUES ($1, $2, $3, $4, $5::jsonb, true) ON CONFLICT ("slug") DO NOTHING`,
 				p.slug, p.name, p.protocol, p.authType, p.capabilities,
 			); err != nil {
 				return err

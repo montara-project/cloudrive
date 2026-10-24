@@ -8,7 +8,7 @@ export const AUTH_STORAGE_KEYS = {
   AUTH_STORAGE: 'authStorage',
 } as const
 
-/** How often the session probe re-checks `/v1/me` while signed in. */
+/** How often the session probe re-checks `/api/v1/me` while signed in. */
 export const SESSION_POLL_INTERVAL_MS = 60_000
 
 export enum AUTH_ERROR_TYPE {

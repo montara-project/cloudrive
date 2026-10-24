@@ -15,7 +15,7 @@ const parsed = createEnv({
   emptyStringAsUndefined: true,
 })
 
-// An empty VITE_API_URL means "same as the page origin" (dev proxies /v1);
+// An empty VITE_API_URL means "same as the page origin" (dev proxies /api);
 // set it only for a split-origin setup.
 export const env = {
   ...parsed,

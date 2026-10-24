@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Build context is the repo root: the image also carries the apps/web SPA,
-# which the API serves at / (SPA_DIR) next to /v1 and /health.
+# which the API serves at / (SPA_DIR) next to the /api endpoints.
 #
 #   docker build -f apps/server/Dockerfile -t cloudrive .
 
@@ -71,7 +71,7 @@ USER cloudrive
 EXPOSE 8080 9000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
-    CMD wget -qO- "http://127.0.0.1:${PORT:-8080}/health" >/dev/null || exit 1
+    CMD wget -qO- "http://127.0.0.1:${PORT:-8080}/api/health" >/dev/null || exit 1
 
 # Configuration comes from environment variables, read by the binary itself
 # (ENV defaults to production, PORT to 8080); a flag passed after the image

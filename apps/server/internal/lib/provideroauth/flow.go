@@ -558,5 +558,5 @@ func flowTokenSource(ctx context.Context, flow Flow, creds Credentials) (*oauth2
 }
 
 func redirectURL(serverURL, slug string) string {
-	return strings.TrimSuffix(serverURL, "/") + "/v1/storage/oauth/" + slug + "/callback"
+	return strings.TrimSuffix(serverURL, "/") + "/api/v1/storage/oauth/" + slug + "/callback"
 }

@@ -25,7 +25,7 @@ func TestFlowAuthorizationURLs(t *testing.T) {
 				"https://www.dropbox.com/oauth2/authorize",
 				"token_access_type=offline",
 				"state=abc",
-				"redirect_uri=https%3A%2F%2Fapi.cloudrive.test%2Fv1%2Fstorage%2Foauth%2Fdropbox%2Fcallback",
+				"redirect_uri=https%3A%2F%2Fapi.cloudrive.test%2Fapi%2Fv1%2Fstorage%2Foauth%2Fdropbox%2Fcallback",
 			},
 		},
 		{
@@ -61,7 +61,7 @@ func TestFlowRedirectURIDerivation(t *testing.T) {
 	// Trailing slash on SERVER_URL must not double the slash.
 	f := NewOneDriveFlow(oneDriveConfig(), "https://api.cloudrive.test/")
 	url := f.AuthorizationURL("s")
-	if contains(url, "//v1//storage") || contains(url, "://api.cloudrive.test//v1") {
+	if contains(url, "/api/v1//storage") || contains(url, "://api.cloudrive.test//api") {
 		t.Errorf("redirect URL malformed: %q", url)
 	}
 }

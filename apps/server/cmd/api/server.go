@@ -104,7 +104,7 @@ func serve(app *app.Application) error {
 	if dir := app.Config.App.SPADir; dir != "" {
 		spa, err := middlewares.SPA(middlewares.SPAConfig{
 			FS:      os.DirFS(dir),
-			Exclude: []string{"/v1", "/health"},
+			Exclude: []string{"/api"},
 		})
 		if err != nil {
 			return err

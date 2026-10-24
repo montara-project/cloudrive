@@ -4,7 +4,7 @@ import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import viteReact from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
-// The Go API owns /v1; override the target when it is not on :8080.
+// The Go API owns /api; override the target when it is not on :8080.
 const apiTarget = process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:8080'
 
 const config = defineConfig({
@@ -17,7 +17,7 @@ const config = defineConfig({
   ],
   server: {
     proxy: {
-      '/v1': { target: apiTarget, changeOrigin: true },
+      '/api': { target: apiTarget, changeOrigin: true },
     },
   },
 })

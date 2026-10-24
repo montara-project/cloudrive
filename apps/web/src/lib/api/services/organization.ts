@@ -17,19 +17,19 @@ const api = new ClientFetchApi({
 const organizationResources = (): OrganizationResources => {
   return {
     list: (params) => {
-      return api.get(`/v1/organizations`, { params })
+      return api.get(`/api/v1/organizations`, { params })
     },
     create: (reqBody) => {
-      return api.post(`/v1/organizations`, reqBody)
+      return api.post(`/api/v1/organizations`, reqBody)
     },
     get: (orgId) => {
-      return api.get(`/v1/organizations/${orgId}`)
+      return api.get(`/api/v1/organizations/${orgId}`)
     },
     update: (orgId, reqBody) => {
-      return api.patch(`/v1/organizations/${orgId}`, reqBody)
+      return api.patch(`/api/v1/organizations/${orgId}`, reqBody)
     },
     delete: (orgId) => {
-      return api.delete(`/v1/organizations/${orgId}`)
+      return api.delete(`/api/v1/organizations/${orgId}`)
     },
   }
 }
@@ -37,16 +37,16 @@ const organizationResources = (): OrganizationResources => {
 const organizationMemberResources = (): OrganizationMemberResources => {
   return {
     list: (orgId, params) => {
-      return api.get(`/v1/organizations/${orgId}/members`, { params })
+      return api.get(`/api/v1/organizations/${orgId}/members`, { params })
     },
     add: (orgId, reqBody) => {
-      return api.post(`/v1/organizations/${orgId}/members`, reqBody)
+      return api.post(`/api/v1/organizations/${orgId}/members`, reqBody)
     },
     update: (orgId, userId, reqBody) => {
-      return api.patch(`/v1/organizations/${orgId}/members/${userId}`, reqBody)
+      return api.patch(`/api/v1/organizations/${orgId}/members/${userId}`, reqBody)
     },
     remove: (orgId, userId) => {
-      return api.delete(`/v1/organizations/${orgId}/members/${userId}`)
+      return api.delete(`/api/v1/organizations/${orgId}/members/${userId}`)
     },
   }
 }
@@ -54,16 +54,16 @@ const organizationMemberResources = (): OrganizationMemberResources => {
 const organizationInvitationResources = (): OrganizationInvitationResources => {
   return {
     list: (orgId, params) => {
-      return api.get(`/v1/organizations/${orgId}/invitations`, { params })
+      return api.get(`/api/v1/organizations/${orgId}/invitations`, { params })
     },
     create: (orgId, reqBody) => {
-      return api.post(`/v1/organizations/${orgId}/invitations`, reqBody)
+      return api.post(`/api/v1/organizations/${orgId}/invitations`, reqBody)
     },
     update: (orgId, invitationId, reqBody) => {
-      return api.patch(`/v1/organizations/${orgId}/invitations/${invitationId}`, reqBody)
+      return api.patch(`/api/v1/organizations/${orgId}/invitations/${invitationId}`, reqBody)
     },
     delete: (orgId, invitationId) => {
-      return api.delete(`/v1/organizations/${orgId}/invitations/${invitationId}`)
+      return api.delete(`/api/v1/organizations/${orgId}/invitations/${invitationId}`)
     },
   }
 }

@@ -14,35 +14,35 @@ const storageAccountResources = (): StorageAccountResources => {
   return {
     // The server requires the workspace_id query parameter.
     list: (workspaceId, params) => {
-      return api.get(`/v1/storage/accounts`, {
+      return api.get(`/api/v1/storage/accounts`, {
         params: { workspace_id: workspaceId, ...params },
       })
     },
     connect: (reqBody) => {
-      return api.post(`/v1/storage/accounts`, reqBody)
+      return api.post(`/api/v1/storage/accounts`, reqBody)
     },
     get: (accountId) => {
-      return api.get(`/v1/storage/accounts/${accountId}`)
+      return api.get(`/api/v1/storage/accounts/${accountId}`)
     },
     update: (accountId, reqBody) => {
-      return api.patch(`/v1/storage/accounts/${accountId}`, reqBody)
+      return api.patch(`/api/v1/storage/accounts/${accountId}`, reqBody)
     },
     rotate: (accountId, credentials) => {
-      return api.put(`/v1/storage/accounts/${accountId}/credentials`, { credentials })
+      return api.put(`/api/v1/storage/accounts/${accountId}/credentials`, { credentials })
     },
     disconnect: (accountId) => {
-      return api.delete(`/v1/storage/accounts/${accountId}`)
+      return api.delete(`/api/v1/storage/accounts/${accountId}`)
     },
     authorizeOAuth: (providerSlug, workspaceId) => {
-      return api.post(`/v1/storage/oauth/${providerSlug}/authorize`, {
+      return api.post(`/api/v1/storage/oauth/${providerSlug}/authorize`, {
         workspace_id: workspaceId,
       })
     },
     refreshOAuth: (accountId) => {
-      return api.post(`/v1/storage/accounts/${accountId}/refresh`)
+      return api.post(`/api/v1/storage/accounts/${accountId}/refresh`)
     },
     quota: (accountId) => {
-      return api.get(`/v1/storage/accounts/${accountId}/quota`)
+      return api.get(`/api/v1/storage/accounts/${accountId}/quota`)
     },
   }
 }

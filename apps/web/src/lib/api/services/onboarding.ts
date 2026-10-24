@@ -13,7 +13,7 @@ const api = new ClientFetchApi({
 const onboardingResources = (): OnboardingResources => {
   return {
     submitSurvey: (reqBody) => {
-      return api.post(`/v1/onboarding/survey`, reqBody)
+      return api.post(`/api/v1/onboarding/survey`, reqBody)
     },
   }
 }

@@ -16,7 +16,7 @@ import {
 /**
  * Read the session issued by our own backend.
  *
- * Identity is resolved via `GET /v1/me` on the better-auth client. The bearer
+ * Identity is resolved via `GET /api/v1/me` on the better-auth client. The bearer
  * token goes through `getValidAccessToken` first, so an expiring access token
  * is rotated through the refresh token before the probe is sent — the server
  * authenticates by bearer token only, there is no session-cookie fallback.
@@ -82,7 +82,7 @@ async function getBackendSession(): Promise<AuthSession | null> {
  * Synchronously resolve the session from locally stored credentials.
  *
  * Used as the session query's `placeholderData` so gates can mount instantly
- * instead of waiting on `/v1/me`. It answers "probably signed in" — enough to
+ * instead of waiting on `/api/v1/me`. It answers "probably signed in" — enough to
  * paint the dashboard — while the real probe revalidates in the background and
  * bounces to / if the server disagrees. A dead or missing credential set
  * returns null so first-time visitors and signed-out users probe normally.

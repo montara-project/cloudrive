@@ -130,5 +130,5 @@ func ExternalAccountID(provider, identifier string) string {
 
 // RedirectURL derives the provider callback URL for a slug.
 func RedirectURL(serverURL, slug string) string {
-	return strings.TrimSuffix(serverURL, "/") + "/v1/storage/oauth/" + slug + "/callback"
+	return strings.TrimSuffix(serverURL, "/") + "/api/v1/storage/oauth/" + slug + "/callback"
 }

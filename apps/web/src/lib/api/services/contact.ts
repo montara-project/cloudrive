@@ -9,5 +9,5 @@ import { ClientFetchApi } from '../client-fetch'
 const api = new ClientFetchApi({ baseURL: String(env.VITE_API_URL) }).default
 
 export const contactServices = {
-  send: (data: ContactDto) => api.post<Models.ContactTicket>('/v1/contact', data),
+  send: (data: ContactDto) => api.post<Models.ContactTicket>('/api/v1/contact', data),
 } as const

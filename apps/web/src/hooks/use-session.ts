@@ -24,7 +24,7 @@ export const SESSION_QUERY_KEY = ['session'] as const
  * cached "signed in" answer would keep the dashboard mounted against a dead
  * token. With `staleTime: 0` the query revalidates on every mount and on every
  * window refocus, so expiry surfaces as a redirect instead of a page of failed
- * requests. The extra probe is cheap (`GET /v1/me`) and the cache still dedupes
+ * requests. The extra probe is cheap (`GET /api/v1/me`) and the cache still dedupes
  * concurrent readers within a single render.
  *
  * While signed in the query also re-probes every `SESSION_POLL_INTERVAL_MS`.
@@ -33,7 +33,7 @@ export const SESSION_QUERY_KEY = ['session'] as const
  * server-side validation and proactive refresh in one probe.
  *
  * `placeholderData` answers from the locally stored credential snapshot, so
- * returning users paint instantly instead of waiting on `/v1/me` — the real
+ * returning users paint instantly instead of waiting on `/api/v1/me` — the real
  * probe still runs in the background and overrides it.
  */
 export const sessionQuery = () =>
