@@ -13,11 +13,14 @@ func routes(r *fiber.App, app *app.Application) {
 	h := handlers.New(app)
 	m := middlewares.New(app)
 
-	r.Get("/", func(c fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"message": "Hello, World!",
+	// With an SPA, / is its index.html (see server.go).
+	if app.Config.App.SPADir == "" {
+		r.Get("/", func(c fiber.Ctx) error {
+			return c.JSON(fiber.Map{
+				"message": "Hello, World!",
+			})
 		})
-	})
+	}
 
 	r.Get("/health", h.Health.Check)
 

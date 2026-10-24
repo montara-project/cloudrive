@@ -27,6 +27,7 @@ run:
 		--client-url=$(CLIENT_URL) \
 		--server-url=$(SERVER_URL) \
 		--cors-allowed-origins=$(CORS_ALLOWED_ORIGINS) \
+		--spa-dir=$(SPA_DIR) \
 		--super-user=$(SUPER_USER) \
 		--db-dsn=$(DB_DSN) \
 		--db-max-open-conns=$(DB_MAX_OPEN_CONNS) \

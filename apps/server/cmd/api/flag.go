@@ -28,6 +28,9 @@ func parseFlag(cfg *config.Config) {
 	// trusted. Leave empty when the app is exposed directly.
 	flag.StringVar(&trustedProxies, "trusted-proxies", "", "Trusted proxy IPs/CIDRs (comma-separated)")
 
+	// Built single-page app (apps/web) served at /; empty disables it.
+	flag.StringVar(&cfg.App.SPADir, "spa-dir", "", "Directory of a built single-page app served at / (empty disables)")
+
 	// Default admin account seeded at startup, in email:password form.
 	flag.StringVar(&superUser, "super-user", "", "Default admin user (email:password, optional)")
 

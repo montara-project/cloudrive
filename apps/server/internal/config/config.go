@@ -26,6 +26,9 @@ type ConfigApp struct {
 	CORSAllowedOrigins string
 	TrustedProxies     []string
 	SuperUser          ConfigSuperUser
+	// SPADir is the build output of a single-page app served at /; empty
+	// disables it.
+	SPADir string
 }
 
 // ConfigSuperUser is the default admin account seeded at startup, parsed

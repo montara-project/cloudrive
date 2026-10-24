@@ -1,0 +1,16 @@
+# Build context is the repo root (see Dockerfile); BuildKit reads this file
+# instead of a root .dockerignore.
+.git
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+**/.DS_Store
+.omc
+.trail/cache
+graft
+apps/app
+apps/server/bin
+apps/server/tmp

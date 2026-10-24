@@ -4,6 +4,7 @@ import (
 	"cloudrive/server/internal/app"
 	"cloudrive/server/internal/connectors"
 	"cloudrive/server/internal/handlers"
+	"cloudrive/server/internal/middlewares"
 	"cloudrive/server/internal/services/s3"
 	"errors"
 	"fmt"
@@ -72,7 +73,11 @@ func serve(app *app.Application) error {
 	// Middleware
 	server.Use(recover.New())
 	server.Use(logger.New())
-	server.Use(helmet.New())
+	server.Use(helmet.New(helmet.Config{
+		// The default require-corp blocks the cross-origin fonts and scripts
+		// the SPA loads from CDNs; the API's JSON is unaffected.
+		CrossOriginEmbedderPolicy: "unsafe-none",
+	}))
 	server.Use(requestid.New())
 	server.Use(compress.New())
 
@@ -117,6 +122,19 @@ func serve(app *app.Application) error {
 
 	// Initial Routes
 	routes(server, app)
+
+	// The SPA answers whatever the API routes did not: its built files, then
+	// index.html for client-side routes. /v1 and /health stay API-only.
+	if dir := app.Config.App.SPADir; dir != "" {
+		spa, err := middlewares.SPA(middlewares.SPAConfig{
+			FS:      os.DirFS(dir),
+			Exclude: []string{"/v1", "/health"},
+		})
+		if err != nil {
+			return err
+		}
+		server.Use(spa)
+	}
 
 	// S3-compatible gateway: a separate Fiber app with its own listener —
 	// different dialect (XML, path-style, SigV4) from the JSON REST API, so
