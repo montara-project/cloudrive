@@ -18,12 +18,14 @@ COPY apps/docs apps/docs
 RUN pnpm --filter @cloudrive/docs run build
 
 # In a workspace the standalone tree mirrors the repository layout, so the
-# entrypoint is apps/docs/server.js and Next resolves .next/static next to it.
+# entrypoint is apps/docs/server.js and Next resolves .next/static and public
+# next to it.
 FROM node:24-alpine AS runtime
 ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
 WORKDIR /app
 COPY --from=build --chown=node:node /repo/apps/docs/.next/standalone ./
 COPY --from=build --chown=node:node /repo/apps/docs/.next/static ./apps/docs/.next/static
+COPY --from=build --chown=node:node /repo/apps/docs/public ./apps/docs/public
 USER node
 EXPOSE 3000
 CMD ["node", "apps/docs/server.js"]
