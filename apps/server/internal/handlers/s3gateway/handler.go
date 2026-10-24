@@ -1,4 +1,4 @@
-package s3
+package s3gateway
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"cloudrive/server/internal/connectors"
+	"cloudrive/server/internal/lib/connectors"
 	"cloudrive/server/internal/lib/sigv4"
 	"cloudrive/server/internal/models"
 
@@ -164,7 +164,7 @@ func (h *handler) connectorFor(credential *models.S3Credential, bucketName strin
 
 	conn, err := h.service.Registry.New(
 		connectors.AccountInput{ID: account.ID, Settings: account.Settings},
-		provider,
+		provider.Protocol, provider.Slug,
 		credsJSON,
 	)
 	if err != nil {

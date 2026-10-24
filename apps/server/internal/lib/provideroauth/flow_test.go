@@ -7,8 +7,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"cloudrive/server/internal/config"
 )
 
 func TestFlowAuthorizationURLs(t *testing.T) {
@@ -161,20 +159,20 @@ func TestCredentialsToOAuth2TokenToleratesBadExpiry(t *testing.T) {
 
 // --- test helpers ---
 
-func googleConfig() config.ConfigGoogle {
-	return config.ConfigGoogle{ClientID: "gid", ClientSecret: "gsec"}
+func googleConfig() Client {
+	return Client{ClientID: "gid", ClientSecret: "gsec"}
 }
 
-func oneDriveConfig() config.ConfigOneDrive {
-	return config.ConfigOneDrive{ClientID: "oid", ClientSecret: "osec", Tenant: "common"}
+func oneDriveConfig() Client {
+	return Client{ClientID: "oid", ClientSecret: "osec", Tenant: "common"}
 }
 
-func serverDropboxConfig() config.ConfigDropbox {
-	return config.ConfigDropbox{ClientID: "did", ClientSecret: "dsec"}
+func serverDropboxConfig() Client {
+	return Client{ClientID: "did", ClientSecret: "dsec"}
 }
 
-func dropboxConfigWithTokenURL(tokenURL string) (config.ConfigDropbox, string, string) {
-	return config.ConfigDropbox{ClientID: "did", ClientSecret: "dsec"},
+func dropboxConfigWithTokenURL(tokenURL string) (Client, string, string) {
+	return Client{ClientID: "did", ClientSecret: "dsec"},
 		"https://www.dropbox.com/oauth2/authorize",
 		tokenURL
 }

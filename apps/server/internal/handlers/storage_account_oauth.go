@@ -6,11 +6,13 @@ import (
 	"net/url"
 
 	"cloudrive/server/internal/app"
-	"cloudrive/server/internal/connectors"
 	"cloudrive/server/internal/dtos"
+	"cloudrive/server/internal/lib"
+	"cloudrive/server/internal/lib/apperr"
+	"cloudrive/server/internal/lib/connectors"
+	"cloudrive/server/internal/lib/provideroauth"
 	"cloudrive/server/internal/models"
 	"cloudrive/server/internal/repositories"
-	"cloudrive/server/internal/services/provideroauth"
 
 	"braces.dev/errtrace"
 	"github.com/gofiber/fiber/v3"
@@ -41,41 +43,41 @@ func (h *storageAccountOAuthHandler) Authorize(c fiber.Ctx) error {
 
 	slug := c.Params("provider_slug")
 	req := &dtos.AuthorizeStorageOAuthRequest{}
-	if err := bindBody(c, req); err != nil {
+	if err := lib.ValidateRequestBody(c, req); err != nil {
 		return err
 	}
 	wsID, err := uuid.Parse(req.WorkspaceID)
 	if err != nil {
-		return badRequest(c, "Invalid workspace_id")
+		return apperr.New(apperr.KindBadRequest, "Invalid workspace_id")
 	}
 
 	workspace, err := h.app.Repositories.Workspace.Get(wsID)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
-	if _, err := requireOrgMember(c, h.app, workspace.OrganizationID, userID, "owner", "admin"); err != nil {
+	if _, err := requireOrgMember(h.app, workspace.OrganizationID, userID, "owner", "admin"); err != nil {
 		return err
 	}
 
 	provider, err := h.app.Repositories.Provider.GetBySlug(slug)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 	if provider.Protocol != "oauth2_cloud" {
-		return badRequest(c, "Provider does not support OAuth connect")
+		return apperr.New(apperr.KindBadRequest, "Provider does not support OAuth connect")
 	}
 
-	flow := h.app.Connectors.Registry.Flow(slug)
+	flow := ConnectorRegistry(h.app).Flow(slug)
 	if flow == nil || !flow.Configured() {
-		return badRequest(c, "Provider OAuth is not configured on the server")
+		return apperr.New(apperr.KindBadRequest, "Provider OAuth is not configured on the server")
 	}
 
-	state, err := h.app.Connectors.Session.Issue(wsID.String(), userID.String(), slug)
+	state, err := oauthSession(h.app).Issue(wsID.String(), userID.String(), slug)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return respond(c, fiber.StatusOK, fiber.Map{
+	return dtos.OK(c, fiber.Map{
 		"provider":          slug,
 		"authorization_url": flow.AuthorizationURL(state),
 		"state":             state,
@@ -101,12 +103,12 @@ func (h *storageAccountOAuthHandler) Callback(c fiber.Ctx) error {
 		return redirectErr("consent_failed")
 	}
 
-	payload, err := h.app.Connectors.Session.Verify(state, slug)
+	payload, err := oauthSession(h.app).Verify(state, slug)
 	if err != nil {
 		return redirectErr("invalid_state")
 	}
 
-	flow := h.app.Connectors.Registry.Flow(slug)
+	flow := ConnectorRegistry(h.app).Flow(slug)
 	if flow == nil || !flow.Configured() {
 		return redirectErr("provider_not_configured")
 	}
@@ -270,7 +272,7 @@ func (h *storageAccountOAuthHandler) Refresh(c fiber.Ctx) error {
 
 	accountID, err := uuid.Parse(c.Params("accountId"))
 	if err != nil {
-		return badRequest(c, "Invalid account id")
+		return apperr.New(apperr.KindBadRequest, "Invalid account id")
 	}
 
 	account, err := h.authorizeOAuthAccount(c, accountID, userID, true)
@@ -280,26 +282,26 @@ func (h *storageAccountOAuthHandler) Refresh(c fiber.Ctx) error {
 
 	flow, creds, err := h.flowForAccount(account)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
 	renewed, err := provideroauth.Refresh(c.Context(), flow, credentialsFromMap(creds))
 	if err != nil {
 		_ = h.app.Repositories.StorageAccount.UpdateStatus(account.ID, "expired")
 		h.app.Logger.Error("provider oauth refresh failed", "account", account.ID, "error", err)
-		return respond(c, fiber.StatusBadGateway, fiber.Map{"message": "Token refresh failed; account marked expired"})
+		return apperr.New(apperr.KindBadGateway, "Token refresh failed; account marked expired")
 	}
 
 	if err := h.app.Repositories.StorageAccount.UpdateCredentials(account.ID, marshalCredentials(renewed)); err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 	if account.Status != "active" {
 		if err := h.app.Repositories.StorageAccount.UpdateStatus(account.ID, "active"); err != nil {
-			return respondError(c, err)
+			return dbError(err)
 		}
 	}
 
-	return c.JSON(fiber.Map{"status": "refreshed"})
+	return dtos.OK(c, fiber.Map{"status": "refreshed"})
 }
 
 // Quota returns the provider-reported storage quota for one account.
@@ -311,7 +313,7 @@ func (h *storageAccountOAuthHandler) Quota(c fiber.Ctx) error {
 
 	accountID, err := uuid.Parse(c.Params("accountId"))
 	if err != nil {
-		return badRequest(c, "Invalid account id")
+		return apperr.New(apperr.KindBadRequest, "Invalid account id")
 	}
 
 	account, err := h.authorizeOAuthAccount(c, accountID, userID, false)
@@ -321,16 +323,16 @@ func (h *storageAccountOAuthHandler) Quota(c fiber.Ctx) error {
 
 	flow, creds, err := h.flowForAccount(account)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
 	profile, err := flow.Profile(c.Context(), credentialsFromMap(creds))
 	if err != nil {
 		h.app.Logger.Error("provider quota fetch failed", "account", account.ID, "error", err)
-		return respond(c, fiber.StatusBadGateway, fiber.Map{"message": "Provider quota fetch failed"})
+		return apperr.New(apperr.KindBadGateway, "Provider quota fetch failed")
 	}
 
-	return c.JSON(fiber.Map{
+	return dtos.OK(c, fiber.Map{
 		"total_bytes": profile.TotalBytes,
 		"used_bytes":  profile.UsedBytes,
 	})
@@ -348,7 +350,7 @@ func (h *storageAccountOAuthHandler) authorizeOAuthAccount(c fiber.Ctx, accountI
 	if manage {
 		roles = []string{"owner", "admin"}
 	}
-	if _, err := requireOrgMember(c, h.app, account.OrganizationID, userID, roles...); err != nil {
+	if _, err := requireOrgMember(h.app, account.OrganizationID, userID, roles...); err != nil {
 		return nil, errtrace.Wrap(err)
 	}
 
@@ -367,7 +369,7 @@ func (h *storageAccountOAuthHandler) authorizeOAuthAccount(c fiber.Ctx, accountI
 // flowForAccount resolves the provider flow and decrypts credentials.
 func (h *storageAccountOAuthHandler) flowForAccount(account *models.StorageAccount) (provideroauth.Flow, connectors.Credentials, error) {
 	slug := h.providerSlug
-	flow := h.app.Connectors.Registry.Flow(slug)
+	flow := ConnectorRegistry(h.app).Flow(slug)
 	if flow == nil || !flow.Configured() {
 		return nil, nil, errtrace.New("provider oauth is not configured on the server")
 	}

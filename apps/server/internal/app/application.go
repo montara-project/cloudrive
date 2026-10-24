@@ -1,29 +1,22 @@
 package app
 
 import (
+	"database/sql"
 	"log/slog"
 
 	"cloudrive/server/internal/config"
-	"cloudrive/server/internal/connectors"
 	"cloudrive/server/internal/repositories"
-	"cloudrive/server/internal/services"
-	"cloudrive/server/internal/services/provideroauth"
 
 	"github.com/Authula/authula"
 )
 
+// Application is the dependency container handed to handlers and
+// middlewares. Integrations (connectors, provider OAuth, email) are built
+// from Config where they are used, so they stay out of here.
 type Application struct {
 	Config       config.Config
 	Logger       *slog.Logger
+	DB           *sql.DB
 	Repositories repositories.Repositories
-	Services     services.Services
-	Connectors   Connectors
 	Auth         *authula.Auth
-}
-
-// Connectors carries the storage connector registry and the OAuth state
-// session used by the provider connect flow.
-type Connectors struct {
-	Registry connectors.Registry
-	Session  *provideroauth.Session
 }

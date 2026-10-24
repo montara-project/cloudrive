@@ -22,7 +22,7 @@ func (h *organizationHandler) Create(c fiber.Ctx) error {
 	}
 
 	req := &dtos.CreateOrganizationRequest{}
-	if err := bindBody(c, req); err != nil {
+	if err := lib.ValidateRequestBody(c, req); err != nil {
 		return err
 	}
 
@@ -36,10 +36,10 @@ func (h *organizationHandler) Create(c fiber.Ctx) error {
 	}
 
 	if err := h.app.Repositories.Organization.CreateWithOwner(organization, userID); err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(organization)
+	return dtos.Created(c, organization, "Organization created")
 }
 
 // List returns the organizations the current user belongs to.
@@ -56,10 +56,10 @@ func (h *organizationHandler) List(c fiber.Ctx) error {
 
 	organizations, metadata, err := h.app.Repositories.Organization.ListByUser(userID, opts)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return listResponse(c, q, metadata.Total, organizations)
+	return dtos.List(c, organizations, listMeta(q, metadata.Total))
 }
 
 // Get returns one organization. Any member of the organization may read it.
@@ -69,21 +69,21 @@ func (h *organizationHandler) Get(c fiber.Ctx) error {
 		return err
 	}
 
-	orgID, err := lib.ContextParamUUID(c, "orgId")
+	orgID, err := pathUUID(c, "orgId", "Invalid organization id")
 	if err != nil {
-		return badRequest(c, "Invalid organization id")
+		return err
 	}
 
-	if _, err := requireOrgMember(c, h.app, orgID, userID); err != nil {
+	if _, err := requireOrgMember(h.app, orgID, userID); err != nil {
 		return err
 	}
 
 	organization, err := h.app.Repositories.Organization.Get(orgID)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return c.JSON(organization)
+	return dtos.OK(c, organization)
 }
 
 // Update changes the organization profile. Requires the owner or admin role.
@@ -93,23 +93,23 @@ func (h *organizationHandler) Update(c fiber.Ctx) error {
 		return err
 	}
 
-	orgID, err := lib.ContextParamUUID(c, "orgId")
+	orgID, err := pathUUID(c, "orgId", "Invalid organization id")
 	if err != nil {
-		return badRequest(c, "Invalid organization id")
+		return err
 	}
 
-	if _, err := requireOrgMember(c, h.app, orgID, userID, "owner", "admin"); err != nil {
+	if _, err := requireOrgMember(h.app, orgID, userID, "owner", "admin"); err != nil {
 		return err
 	}
 
 	req := &dtos.UpdateOrganizationRequest{}
-	if err := bindBody(c, req); err != nil {
+	if err := lib.ValidateRequestBody(c, req); err != nil {
 		return err
 	}
 
 	current, err := h.app.Repositories.Organization.Get(orgID)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
 	current.Name = req.Name
@@ -120,10 +120,10 @@ func (h *organizationHandler) Update(c fiber.Ctx) error {
 	}
 
 	if err := h.app.Repositories.Organization.Update(orgID, current); err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return c.JSON(current)
+	return dtos.OK(c, current)
 }
 
 // Delete soft-deletes the organization. Owner only.
@@ -133,18 +133,18 @@ func (h *organizationHandler) Delete(c fiber.Ctx) error {
 		return err
 	}
 
-	orgID, err := lib.ContextParamUUID(c, "orgId")
+	orgID, err := pathUUID(c, "orgId", "Invalid organization id")
 	if err != nil {
-		return badRequest(c, "Invalid organization id")
+		return err
 	}
 
-	if _, err := requireOrgMember(c, h.app, orgID, userID, "owner"); err != nil {
+	if _, err := requireOrgMember(h.app, orgID, userID, "owner"); err != nil {
 		return err
 	}
 
 	if err := h.app.Repositories.Organization.SoftDelete(orgID); err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Organization deleted"})
+	return dtos.Message(c, fiber.StatusOK, "Organization deleted")
 }

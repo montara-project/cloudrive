@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"log"
@@ -45,11 +44,7 @@ func main() {
 	}
 
 	if cfg.seed != "" {
-		s := []seeders.Seeder{
-			seeders.ProviderSeeder{DB: db},
-		}
-
-		execSeeders(db, s...)
+		execSeeders(seeders.All(db)...)
 	}
 
 	fmt.Println("Completed")
@@ -69,9 +64,11 @@ func migrateDown(m *migrate.Migrate) {
 	}
 }
 
-func execSeeders(db *sql.DB, seeders ...seeders.Seeder) {
+func execSeeders(seeders ...seeders.Seeder) {
 	for _, seeder := range seeders {
 		fmt.Printf("Running %s seeder...\n", seeder.Name())
-		seeder.Seed()
+		if err := seeder.Seed(); err != nil {
+			log.Fatalf("%s seeder: %v", seeder.Name(), err)
+		}
 	}
 }

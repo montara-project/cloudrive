@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"cloudrive/server/internal/app"
+	"cloudrive/server/internal/dtos"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -24,8 +25,8 @@ func (h *providerHandler) List(c fiber.Ctx) error {
 
 	providers, metadata, err := h.app.Repositories.Provider.List(opts)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return listResponse(c, q, metadata.Total, providers)
+	return dtos.List(c, providers, listMeta(q, metadata.Total))
 }

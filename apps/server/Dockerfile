@@ -61,7 +61,6 @@ COPY --from=builder /temp-build/migrations /app/migrations
 COPY --from=builder /temp-build/templates /app/templates
 COPY --from=builder /temp-build/public /app/public
 COPY --from=web /repo/apps/web/dist /app/web
-COPY --chmod=0755 apps/server/scripts/entrypoint.sh /app/entrypoint.sh
 
 # The API serves the SPA at /; an empty SPA_DIR at runtime disables it.
 ENV SPA_DIR=/app/web
@@ -74,8 +73,7 @@ EXPOSE 8080 9000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
     CMD wget -qO- "http://127.0.0.1:${PORT:-8080}/health" >/dev/null || exit 1
 
-# Configuration comes from environment variables; entrypoint.sh maps them
-# onto the binary's flags. CMD holds image defaults that env vars override
-# (env-derived flags are appended after these).
-ENTRYPOINT ["./entrypoint.sh"]
-CMD ["--env=production", "--port=8080"]
+# Configuration comes from environment variables, read by the binary itself
+# (ENV defaults to production, PORT to 8080); a flag passed after the image
+# name still overrides its variable.
+ENTRYPOINT ["/app/api"]

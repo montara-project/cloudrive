@@ -8,6 +8,8 @@ import (
 
 	"cloudrive/server/internal/app"
 	"cloudrive/server/internal/dtos"
+	"cloudrive/server/internal/lib"
+	"cloudrive/server/internal/lib/apperr"
 	"cloudrive/server/internal/lib/validator"
 	"cloudrive/server/internal/models"
 
@@ -28,17 +30,17 @@ func (h *onboardingHandler) Submit(c fiber.Ctx) error {
 	}
 
 	req := &dtos.CreateOnboardingSurveyRequest{}
-	if err := bindBody(c, req); err != nil {
+	if err := lib.ValidateRequestBody(c, req); err != nil {
 		return err
 	}
 
 	if mr := validateSurvey(req); !mr.Empty() {
-		return unprocessable(c, mr)
+		return &lib.ErrValidationFailed{MessageRecord: mr}
 	}
 
 	useCases, err := json.Marshal(req.UseCases)
 	if err != nil {
-		return badRequest(c, "Invalid use cases payload")
+		return apperr.New(apperr.KindBadRequest, "Invalid use cases payload")
 	}
 
 	survey := &models.OnboardingSurvey{
@@ -50,10 +52,10 @@ func (h *onboardingHandler) Submit(c fiber.Ctx) error {
 	}
 
 	if err := h.app.Repositories.OnboardingSurvey.UpsertByUser(survey); err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(survey)
+	return dtos.OK(c, survey)
 }
 
 // validateSurvey enforces the rules the per-field validator cannot express on

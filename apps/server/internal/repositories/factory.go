@@ -3,7 +3,6 @@ package repositories
 import (
 	"database/sql"
 
-	"cloudrive/server/internal/config"
 	"cloudrive/server/internal/lib/secretbox"
 )
 
@@ -21,7 +20,7 @@ type Repositories struct {
 	OnboardingSurvey       OnboardingSurveyRepository
 }
 
-func New(db *sql.DB, cfg *config.ConfigApp, box *secretbox.SecretBox) Repositories {
+func New(db *sql.DB, box *secretbox.SecretBox) Repositories {
 	return Repositories{
 		Provider: ProviderRepository{BaseRepository: BaseRepository{
 			DB:         db,

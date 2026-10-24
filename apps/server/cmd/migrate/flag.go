@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
 	"slices"
 	"strings"
 )
@@ -25,7 +26,8 @@ type config struct {
 }
 
 func parseFlag(cfg *config) {
-	flag.StringVar(&cfg.dbDSN, "db-dsn", "", "PostgreSQL DSN")
+	// Defaults to DB_DSN so `make` targets and the container need no argument.
+	flag.StringVar(&cfg.dbDSN, "db-dsn", os.Getenv("DB_DSN"), "PostgreSQL DSN (default $DB_DSN)")
 	flag.StringVar(&cfg.seed, "seed", "", "seed")
 
 	flag.Parse()

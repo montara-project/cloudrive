@@ -7,8 +7,6 @@ import (
 	"log/slog"
 	"time"
 
-	"cloudrive/server/internal/config"
-
 	"braces.dev/errtrace"
 	"github.com/google/uuid"
 	"github.com/maxrichie5/go-sqlfmt/sqlfmt"
@@ -17,14 +15,15 @@ import (
 type BaseRepository struct {
 	DB        *sql.DB
 	TableName string
-	Config    *config.ConfigApp
 	// SoftDelete marks tables that carry a "deleted_at" column, so row counts
 	// can exclude soft-deleted rows.
 	SoftDelete bool
 }
 
+// debugQuery logs the SQL text (never its arguments) when the logger runs at
+// debug level (DEBUG=true); formatting is skipped otherwise.
 func (r BaseRepository) debugQuery(query string) {
-	if r.Config == nil || !r.Config.Debug {
+	if !slog.Default().Enabled(context.Background(), slog.LevelDebug) {
 		return
 	}
 	slog.Debug("query", "sql", sqlfmt.PrettyFormat(query))
@@ -39,6 +38,33 @@ func (r BaseRepository) tableName() (string, error) {
 	}
 
 	return r.TableName, nil
+}
+
+// HasTable reports whether the repository's table exists in the public
+// schema yet. Boot diagnostics use it to tell "migrations never ran" apart
+// from other boot failures; a missing table is the answer to the question,
+// not an error, so the result is a plain bool and any probe failure reads
+// as false.
+func (r BaseRepository) HasTable(ctx context.Context) bool {
+	if r.DB == nil {
+		return false
+	}
+
+	tableName, err := r.tableName()
+	if err != nil {
+		return false
+	}
+
+	query := `SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1`
+
+	r.debugQuery(query)
+
+	var count int
+	if err := r.DB.QueryRowContext(ctx, query, tableName).Scan(&count); err != nil {
+		return false
+	}
+
+	return count > 0
 }
 
 func (r BaseRepository) countExec(exc Executor) (int64, error) {

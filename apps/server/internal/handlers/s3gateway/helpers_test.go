@@ -1,4 +1,4 @@
-package s3
+package s3gateway
 
 import (
 	"bytes"
@@ -13,7 +13,7 @@ import (
 	"sync"
 	"testing"
 
-	"cloudrive/server/internal/connectors"
+	"cloudrive/server/internal/lib/connectors"
 	"cloudrive/server/internal/models"
 
 	"github.com/gofiber/fiber/v3"

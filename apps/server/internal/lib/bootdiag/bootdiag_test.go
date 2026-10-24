@@ -192,9 +192,14 @@ func TestDiagnoseWithoutAPIKey(t *testing.T) {
 
 func TestCollectFactsCapturesPostgresCode(t *testing.T) {
 	bootErr := &pq.Error{Code: "42P01", Message: `relation "users" does not exist`}
+	probeCalled := false
+	probe := func(ctx context.Context) bool { probeCalled = true; return true }
 
-	facts := CollectFacts(context.Background(), nil, bootErr, true, "/app/migrate", "production")
+	facts := CollectFacts(context.Background(), nil, probe, bootErr, true, "/app/migrate", "production")
 
+	if probeCalled {
+		t.Error("schema probe called without a database handle")
+	}
 	if facts.PostgresErrorCode != "42P01" {
 		t.Errorf("PostgresErrorCode = %q", facts.PostgresErrorCode)
 	}
@@ -206,6 +211,9 @@ func TestCollectFactsCapturesPostgresCode(t *testing.T) {
 	}
 	if facts.DatabaseReachable {
 		t.Error("DatabaseReachable = true without a database handle")
+	}
+	if facts.AppTablesPresent {
+		t.Error("AppTablesPresent = true without a database handle")
 	}
 }
 

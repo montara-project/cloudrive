@@ -20,17 +20,17 @@ func (h *workspaceHandler) Create(c fiber.Ctx) error {
 		return err
 	}
 
-	orgID, err := lib.ContextParamUUID(c, "orgId")
+	orgID, err := pathUUID(c, "orgId", "Invalid organization id")
 	if err != nil {
-		return badRequest(c, "Invalid organization id")
+		return err
 	}
 
-	if _, err := requireOrgMember(c, h.app, orgID, userID, "owner", "admin"); err != nil {
+	if _, err := requireOrgMember(h.app, orgID, userID, "owner", "admin"); err != nil {
 		return err
 	}
 
 	req := &dtos.CreateWorkspaceRequest{}
-	if err := bindBody(c, req); err != nil {
+	if err := lib.ValidateRequestBody(c, req); err != nil {
 		return err
 	}
 
@@ -45,10 +45,10 @@ func (h *workspaceHandler) Create(c fiber.Ctx) error {
 	}
 
 	if err := h.app.Repositories.Workspace.Create(workspace); err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(workspace)
+	return dtos.Created(c, workspace, "Workspace created")
 }
 
 // List returns the organization's workspaces. Any member may read them.
@@ -58,12 +58,12 @@ func (h *workspaceHandler) List(c fiber.Ctx) error {
 		return err
 	}
 
-	orgID, err := lib.ContextParamUUID(c, "orgId")
+	orgID, err := pathUUID(c, "orgId", "Invalid organization id")
 	if err != nil {
-		return badRequest(c, "Invalid organization id")
+		return err
 	}
 
-	if _, err := requireOrgMember(c, h.app, orgID, userID); err != nil {
+	if _, err := requireOrgMember(h.app, orgID, userID); err != nil {
 		return err
 	}
 
@@ -74,10 +74,10 @@ func (h *workspaceHandler) List(c fiber.Ctx) error {
 
 	workspaces, metadata, err := h.app.Repositories.Workspace.ListByOrganization(orgID, opts)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return listResponse(c, q, metadata.Total, workspaces)
+	return dtos.List(c, workspaces, listMeta(q, metadata.Total))
 }
 
 // Get returns one workspace. Any member of the owning organization may read it.
@@ -87,21 +87,21 @@ func (h *workspaceHandler) Get(c fiber.Ctx) error {
 		return err
 	}
 
-	wsID, err := lib.ContextParamUUID(c, "wsId")
+	wsID, err := pathUUID(c, "wsId", "Invalid workspace id")
 	if err != nil {
-		return badRequest(c, "Invalid workspace id")
+		return err
 	}
 
 	workspace, err := h.app.Repositories.Workspace.Get(wsID)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	if _, err := requireOrgMember(c, h.app, workspace.OrganizationID, userID); err != nil {
+	if _, err := requireOrgMember(h.app, workspace.OrganizationID, userID); err != nil {
 		return err
 	}
 
-	return c.JSON(workspace)
+	return dtos.OK(c, workspace)
 }
 
 // Update changes the workspace profile. Requires owner or admin of the
@@ -112,22 +112,22 @@ func (h *workspaceHandler) Update(c fiber.Ctx) error {
 		return err
 	}
 
-	wsID, err := lib.ContextParamUUID(c, "wsId")
+	wsID, err := pathUUID(c, "wsId", "Invalid workspace id")
 	if err != nil {
-		return badRequest(c, "Invalid workspace id")
+		return err
 	}
 
 	workspace, err := h.app.Repositories.Workspace.Get(wsID)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	if _, err := requireOrgMember(c, h.app, workspace.OrganizationID, userID, "owner", "admin"); err != nil {
+	if _, err := requireOrgMember(h.app, workspace.OrganizationID, userID, "owner", "admin"); err != nil {
 		return err
 	}
 
 	req := &dtos.UpdateWorkspaceRequest{}
-	if err := bindBody(c, req); err != nil {
+	if err := lib.ValidateRequestBody(c, req); err != nil {
 		return err
 	}
 
@@ -139,10 +139,10 @@ func (h *workspaceHandler) Update(c fiber.Ctx) error {
 	}
 
 	if err := h.app.Repositories.Workspace.Update(wsID, workspace); err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return c.JSON(workspace)
+	return dtos.OK(c, workspace)
 }
 
 // Delete soft-deletes the workspace. Requires owner or admin of the
@@ -153,23 +153,23 @@ func (h *workspaceHandler) Delete(c fiber.Ctx) error {
 		return err
 	}
 
-	wsID, err := lib.ContextParamUUID(c, "wsId")
+	wsID, err := pathUUID(c, "wsId", "Invalid workspace id")
 	if err != nil {
-		return badRequest(c, "Invalid workspace id")
+		return err
 	}
 
 	workspace, err := h.app.Repositories.Workspace.Get(wsID)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	if _, err := requireOrgMember(c, h.app, workspace.OrganizationID, userID, "owner", "admin"); err != nil {
+	if _, err := requireOrgMember(h.app, workspace.OrganizationID, userID, "owner", "admin"); err != nil {
 		return err
 	}
 
 	if err := h.app.Repositories.Workspace.SoftDelete(wsID); err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Workspace deleted"})
+	return dtos.Message(c, fiber.StatusOK, "Workspace deleted")
 }

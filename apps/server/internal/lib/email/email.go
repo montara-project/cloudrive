@@ -1,4 +1,4 @@
-package services
+package email
 
 import (
 	"bytes"
@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"html/template"
 
-	"cloudrive/server/internal/config"
-
 	"github.com/resend/resend-go/v4"
 )
 
-type EmailService struct {
-	AppName string
-	Config  config.ConfigResend
+// Service sends transactional mail through Resend.
+type Service struct {
+	AppName   string
+	APIKey    string
+	FromEmail string
 }
 
 type SendEmailParams struct {
@@ -23,8 +23,8 @@ type SendEmailParams struct {
 	HtmlTemplate string
 }
 
-func (s EmailService) SendEmail(value SendEmailParams) (string, error) {
-	client := resend.NewClient(s.Config.ApiKey)
+func (s Service) SendEmail(value SendEmailParams) (string, error) {
+	client := resend.NewClient(s.APIKey)
 
 	// Load the HTML template
 	htmlStr, err := ParseTemplate(value.HtmlTemplate, value.Data)
@@ -33,7 +33,7 @@ func (s EmailService) SendEmail(value SendEmailParams) (string, error) {
 	}
 
 	params := &resend.SendEmailRequest{
-		From:    fmt.Sprintf("%s <%s>", s.AppName, s.Config.FromEmail),
+		From:    fmt.Sprintf("%s <%s>", s.AppName, s.FromEmail),
 		To:      []string{value.To},
 		Html:    htmlStr,
 		Subject: value.Subject,

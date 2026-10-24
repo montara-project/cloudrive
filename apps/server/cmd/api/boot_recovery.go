@@ -33,6 +33,7 @@ func diagnoseBootFailure(application *app.Application, bootErr error) {
 	facts := bootdiag.CollectFacts(
 		context.Background(),
 		application.Repositories.User.DB,
+		application.Repositories.User.HasTable,
 		bootErr,
 		runningInContainer(),
 		migrateBinary,

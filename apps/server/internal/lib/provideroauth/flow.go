@@ -10,8 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"cloudrive/server/internal/config"
-
 	"braces.dev/errtrace"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -122,7 +120,16 @@ type GoogleDriveFlow struct {
 	nowFunc func() time.Time
 }
 
-func NewGoogleDriveFlow(cfg config.ConfigGoogle, serverURL string, client *http.Client) *GoogleDriveFlow {
+// Client is a provider's OAuth client registration. Tenant is only read by
+// the OneDrive flow (Microsoft authority: common, consumers, organizations or
+// a directory id).
+type Client struct {
+	ClientID     string
+	ClientSecret string
+	Tenant       string
+}
+
+func NewGoogleDriveFlow(cfg Client, serverURL string, client *http.Client) *GoogleDriveFlow {
 	return &GoogleDriveFlow{
 		conf: &oauth2.Config{
 			ClientID:     cfg.ClientID,
@@ -226,7 +233,7 @@ type OneDriveFlow struct {
 	nowFunc func() time.Time
 }
 
-func NewOneDriveFlow(cfg config.ConfigOneDrive, serverURL string) *OneDriveFlow {
+func NewOneDriveFlow(cfg Client, serverURL string) *OneDriveFlow {
 	tenant := cfg.Tenant
 	if tenant == "" {
 		tenant = "common"
@@ -368,7 +375,7 @@ type DropboxFlow struct {
 	nowFunc func() time.Time
 }
 
-func NewDropboxFlow(cfg config.ConfigDropbox, serverURL string, client *http.Client) *DropboxFlow {
+func NewDropboxFlow(cfg Client, serverURL string, client *http.Client) *DropboxFlow {
 	return NewDropboxFlowWithEndpoint(cfg, serverURL,
 		"https://www.dropbox.com/oauth2/authorize",
 		"https://api.dropboxapi.com/oauth2/token", client)
@@ -376,7 +383,7 @@ func NewDropboxFlow(cfg config.ConfigDropbox, serverURL string, client *http.Cli
 
 // NewDropboxFlowWithEndpoint lets tests point the token endpoint at a stub
 // server while keeping the production constructor clean.
-func NewDropboxFlowWithEndpoint(cfg config.ConfigDropbox, serverURL, authURL, tokenURL string, client *http.Client) *DropboxFlow {
+func NewDropboxFlowWithEndpoint(cfg Client, serverURL, authURL, tokenURL string, client *http.Client) *DropboxFlow {
 	return &DropboxFlow{
 		conf: &oauth2.Config{
 			ClientID:     cfg.ClientID,

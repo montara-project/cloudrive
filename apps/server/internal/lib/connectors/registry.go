@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"cloudrive/server/internal/config"
-	"cloudrive/server/internal/models"
-	"cloudrive/server/internal/services/provideroauth"
+	"cloudrive/server/internal/lib/provideroauth"
 
 	"github.com/google/uuid"
 )
@@ -105,17 +103,17 @@ func (reg Registry) Flow(slug string) provideroauth.Flow {
 	switch slug {
 	case "google_drive":
 		return provideroauth.NewGoogleDriveFlow(
-			config.ConfigGoogle{ClientID: reg.GoogleClientID, ClientSecret: reg.GoogleClientSecret},
+			provideroauth.Client{ClientID: reg.GoogleClientID, ClientSecret: reg.GoogleClientSecret},
 			reg.ServerURL, http.DefaultClient,
 		)
 	case "onedrive":
 		return provideroauth.NewOneDriveFlow(
-			config.ConfigOneDrive{ClientID: reg.OneDriveClientID, ClientSecret: reg.OneDriveClientSecret, Tenant: reg.OneDriveTenant},
+			provideroauth.Client{ClientID: reg.OneDriveClientID, ClientSecret: reg.OneDriveClientSecret, Tenant: reg.OneDriveTenant},
 			reg.ServerURL,
 		)
 	case "dropbox":
 		return provideroauth.NewDropboxFlow(
-			config.ConfigDropbox{ClientID: reg.DropboxClientID, ClientSecret: reg.DropboxClientSecret},
+			provideroauth.Client{ClientID: reg.DropboxClientID, ClientSecret: reg.DropboxClientSecret},
 			reg.ServerURL, http.DefaultClient,
 		)
 	default:
@@ -125,17 +123,18 @@ func (reg Registry) Flow(slug string) provideroauth.Flow {
 
 // New returns a Connector for the account based on its provider protocol.
 // credentialsJSON must be the decrypted credentials JSON for the account.
-func (reg Registry) New(account AccountInput, provider *models.Provider, credentialsJSON string) (Connector, error) {
+// protocol and slug come from the account's provider row.
+func (reg Registry) New(account AccountInput, protocol, slug string, credentialsJSON string) (Connector, error) {
 	creds, err := parseCredentials(account.ID.String(), credentialsJSON)
 	if err != nil {
 		return nil, err
 	}
 
-	switch provider.Protocol {
+	switch protocol {
 	case "s3_compatible":
 		return newS3Connector(account, creds)
 	case "oauth2_cloud":
-		switch provider.Slug {
+		switch slug {
 		case "google_drive":
 			return newGoogleDriveConnector(reg, account, creds)
 		case "dropbox":
@@ -143,9 +142,9 @@ func (reg Registry) New(account AccountInput, provider *models.Provider, credent
 		case "onedrive":
 			return newOneDriveConnector(reg, account, creds)
 		default:
-			return nil, fmt.Errorf("provider %q is not supported by the S3 gateway", provider.Slug)
+			return nil, fmt.Errorf("provider %q is not supported by the S3 gateway", slug)
 		}
 	default:
-		return nil, fmt.Errorf("protocol %q is not supported by the S3 gateway", provider.Protocol)
+		return nil, fmt.Errorf("protocol %q is not supported by the S3 gateway", protocol)
 	}
 }

@@ -11,9 +11,10 @@ import (
 	"time"
 
 	"cloudrive/server/internal/app"
-	"cloudrive/server/internal/connectors"
 	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
+	"cloudrive/server/internal/lib/apperr"
+	"cloudrive/server/internal/lib/connectors"
 	"cloudrive/server/internal/models"
 	"cloudrive/server/internal/repositories"
 
@@ -30,10 +31,10 @@ type s3GatewayHandler struct {
 func (h *s3GatewayHandler) authorizeWorkspace(c fiber.Ctx, wsID, userID uuid.UUID) (*models.Workspace, error) {
 	workspace, err := h.app.Repositories.Workspace.Get(wsID)
 	if err != nil {
-		return nil, respondError(c, err)
+		return nil, dbError(err)
 	}
 
-	if _, err := requireOrgMember(c, h.app, workspace.OrganizationID, userID, "owner", "admin"); err != nil {
+	if _, err := requireOrgMember(h.app, workspace.OrganizationID, userID, "owner", "admin"); err != nil {
 		return nil, err
 	}
 
@@ -51,9 +52,9 @@ func (h *s3GatewayHandler) CreateCredential(c fiber.Ctx) error {
 		return err
 	}
 
-	wsID, err := lib.ContextParamUUID(c, "wsId")
+	wsID, err := pathUUID(c, "wsId", "Invalid workspace id")
 	if err != nil {
-		return badRequest(c, "Invalid workspace id")
+		return err
 	}
 
 	workspace, err := h.authorizeWorkspace(c, wsID, userID)
@@ -64,7 +65,7 @@ func (h *s3GatewayHandler) CreateCredential(c fiber.Ctx) error {
 	// Body is optional (label only); bindBody treats an absent body as an
 	// empty object.
 	req := &dtos.CreateS3CredentialRequest{}
-	if err := bindBody(c, req); err != nil {
+	if err := lib.ValidateRequestBody(c, req); err != nil {
 		return err
 	}
 
@@ -83,10 +84,10 @@ func (h *s3GatewayHandler) CreateCredential(c fiber.Ctx) error {
 	}
 
 	if err := h.app.Repositories.S3Credential.Create(credential, []byte(secretKey)); err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(dtos.S3CredentialResponse{
+	return dtos.Created(c, dtos.S3CredentialResponse{
 		ID:          credential.ID,
 		WorkspaceID: credential.WorkspaceID,
 		AccessKeyID: credential.AccessKeyID,
@@ -94,7 +95,7 @@ func (h *s3GatewayHandler) CreateCredential(c fiber.Ctx) error {
 		Label:       credential.Label,
 		Status:      credential.Status,
 		CreatedAt:   credential.CreatedAt,
-	})
+	}, "Credential created")
 }
 
 // ListCredentials returns the workspace's access keys (never their secrets).
@@ -104,17 +105,17 @@ func (h *s3GatewayHandler) ListCredentials(c fiber.Ctx) error {
 		return err
 	}
 
-	wsID, err := lib.ContextParamUUID(c, "wsId")
+	wsID, err := pathUUID(c, "wsId", "Invalid workspace id")
 	if err != nil {
-		return badRequest(c, "Invalid workspace id")
+		return err
 	}
 
 	workspace, err := h.app.Repositories.Workspace.Get(wsID)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	if _, err := requireOrgMember(c, h.app, workspace.OrganizationID, userID); err != nil {
+	if _, err := requireOrgMember(h.app, workspace.OrganizationID, userID); err != nil {
 		return err
 	}
 
@@ -125,10 +126,10 @@ func (h *s3GatewayHandler) ListCredentials(c fiber.Ctx) error {
 
 	credentials, metadata, err := h.app.Repositories.S3Credential.ListByWorkspace(wsID, opts)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return listResponse(c, q, metadata.Total, credentials)
+	return dtos.List(c, credentials, listMeta(q, metadata.Total))
 }
 
 // RevokeCredential disables an access key; it stops authenticating
@@ -139,13 +140,13 @@ func (h *s3GatewayHandler) RevokeCredential(c fiber.Ctx) error {
 		return err
 	}
 
-	wsID, err := lib.ContextParamUUID(c, "wsId")
+	wsID, err := pathUUID(c, "wsId", "Invalid workspace id")
 	if err != nil {
-		return badRequest(c, "Invalid workspace id")
+		return err
 	}
-	credentialID, err := lib.ContextParamUUID(c, "credentialId")
+	credentialID, err := pathUUID(c, "credentialId", "Invalid credential id")
 	if err != nil {
-		return badRequest(c, "Invalid credential id")
+		return err
 	}
 
 	if _, err := h.authorizeWorkspace(c, wsID, userID); err != nil {
@@ -154,17 +155,17 @@ func (h *s3GatewayHandler) RevokeCredential(c fiber.Ctx) error {
 
 	credential, err := h.app.Repositories.S3Credential.Get(credentialID)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 	if credential.WorkspaceID != wsID {
-		return forbidden(c, "Credential belongs to a different workspace")
+		return apperr.New(apperr.KindForbidden, "Credential belongs to a different workspace")
 	}
 
 	if err := h.app.Repositories.S3Credential.UpdateStatus(credentialID, "revoked"); err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return c.JSON(fiber.Map{"message": "Credential revoked"})
+	return dtos.Message(c, fiber.StatusOK, "Credential revoked")
 }
 
 // --- S3 buckets (mapping to storage accounts) ---
@@ -176,9 +177,9 @@ func (h *s3GatewayHandler) CreateBucket(c fiber.Ctx) error {
 		return err
 	}
 
-	wsID, err := lib.ContextParamUUID(c, "wsId")
+	wsID, err := pathUUID(c, "wsId", "Invalid workspace id")
 	if err != nil {
-		return badRequest(c, "Invalid workspace id")
+		return err
 	}
 
 	workspace, err := h.authorizeWorkspace(c, wsID, userID)
@@ -187,21 +188,21 @@ func (h *s3GatewayHandler) CreateBucket(c fiber.Ctx) error {
 	}
 
 	req := &dtos.CreateS3BucketRequest{}
-	if err := bindBody(c, req); err != nil {
+	if err := lib.ValidateRequestBody(c, req); err != nil {
 		return err
 	}
 
 	accountID, err := uuid.Parse(req.StorageAccountID)
 	if err != nil {
-		return badRequest(c, "Invalid storage_account_id")
+		return apperr.New(apperr.KindBadRequest, "Invalid storage_account_id")
 	}
 
 	account, err := h.app.Repositories.StorageAccount.Get(accountID)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 	if account.WorkspaceID != wsID {
-		return forbidden(c, "Storage account belongs to a different workspace")
+		return apperr.New(apperr.KindForbidden, "Storage account belongs to a different workspace")
 	}
 
 	bucket := &models.S3Bucket{
@@ -214,10 +215,10 @@ func (h *s3GatewayHandler) CreateBucket(c fiber.Ctx) error {
 	}
 
 	if err := h.app.Repositories.S3Bucket.Create(bucket); err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(bucket)
+	return dtos.Created(c, bucket, "Bucket mapping created")
 }
 
 // ListBuckets returns the workspace's bucket mappings.
@@ -227,17 +228,17 @@ func (h *s3GatewayHandler) ListBuckets(c fiber.Ctx) error {
 		return err
 	}
 
-	wsID, err := lib.ContextParamUUID(c, "wsId")
+	wsID, err := pathUUID(c, "wsId", "Invalid workspace id")
 	if err != nil {
-		return badRequest(c, "Invalid workspace id")
+		return err
 	}
 
 	workspace, err := h.app.Repositories.Workspace.Get(wsID)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	if _, err := requireOrgMember(c, h.app, workspace.OrganizationID, userID); err != nil {
+	if _, err := requireOrgMember(h.app, workspace.OrganizationID, userID); err != nil {
 		return err
 	}
 
@@ -248,10 +249,10 @@ func (h *s3GatewayHandler) ListBuckets(c fiber.Ctx) error {
 
 	buckets, metadata, err := h.app.Repositories.S3Bucket.ListByWorkspace(wsID, opts)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return listResponse(c, q, metadata.Total, buckets)
+	return dtos.List(c, buckets, listMeta(q, metadata.Total))
 }
 
 // DeleteBucket removes the bucket mapping only — objects in the backing
@@ -262,13 +263,13 @@ func (h *s3GatewayHandler) DeleteBucket(c fiber.Ctx) error {
 		return err
 	}
 
-	wsID, err := lib.ContextParamUUID(c, "wsId")
+	wsID, err := pathUUID(c, "wsId", "Invalid workspace id")
 	if err != nil {
-		return badRequest(c, "Invalid workspace id")
+		return err
 	}
-	bucketID, err := lib.ContextParamUUID(c, "bucketId")
+	bucketID, err := pathUUID(c, "bucketId", "Invalid bucket id")
 	if err != nil {
-		return badRequest(c, "Invalid bucket id")
+		return err
 	}
 
 	if _, err := h.authorizeWorkspace(c, wsID, userID); err != nil {
@@ -277,17 +278,17 @@ func (h *s3GatewayHandler) DeleteBucket(c fiber.Ctx) error {
 
 	bucket, err := h.app.Repositories.S3Bucket.Get(bucketID)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 	if bucket.WorkspaceID != wsID {
-		return forbidden(c, "Bucket belongs to a different workspace")
+		return apperr.New(apperr.KindForbidden, "Bucket belongs to a different workspace")
 	}
 
 	if err := h.app.Repositories.S3Bucket.Delete(bucketID); err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return c.JSON(fiber.Map{"message": "Bucket mapping deleted"})
+	return dtos.Message(c, fiber.StatusOK, "Bucket mapping deleted")
 }
 
 // randomToken returns n random bytes as unpadded base64 (URL-safe).
@@ -329,23 +330,23 @@ func (h *s3GatewayHandler) RecentFiles(c fiber.Ctx) error {
 		return err
 	}
 
-	wsID, err := lib.ContextParamUUID(c, "wsId")
+	wsID, err := pathUUID(c, "wsId", "Invalid workspace id")
 	if err != nil {
-		return badRequest(c, "Invalid workspace id")
+		return err
 	}
 
 	workspace, err := h.app.Repositories.Workspace.Get(wsID)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	if _, err := requireOrgMember(c, h.app, workspace.OrganizationID, userID); err != nil {
+	if _, err := requireOrgMember(h.app, workspace.OrganizationID, userID); err != nil {
 		return err
 	}
 
 	q := &dtos.ListQuery{}
 	if err := lib.ValidateRequestQuery(c, q); err != nil {
-		return requestError(c, err, "Invalid pagination parameters")
+		return err
 	}
 	limit := q.Limit
 	if limit <= 0 || limit > 50 {
@@ -356,7 +357,7 @@ func (h *s3GatewayHandler) RecentFiles(c fiber.Ctx) error {
 		wsID, &repositories.QueryOptions{Limit: 100},
 	)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), 15*time.Second)
@@ -389,7 +390,7 @@ func (h *s3GatewayHandler) RecentFiles(c fiber.Ctx) error {
 		files = files[:limit]
 	}
 
-	return listResponse(c, q, int64(len(files)), files)
+	return dtos.List(c, files, listMeta(q, int64(len(files))))
 }
 
 // recentFilesForBucket lists the bucket's newest objects through its backing
@@ -410,9 +411,9 @@ func (h *s3GatewayHandler) recentFilesForBucket(
 		return nil, err
 	}
 
-	conn, err := h.app.Connectors.Registry.New(
+	conn, err := ConnectorRegistry(h.app).New(
 		connectors.AccountInput{ID: account.ID, Settings: account.Settings},
-		provider,
+		provider.Protocol, provider.Slug,
 		string(credsJSON),
 	)
 	if err != nil {
@@ -480,23 +481,23 @@ func (h *s3GatewayHandler) Drive(c fiber.Ctx) error {
 		return err
 	}
 
-	wsID, err := lib.ContextParamUUID(c, "wsId")
+	wsID, err := pathUUID(c, "wsId", "Invalid workspace id")
 	if err != nil {
-		return badRequest(c, "Invalid workspace id")
+		return err
 	}
 
 	workspace, err := h.app.Repositories.Workspace.Get(wsID)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	if _, err := requireOrgMember(c, h.app, workspace.OrganizationID, userID); err != nil {
+	if _, err := requireOrgMember(h.app, workspace.OrganizationID, userID); err != nil {
 		return err
 	}
 
 	q := &dtos.ListQuery{}
 	if err := lib.ValidateRequestQuery(c, q); err != nil {
-		return requestError(c, err, "Invalid pagination parameters")
+		return err
 	}
 	limit := q.Limit
 	if limit <= 0 || limit > 500 {
@@ -512,14 +513,14 @@ func (h *s3GatewayHandler) Drive(c fiber.Ctx) error {
 		wsID, &repositories.QueryOptions{Limit: 100},
 	)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
 	// An explicit account param scopes the browse to one provider account.
 	if accountParam := c.Query("account"); accountParam != "" {
 		accountID, err := uuid.Parse(accountParam)
 		if err != nil {
-			return badRequest(c, "Invalid account id")
+			return apperr.New(apperr.KindBadRequest, "Invalid account id")
 		}
 		filtered := accounts[:0]
 		for _, account := range accounts {
@@ -572,7 +573,7 @@ func (h *s3GatewayHandler) Drive(c fiber.Ctx) error {
 		entries = entries[:limit]
 	}
 
-	return listResponse(c, q, total, entries)
+	return dtos.List(c, entries, listMeta(q, total))
 }
 
 // driveEntriesForAccount lists one level of the account's drive at prefix.
@@ -589,9 +590,9 @@ func (h *s3GatewayHandler) driveEntriesForAccount(
 		return nil, err
 	}
 
-	conn, err := h.app.Connectors.Registry.New(
+	conn, err := ConnectorRegistry(h.app).New(
 		connectors.AccountInput{ID: account.ID, Settings: account.Settings},
-		provider,
+		provider.Protocol, provider.Slug,
 		string(credsJSON),
 	)
 	if err != nil {

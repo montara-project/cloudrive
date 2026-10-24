@@ -1,12 +1,8 @@
 package seeders
 
 import (
+	"context"
 	"database/sql"
-
-	"cloudrive/server/internal/models"
-	"cloudrive/server/internal/repositories"
-
-	"github.com/google/uuid"
 )
 
 type ProviderSeeder struct {
@@ -17,50 +13,26 @@ func (s ProviderSeeder) Name() string {
 	return "provider"
 }
 
-func (s ProviderSeeder) Seed() {
-	providers := []*models.Provider{
-		{
-			ID:           uuid.Must(uuid.NewV7()),
-			Slug:         "google_drive",
-			Name:         "Google Drive",
-			Protocol:     "oauth2_cloud",
-			AuthType:     "oauth2",
-			Capabilities: []byte(`{"versioning": true, "trash": true, "native_search": true}`),
-		},
-		{
-			ID:           uuid.Must(uuid.NewV7()),
-			Slug:         "onedrive",
-			Name:         "OneDrive",
-			Protocol:     "oauth2_cloud",
-			AuthType:     "oauth2",
-			Capabilities: []byte(`{"versioning": true, "trash": true}`),
-		},
-		{
-			ID:           uuid.Must(uuid.NewV7()),
-			Slug:         "dropbox",
-			Name:         "Dropbox",
-			Protocol:     "oauth2_cloud",
-			AuthType:     "oauth2",
-			Capabilities: []byte(`{"versioning": true, "trash": true}`),
-		},
-		{
-			ID:           uuid.Must(uuid.NewV7()),
-			Slug:         "s3_compatible",
-			Name:         "S3 Compatible",
-			Protocol:     "s3_compatible",
-			AuthType:     "access_key",
-			Capabilities: []byte(`{"versioning": false, "trash": false, "multipart": true}`),
-		},
+// Seed inserts the provider catalog; rows whose slug already exists are left
+// untouched, so their ids (referenced by storage accounts) never change.
+func (s ProviderSeeder) Seed() error {
+	providers := []struct{ slug, name, protocol, authType, capabilities string }{
+		{"google_drive", "Google Drive", "oauth2_cloud", "oauth2", `{"versioning": true, "trash": true, "native_search": true}`},
+		{"onedrive", "OneDrive", "oauth2_cloud", "oauth2", `{"versioning": true, "trash": true}`},
+		{"dropbox", "Dropbox", "oauth2_cloud", "oauth2", `{"versioning": true, "trash": true}`},
+		{"s3_compatible", "S3 Compatible", "s3_compatible", "access_key", `{"versioning": false, "trash": false, "multipart": true}`},
 	}
 
-	providerRepo := repositories.ProviderRepository{
-		BaseRepository: repositories.BaseRepository{
-			DB:        s.DB,
-			TableName: "providers",
-		},
-	}
-
-	if err := providerRepo.Insert(providers...); err != nil {
-		panic(err)
-	}
+	return runSeed(s.DB, func(ctx context.Context, tx *sql.Tx) error {
+		for _, p := range providers {
+			if _, err := tx.ExecContext(ctx,
+				`INSERT INTO "providers" ("slug", "name", "protocol", "auth_type", "capabilities")
+				VALUES ($1, $2, $3, $4, $5::jsonb) ON CONFLICT ("slug") DO NOTHING`,
+				p.slug, p.name, p.protocol, p.authType, p.capabilities,
+			); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }

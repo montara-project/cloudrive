@@ -1,8 +1,6 @@
-package s3
+package s3gateway
 
 import (
-	"database/sql"
-
 	"cloudrive/server/internal/models"
 	"cloudrive/server/internal/repositories"
 
@@ -12,7 +10,6 @@ import (
 // RepoAdapter adapts the concrete repositories to the gateway's Repos
 // interface, including the decrypted-credentials path.
 type RepoAdapter struct {
-	DB             *sql.DB
 	S3Credentials  S3CredentialRepo
 	S3Buckets      S3BucketRepo
 	StorageAccount StorageAccountRepo

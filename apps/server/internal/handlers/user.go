@@ -4,7 +4,9 @@ import (
 	"errors"
 
 	"cloudrive/server/internal/app"
+	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
+	"cloudrive/server/internal/lib/apperr"
 	"cloudrive/server/internal/repositories"
 
 	"github.com/gofiber/fiber/v3"
@@ -20,16 +22,16 @@ type userHandler struct {
 func (h *userHandler) Me(c fiber.Ctx) error {
 	uid, err := lib.ContextGetUID(c)
 	if err != nil {
-		return unauthorized(c)
+		return errUnauthorized
 	}
 
 	user, err := h.app.Repositories.User.Get(uid)
 	if err != nil {
 		if errors.Is(err, repositories.ErrRecordNotFound) {
-			return respond(c, fiber.StatusNotFound, "User not found")
+			return apperr.New(apperr.KindNotFound, "User not found")
 		}
 		return err
 	}
 
-	return c.JSON(user)
+	return dtos.OK(c, user)
 }

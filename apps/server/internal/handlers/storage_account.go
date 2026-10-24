@@ -4,6 +4,7 @@ import (
 	"cloudrive/server/internal/app"
 	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
+	"cloudrive/server/internal/lib/apperr"
 	"cloudrive/server/internal/models"
 
 	"github.com/gofiber/fiber/v3"
@@ -19,7 +20,7 @@ type storageAccountHandler struct {
 func (h *storageAccountHandler) authorize(c fiber.Ctx, accountID, userID uuid.UUID, manage bool) (*models.StorageAccount, error) {
 	account, err := h.app.Repositories.StorageAccount.Get(accountID)
 	if err != nil {
-		return nil, respondError(c, err)
+		return nil, dbError(err)
 	}
 
 	roles := []string{}
@@ -27,7 +28,7 @@ func (h *storageAccountHandler) authorize(c fiber.Ctx, accountID, userID uuid.UU
 		roles = []string{"owner", "admin"}
 	}
 
-	if _, err := requireOrgMember(c, h.app, account.OrganizationID, userID, roles...); err != nil {
+	if _, err := requireOrgMember(h.app, account.OrganizationID, userID, roles...); err != nil {
 		return nil, err
 	}
 
@@ -44,19 +45,19 @@ func (h *storageAccountHandler) Connect(c fiber.Ctx) error {
 	}
 
 	req := &dtos.CreateStorageAccountRequest{}
-	if err := bindBody(c, req); err != nil {
+	if err := lib.ValidateRequestBody(c, req); err != nil {
 		return err
 	}
 	if req.WorkspaceID == uuid.Nil {
-		return badRequest(c, "workspace_id is required")
+		return apperr.New(apperr.KindBadRequest, "workspace_id is required")
 	}
 
 	workspace, err := h.app.Repositories.Workspace.Get(req.WorkspaceID)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	if _, err := requireOrgMember(c, h.app, workspace.OrganizationID, userID, "owner", "admin"); err != nil {
+	if _, err := requireOrgMember(h.app, workspace.OrganizationID, userID, "owner", "admin"); err != nil {
 		return err
 	}
 
@@ -66,11 +67,11 @@ func (h *storageAccountHandler) Connect(c fiber.Ctx) error {
 	} else if req.ProviderSlug != "" {
 		provider, err := h.app.Repositories.Provider.GetBySlug(req.ProviderSlug)
 		if err != nil {
-			return respondError(c, err)
+			return dbError(err)
 		}
 		providerID = provider.ID
 	} else {
-		return badRequest(c, "provider_id or provider_slug is required")
+		return apperr.New(apperr.KindBadRequest, "provider_id or provider_slug is required")
 	}
 
 	account := &models.StorageAccount{
@@ -88,10 +89,10 @@ func (h *storageAccountHandler) Connect(c fiber.Ctx) error {
 	}
 
 	if err := h.app.Repositories.StorageAccount.Create(account, req.Credentials); err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(account)
+	return dtos.Created(c, account, "Storage account connected")
 }
 
 // List returns the workspace's connected accounts. Requires the workspace_id
@@ -104,19 +105,19 @@ func (h *storageAccountHandler) List(c fiber.Ctx) error {
 
 	lq := &dtos.ListStorageAccountsQuery{}
 	if err := lib.ValidateRequestQuery(c, lq); err != nil {
-		return requestError(c, err, "Invalid query parameters")
+		return err
 	}
 	wsID, err := uuid.Parse(lq.WorkspaceID)
 	if err != nil {
-		return badRequest(c, "Invalid workspace_id")
+		return apperr.New(apperr.KindBadRequest, "Invalid workspace_id")
 	}
 
 	workspace, err := h.app.Repositories.Workspace.Get(wsID)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	if _, err := requireOrgMember(c, h.app, workspace.OrganizationID, userID); err != nil {
+	if _, err := requireOrgMember(h.app, workspace.OrganizationID, userID); err != nil {
 		return err
 	}
 
@@ -127,10 +128,10 @@ func (h *storageAccountHandler) List(c fiber.Ctx) error {
 
 	accounts, metadata, err := h.app.Repositories.StorageAccount.ListByWorkspace(wsID, opts)
 	if err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return listResponse(c, q, metadata.Total, accounts)
+	return dtos.List(c, accounts, listMeta(q, metadata.Total))
 }
 
 // Get returns one connected account (never its credentials).
@@ -140,9 +141,9 @@ func (h *storageAccountHandler) Get(c fiber.Ctx) error {
 		return err
 	}
 
-	accountID, err := lib.ContextParamUUID(c, "accountId")
+	accountID, err := pathUUID(c, "accountId", "Invalid account id")
 	if err != nil {
-		return badRequest(c, "Invalid account id")
+		return err
 	}
 
 	account, err := h.authorize(c, accountID, userID, false)
@@ -150,7 +151,7 @@ func (h *storageAccountHandler) Get(c fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(account)
+	return dtos.OK(c, account)
 }
 
 // Update changes the account's label, settings, or status. Requires owner or
@@ -161,9 +162,9 @@ func (h *storageAccountHandler) Update(c fiber.Ctx) error {
 		return err
 	}
 
-	accountID, err := lib.ContextParamUUID(c, "accountId")
+	accountID, err := pathUUID(c, "accountId", "Invalid account id")
 	if err != nil {
-		return badRequest(c, "Invalid account id")
+		return err
 	}
 
 	account, err := h.authorize(c, accountID, userID, true)
@@ -172,7 +173,7 @@ func (h *storageAccountHandler) Update(c fiber.Ctx) error {
 	}
 
 	req := &dtos.UpdateStorageAccountRequest{}
-	if err := bindBody(c, req); err != nil {
+	if err := lib.ValidateRequestBody(c, req); err != nil {
 		return err
 	}
 
@@ -187,10 +188,10 @@ func (h *storageAccountHandler) Update(c fiber.Ctx) error {
 	}
 
 	if err := h.app.Repositories.StorageAccount.Update(accountID, account); err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return c.JSON(account)
+	return dtos.OK(c, account)
 }
 
 // Rotate replaces the stored credentials (e.g. after a token refresh). The
@@ -201,9 +202,9 @@ func (h *storageAccountHandler) Rotate(c fiber.Ctx) error {
 		return err
 	}
 
-	accountID, err := lib.ContextParamUUID(c, "accountId")
+	accountID, err := pathUUID(c, "accountId", "Invalid account id")
 	if err != nil {
-		return badRequest(c, "Invalid account id")
+		return err
 	}
 
 	if _, err := h.authorize(c, accountID, userID, true); err != nil {
@@ -211,15 +212,15 @@ func (h *storageAccountHandler) Rotate(c fiber.Ctx) error {
 	}
 
 	req := &dtos.UpdateCredentialsRequest{}
-	if err := bindBody(c, req); err != nil {
+	if err := lib.ValidateRequestBody(c, req); err != nil {
 		return err
 	}
 
 	if err := h.app.Repositories.StorageAccount.UpdateCredentials(accountID, req.Credentials); err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Credentials updated"})
+	return dtos.Message(c, fiber.StatusOK, "Credentials updated")
 }
 
 // Disconnect soft-deletes the account. Requires owner or admin of the
@@ -230,9 +231,9 @@ func (h *storageAccountHandler) Disconnect(c fiber.Ctx) error {
 		return err
 	}
 
-	accountID, err := lib.ContextParamUUID(c, "accountId")
+	accountID, err := pathUUID(c, "accountId", "Invalid account id")
 	if err != nil {
-		return badRequest(c, "Invalid account id")
+		return err
 	}
 
 	if _, err := h.authorize(c, accountID, userID, true); err != nil {
@@ -240,8 +241,8 @@ func (h *storageAccountHandler) Disconnect(c fiber.Ctx) error {
 	}
 
 	if err := h.app.Repositories.StorageAccount.SoftDelete(accountID); err != nil {
-		return respondError(c, err)
+		return dbError(err)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Storage account disconnected"})
+	return dtos.Message(c, fiber.StatusOK, "Storage account disconnected")
 }
