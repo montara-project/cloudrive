@@ -21,33 +21,23 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { SIDEBAR_MENU } from '@/data/sidebar-menu'
-import { useSession } from '@/hooks/use-session'
 
 import NavFolders from './nav-folders'
 import NavMain from './nav-main'
 import NavStorageCard from './nav-storage-card'
-import NavUser from './nav-user'
 import OrganizationRail from './organization-rail'
+import WorkspaceSelect from './workspace-switch'
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar>
 
 /**
  * The redesigned shell: a slim organization rail (logo, org switcher, collapse
- * toggle) beside the main sidebar (user card, search, main menu, workspace
- * folders, utilities, upgrade card) — mirroring the reference layout while
- * keeping every routed destination reachable.
+ * toggle) beside the main sidebar (workspace selector, search, main menu,
+ * workspace folders, utilities, upgrade card). The account menu lives in the
+ * top bar (UserMenu), not the sidebar.
  */
 export default function AppSidebar(props: AppSidebarProps) {
   const menu = SIDEBAR_MENU
-  const { data: session } = useSession()
-
-  const user = session
-    ? {
-        name: [session.user.first_name, session.user.last_name].filter(Boolean).join(' ') || 'User',
-        email: session.user.email,
-        avatar: session.user.image ?? '',
-      }
-    : { ...menu.user }
 
   return (
     <Sidebar
@@ -77,7 +67,7 @@ export default function AppSidebar(props: AppSidebarProps) {
       {/* Main sidebar */}
       <Sidebar collapsible="none" className="hidden flex-1 md:flex">
         <SidebarHeader className="gap-3 p-4">
-          <NavUser user={user} />
+          <WorkspaceSelect />
           <GlobalSearch />
         </SidebarHeader>
         <SidebarContent>

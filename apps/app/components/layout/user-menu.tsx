@@ -1,9 +1,7 @@
 'use client'
 
-import { BadgeCheck, ChevronsUpDown, LogOut } from 'lucide-react'
+import { BadgeCheck, LogOut } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-
-import type { UserInfo } from '@/types/menu'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -15,11 +13,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useSignOut } from '@/hooks/use-session'
-
-type NavUserProps = {
-  user: UserInfo
-}
+import { SIDEBAR_MENU } from '@/data/sidebar-menu'
+import { useSession, useSignOut } from '@/hooks/use-session'
 
 function initials(name: string) {
   return (
@@ -34,44 +29,46 @@ function initials(name: string) {
 }
 
 /**
- * The sidebar's user profile card — avatar, name, and email with the account
- * menu attached, sitting at the top of the main sidebar like the reference
- * shell. Replaces the old icon-rail avatar button.
+ * The top-bar account menu — an avatar button at the end of the utility
+ * cluster (next to settings) opening the account dropdown: identity, account
+ * settings, sign out. Reads the session directly so any header can drop it
+ * in without prop plumbing.
  */
-export default function NavUser({ user }: NavUserProps) {
+export default function UserMenu() {
   const router = useRouter()
+  const { data: session } = useSession()
   const { signOut, isSigningOut } = useSignOut()
+
+  const user = session
+    ? {
+        name: [session.user.first_name, session.user.last_name].filter(Boolean).join(' ') || 'User',
+        email: session.user.email,
+        avatar: session.user.image ?? '',
+      }
+    : { ...SIDEBAR_MENU.user }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-sidebar-border bg-background p-2 text-left shadow-xs transition-colors hover:bg-accent/60 data-[state=open]:bg-accent/60"
+          aria-label="Account menu"
+          className="cursor-pointer rounded-full outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          <Avatar className="size-9 rounded-lg">
+          <Avatar className="size-8 rounded-full border border-border">
             <AvatarImage src={user.avatar} alt={user.name} />
-            <AvatarFallback className="rounded-lg bg-primary/10 text-xs font-semibold text-primary">
+            <AvatarFallback className="rounded-full bg-primary/10 text-xs font-semibold text-primary">
               {initials(user.name)}
             </AvatarFallback>
           </Avatar>
-          <span className="grid min-w-0 flex-1 leading-tight">
-            <span className="truncate text-sm font-semibold">{user.name}</span>
-            <span className="truncate text-xs text-muted-foreground">{user.email}</span>
-          </span>
-          <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent
-        className="min-w-(--radix-dropdown-menu-trigger-width) rounded-xl"
-        align="start"
-        sideOffset={6}
-      >
+      <DropdownMenuContent className="min-w-56 rounded-xl" align="end" sideOffset={8}>
         <DropdownMenuLabel className="p-0 font-normal">
           <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-            <Avatar className="size-8 rounded-lg">
+            <Avatar className="size-8 rounded-full">
               <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback className="rounded-lg">{initials(user.name)}</AvatarFallback>
+              <AvatarFallback className="rounded-full">{initials(user.name)}</AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">{user.name}</span>

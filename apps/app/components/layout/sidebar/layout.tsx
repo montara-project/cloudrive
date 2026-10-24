@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import React from 'react'
 
 import ThemeToggle from '@/components/layout/theme-toggle'
+import UserMenu from '@/components/layout/user-menu'
 import { Button } from '@/components/ui/button'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 
@@ -63,6 +64,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
                     <IconSettings className="size-4.5" />
                   </Link>
                 </Button>
+                <UserMenu />
               </div>
             </header>
             <div className="flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">{children}</div>

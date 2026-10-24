@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 
 import ThemeToggle from '@/components/layout/theme-toggle'
+import UserMenu from '@/components/layout/user-menu'
 import { Button } from '@/components/ui/button'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -106,6 +107,7 @@ export default function WelcomeHeader() {
             <IconSettings className="size-4.5" />
           </Link>
         </Button>
+        <UserMenu />
       </div>
     </header>
   )
