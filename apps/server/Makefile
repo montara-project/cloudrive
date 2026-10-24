@@ -27,6 +27,7 @@ run:
 		--client-url=$(CLIENT_URL) \
 		--server-url=$(SERVER_URL) \
 		--cors-allowed-origins=$(CORS_ALLOWED_ORIGINS) \
+		--spa-dir=$(SPA_DIR) \
 		--super-user=$(SUPER_USER) \
 		--db-dsn=$(DB_DSN) \
 		--db-max-open-conns=$(DB_MAX_OPEN_CONNS) \
@@ -37,12 +38,17 @@ run:
 		--resend-debug-to-email=$(RESEND_DEBUG_TO_EMAIL) \
 		--google-client-id=$(GOOGLE_CLIENT_ID) \
 		--google-client-secret=$(GOOGLE_CLIENT_SECRET) \
+		--onedrive-client-id=$(ONEDRIVE_CLIENT_ID) \
+		--onedrive-client-secret=$(ONEDRIVE_CLIENT_SECRET) \
+		--onedrive-tenant=$(ONEDRIVE_TENANT_ID) \
+		--dropbox-client-id=$(DROPBOX_CLIENT_ID) \
+		--dropbox-client-secret=$(DROPBOX_CLIENT_SECRET) \
 		--s3-client-id=$(S3_CLIENT_ID) \
 		--s3-client-secret=$(S3_CLIENT_SECRET) \
 		--s3-region=$(S3_REGION) \
 		--s3-endpoint=$(S3_ENDPOINT) \
 		--s3-token=$(S3_TOKEN) \
-		--s3-api-addr=$(S3_API_ADDR) \
+		--s3-api-port=$(S3_API_PORT) \
 		--s3-staging-dir=$(S3_STAGING_DIR) \
 		--storage-credentials-keys=$(STORAGE_CREDENTIALS_KEYS) \
 		--typesafe-api-key=$(TYPESAFE_API_KEY) \
@@ -106,17 +112,3 @@ build/migrate:
 	@echo 'Building cmd/migrate...'
 	go build -ldflags="-s" -o=./bin/migrate ./cmd/migrate
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s" -o=./bin/linux_amd64/migrate ./cmd/migrate
-
-# ==================================================================================== #
-# RELEASE
-# ==================================================================================== #
-
-## release: bump version and create a release tag (auto-detect from commits); extras: make release ARGS="--type=minor --no-push"
-.PHONY: release
-release:
-	@bash scripts/release.sh $(ARGS)
-
-## release/dry-run: preview the next version bump without creating a tag
-.PHONY: release/dry-run
-release/dry-run:
-	@bash scripts/release.sh --dry-run $(ARGS)

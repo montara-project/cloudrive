@@ -1,0 +1,68 @@
+---
+title: Data model
+description: The Postgres schema behind tenants, storage accounts, the credential vault and the S3 gateway.
+icon: Database
+---
+
+Migrations live in `apps/server/migrations` (golang-migrate, `000001` … `000006`). Ids are
+`uuid` with `DEFAULT uuidv7()`, text columns carry `CHECK` constraints, timestamps are
+`timestamptz`. Every tenant-owned table carries `organization_id` with a composite foreign
+key to `workspaces (id, organization_id)`, ready for row-level security later.
+
+## Tables
+
+```text
+users ─┬─< organization_members >── organizations ──< workspaces ─┬─< workspace_members >── users
+       │                                  │                       │
+       └─< organization_invitations ──────┘                       ├─< storage_accounts ── providers
+                                                                  │        │
+                                                                  │        └── storage_account_secrets (1:1, encrypted)
+                                                                  ├─< s3_credentials (encrypted secret)
+                                                                  └─< s3_buckets ──> storage_accounts
+users ──< onboarding_surveys (one per user)
+```
+
+| Migration | Tables                                                                                                                                                                                              |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `000001`  | `users`                                                                                                                                                                                             |
+| `000002`  | `users.role`                                                                                                                                                                                        |
+| `000003`  | `organizations`, `organization_members` (`owner/admin/member`), `workspaces`, `workspace_members` (`admin/member/viewer`), `organization_invitations` (`pending/accepted/rejected/revoked/expired`) |
+| `000004`  | `providers`, `storage_accounts`, `storage_account_secrets`                                                                                                                                          |
+| `000005`  | `s3_credentials`, `s3_buckets`                                                                                                                                                                      |
+| `000006`  | `onboarding_surveys`                                                                                                                                                                                |
+
+## Providers
+
+A global catalog seeded by `seeders/provider.go`:
+
+| `slug`          | `protocol`      | `auth_type`  |
+| --------------- | --------------- | ------------ |
+| `google_drive`  | `oauth2_cloud`  | `oauth2`     |
+| `onedrive`      | `oauth2_cloud`  | `oauth2`     |
+| `dropbox`       | `oauth2_cloud`  | `oauth2`     |
+| `s3_compatible` | `s3_compatible` | `access_key` |
+
+`capabilities` (JSONB) records features such as versioning, trash and multipart.
+
+## Storage accounts and the vault
+
+- `storage_accounts` is one connected account bound to one workspace, with `display_name`,
+  `account_email`, `external_account_id`, `settings` (JSONB) and `status`
+  (`pending_auth`, `active`, `expired`, `revoked`, `error`). The same external account
+  cannot be connected twice to a workspace.
+- `storage_account_secrets` holds the credentials, 1:1, in a separate table so everyday
+  queries never touch them. Values are sealed with AES-256-GCM as
+  `key_id:base64(nonce):base64(ciphertext)` by `internal/lib/secretbox`, inside the
+  repositories.
+
+## S3 gateway tables
+
+- `s3_credentials`: access keys issued per workspace. The secret is encrypted with the same
+  vault, `status` is `active` or `revoked`, and `last_used_at` is updated on each request.
+- `s3_buckets`: a globally unique bucket name (S3 naming rules, enforced by a `CHECK`)
+  mapped to one storage account and a `root_prefix` (empty, or ending in `/`).
+
+## Planned
+
+`docs/erd-cloud-storage.md` describes the next part of the schema, not migrated yet: a
+unified file tree (`storage_nodes`), version history, shares, sync jobs and upload sessions.

@@ -8,7 +8,6 @@ import (
 	"cloudrive/server/internal/app"
 	"cloudrive/server/internal/config"
 	"cloudrive/server/internal/lib"
-	"cloudrive/server/internal/middlewares"
 	appmodels "cloudrive/server/internal/models"
 	"cloudrive/server/internal/services"
 
@@ -27,7 +26,6 @@ import (
 	magiclinkplugintypes "github.com/Authula/authula/plugins/magic-link/types"
 	oauth2plugin "github.com/Authula/authula/plugins/oauth2"
 	oauth2plugintypes "github.com/Authula/authula/plugins/oauth2/types"
-	sessionplugin "github.com/Authula/authula/plugins/session"
 	"github.com/google/uuid"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
@@ -78,9 +76,10 @@ func newAuthulaDB(cfg config.Config) (*bun.DB, error) {
 	return bun.NewDB(sqldb, pgdialect.New()), nil
 }
 
-// newAuthula wires the Authula instance: plugins (session, email via Resend,
-// email & password, magic link, OAuth2 Google), route mappings, and the
-// service hooks that bridge Authula users into the application's users table.
+// newAuthula wires the Authula instance: plugins (jwt, bearer, email via
+// Resend, email & password, magic link, OAuth2 Google), route mappings, and
+// the service hooks that bridge Authula users into the application's users
+// table. Authentication is bearer-token only — no session cookies.
 func newAuthula(application *app.Application, authulaDB *bun.DB) *authula.Auth {
 	cfg := application.Config
 
@@ -106,18 +105,6 @@ func newAuthula(application *app.Application, authulaDB *bun.DB) *authula.Auth {
 		authulaconfig.WithLogger(authulamodels.LoggerConfig{
 			Level: loggerLevel,
 		}),
-		authulaconfig.WithSession(authulamodels.SessionConfig{
-			CookieName:         middlewares.SessionCookieName,
-			ExpiresIn:          7 * 24 * time.Hour,
-			UpdateAge:          24 * time.Hour,
-			CookieMaxAge:       7 * 24 * time.Hour,
-			Secure:             cfg.App.Env == "production",
-			HttpOnly:           true,
-			SameSite:           "lax",
-			AutoCleanup:        true,
-			CleanupInterval:    time.Hour,
-			MaxSessionsPerUser: 5,
-		}),
 		authulaconfig.WithEventBus(authulamodels.EventBusConfig{
 			Provider:              events.ProviderGoChannel,
 			MaxConcurrentHandlers: 100,
@@ -130,7 +117,7 @@ func newAuthula(application *app.Application, authulaDB *bun.DB) *authula.Auth {
 				AllowCredentials: true,
 				AllowedOrigins:   []string{cfg.App.CORSAllowedOrigins},
 				AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-				AllowedHeaders:   []string{"Origin", "Content-Type", "Accept", "Authorization", "Set-Cookie", "Cookie"},
+				AllowedHeaders:   []string{"Origin", "Content-Type", "Accept", "Authorization"},
 				MaxAge:           time.Hour,
 			},
 		}),
@@ -139,11 +126,10 @@ func newAuthula(application *app.Application, authulaDB *bun.DB) *authula.Auth {
 	)
 
 	plugins := []authulamodels.Plugin{
-		sessionplugin.New(sessionplugin.SessionPluginConfig{Enabled: true}),
 		// JWT mints short-lived access tokens (with refresh tokens) after
 		// successful sign-ins; bearer validates those tokens from an
-		// Authorization: Bearer header so external, non-browser clients can
-		// call the API without a session cookie.
+		// Authorization: Bearer header. There is no cookie session plugin —
+		// bearer tokens are the only credential.
 		jwtplugin.New(jwtplugintypes.JWTPluginConfig{
 			Enabled:          true,
 			ExpiresIn:        15 * time.Minute,
@@ -193,44 +179,48 @@ func newAuthula(application *app.Application, authulaDB *bun.DB) *authula.Auth {
 		application.Logger.Warn("google oauth2 disabled: set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable it")
 	}
 
-	return authula.New(&authula.AuthConfig{
+	auth := authula.New(&authula.AuthConfig{
 		Config:  config,
 		Plugins: plugins,
 		DB:      authulaDB,
 	})
+	// Every token-issuing response carries expires_in/expires_at, so clients
+	// can schedule proactive refreshes from the real lifetime.
+	auth.RegisterHooks([]authulamodels.Hook{newTokenResponseExpiryHook()})
+
+	return auth
 }
 
 // routeMappings protects Authula's own routes. Auth endpoints that establish
-// identity run anonymously (session.auth.optional); everything that touches
-// an existing account requires a valid session (session.auth).
+// identity run anonymously (bearer.auth.optional); everything that touches
+// an existing account requires a valid bearer token (bearer.auth).
 //
 // Sign-in routes additionally carry jwt.respond_json, which replaces the JSON
 // body with the minted token pair ({"access_token","refresh_token",
-// "token_type"}) so external clients can obtain bearer credentials; the
-// session cookie is still delivered alongside it.
+// "token_type"}) so clients obtain bearer credentials directly.
 func routeMappings() []authulamodels.RouteMapping {
 	return []authulamodels.RouteMapping{
 		{
 			Paths:   []string{"GET:/me", "POST:/sign-out"},
-			Plugins: []string{"session.auth"},
+			Plugins: []string{"bearer.auth"},
 		},
 		{
 			Paths: []string{
 				"POST:/email-password/sign-in",
+				"POST:/email-password/sign-up",
 				"POST:/magic-link/exchange",
 			},
-			Plugins: []string{"session.auth.optional", "jwt.respond_json"},
+			Plugins: []string{"bearer.auth.optional", "jwt.respond_json"},
 		},
 		{
 			Paths: []string{
-				"POST:/email-password/sign-up",
 				"GET:/email-password/verify-email",
 				"POST:/magic-link/sign-in",
 				"GET:/magic-link/verify",
 				"GET:/oauth2/authorize/google",
 				"GET:/oauth2/callback/google",
 			},
-			Plugins: []string{"session.auth.optional"},
+			Plugins: []string{"bearer.auth.optional"},
 		},
 		{
 			Paths: []string{
@@ -239,7 +229,7 @@ func routeMappings() []authulamodels.RouteMapping {
 				"POST:/email-password/change-password",
 				"POST:/email-password/request-email-change",
 			},
-			Plugins: []string{"session.auth"},
+			Plugins: []string{"bearer.auth"},
 		},
 	}
 }

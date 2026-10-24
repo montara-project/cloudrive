@@ -1,0 +1,55 @@
+---
+title: Adding a feature
+description: The checklist for a new page or resource in apps/web.
+icon: SquarePlus
+---
+
+Every change lands in one layer with one job (see [API layer](/frontend/api-layer)).
+
+## A new resource
+
+1. **Model**: response type in `lib/api/models/<name>.ts`; add it to the `Models`
+   namespace in `models/index.ts`.
+2. **DTO**: zod request schema in `lib/api/dtos/<name>/schema.ts`, reusing helpers from
+   `lib/validation.ts`.
+3. **Service**: HTTP calls in `lib/api/services/<name>.ts` with a `ClientFetchApi`
+   instance; register it in `services/index.ts`.
+4. **Queries**: `queryOptions` / `mutationOptions` in `lib/api/queries/<name>.ts`. Start
+   every key with the resource constant so one `invalidateQueries({ queryKey: [KEY] })`
+   refreshes lists and details. Register in `queries/index.ts`.
+5. **UI**: components in `components/block/<feature>/`. Read data with
+   `useQuery(queries.<name>.list(...))`, write with `useMutation(queries.<name>.create())`,
+   and surface errors with `toastAxiosError`.
+
+## A new page
+
+1. Add a route file under `src/routes`, inside `(dashboard)/` when it needs a session:
+
+   ```tsx title="src/routes/(dashboard)/reports/index.tsx"
+   import { createFileRoute } from '@tanstack/react-router'
+
+   import ReportsContent from '@/components/block/reports/content'
+
+   export const Route = createFileRoute('/(dashboard)/reports/')({
+     head: () => ({ meta: [{ title: 'Reports | Cloudrive' }] }),
+     component: ReportsContent,
+   })
+   ```
+
+2. Run `pnpm dev:web` or `pnpm --filter @cloudrive/web generate-routes` to update
+   `src/routeTree.gen.ts`, and commit it.
+3. Add the entry to `data/sidebar-menu.ts`. Set `scope: 'workspace'` when the page needs
+   the active workspace, so the sidebar link carries `?org=` and `?ws=`.
+
+## Before you push
+
+```sh
+pnpm --filter @cloudrive/web build   # format check, lint, typecheck, build
+```
+
+Keep these rules (the first three fail the build when broken):
+
+- No `next/*` imports: this is a Vite app. Links come from `@tanstack/react-router`.
+- Type-only imports use `import type` (`verbatimModuleSyntax` is on).
+- `env` is read only through `config/env.ts`.
+- Never put a query string in a router `to`; use `search` or `hrefToLocation`.

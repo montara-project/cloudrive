@@ -1,0 +1,81 @@
+---
+title: API layer
+description: How the UI reaches the REST API through models, DTOs, services and queries.
+icon: Layers
+---
+
+UI code never calls axios directly. Every request flows through four layers in
+`src/lib/api`:
+
+```text
+component ─▶ queries (React Query) ─▶ services (HTTP) ─▶ client-fetch (axios) ─▶ /v1/…
+                │                        │
+                └── dtos (zod) ──────────┘   models (response types)
+```
+
+| Layer      | Folder             | Job                                                                                                    |
+| ---------- | ------------------ | ------------------------------------------------------------------------------------------------------ |
+| `models`   | `lib/api/models`   | Response shapes, exported through the `Models` namespace.                                              |
+| `dtos`     | `lib/api/dtos`     | zod request schemas, shared by forms and services.                                                     |
+| `services` | `lib/api/services` | One object per resource doing HTTP calls; registered in `services/index.ts`.                           |
+| `queries`  | `lib/api/queries`  | `queryOptions` / `mutationOptions` with query keys and invalidation; registered in `queries/index.ts`. |
+
+## The HTTP client
+
+`lib/api/client-fetch.ts` builds axios instances through `ClientFetchApi`:
+
+```ts
+const api = new ClientFetchApi({
+  baseURL: String(env.VITE_API_URL),
+  storageKey: AUTH_STORAGE_KEYS.AUTH_STORAGE, // omit for public endpoints
+}).default
+```
+
+With a `storageKey`, requests carry the bearer token and 401s go through the refresh
+flow described in [Authentication](/frontend/auth). The waitlist and contact
+services omit it because those endpoints are public.
+
+Services in this app write their calls explicitly (`api.get`, `api.post`, …).
+`lib/api/resource.ts` → `clientResource(path, methods)` is vine's generator for a plain
+CRUD resource (`list/get/store/update/edit/delete`) when one fits.
+
+## Response envelope
+
+```ts
+// list
+{ data: T[], metadata: { total, offset, limit } }
+// single item
+{ data: T, message?: string }
+// error
+{ message: string, errors?: [{ code, field, message, param }] }
+```
+
+Lists take `offset` (0-based) and `limit` (default 20, at most 100). Types are in
+`src/types/api.ts`.
+
+## Errors in the UI
+
+`lib/api/axios-error.ts`:
+
+- `toastAxiosError(error)`: shows the API's `message`, plus every field message on a 422.
+- `errorResponse<T>(error)`: the failed response body, or `undefined` when the API was
+  never reached. Lets a component tell "server said no" from "offline" without importing
+  axios.
+
+## Registered resources
+
+| `queries.*`                                 | Endpoints                                                 |
+| ------------------------------------------- | --------------------------------------------------------- |
+| `organizations`, `.members`, `.invitations` | `/v1/organizations/…`                                     |
+| `workspaces`, `.members`                    | `/v1/organizations/:orgId/workspaces`, `/v1/workspaces/…` |
+| `providers`                                 | `/v1/providers`                                           |
+| `storageAccounts`                           | `/v1/storage/accounts/…`, `/v1/storage/oauth/…`           |
+| `s3.credentials`, `s3.buckets`              | `/v1/workspaces/:wsId/s3/…` (buckets also `recentFiles`)  |
+| `drive`                                     | `/v1/workspaces/:wsId/drive`                              |
+| `onboarding`                                | `/v1/onboarding/survey`                                   |
+| `waitlist`, `contact`                       | `/v1/waitlist`, `/v1/contact` (public forms)              |
+
+<Callout type="warn">
+  `POST /v1/waitlist` and `POST /v1/contact` are not implemented in `apps/server` yet; the marketing
+  forms show "Something went wrong" until they are.
+</Callout>

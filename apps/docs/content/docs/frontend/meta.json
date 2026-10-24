@@ -1,0 +1,4 @@
+{
+  "title": "Frontend",
+  "pages": ["index", "routing", "auth", "api-layer", "styling", "adding-features"]
+}

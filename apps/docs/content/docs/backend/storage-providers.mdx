@@ -1,0 +1,104 @@
+---
+title: Storage providers
+description: Connecting Google Drive, OneDrive, Dropbox and S3-compatible accounts, and the connectors that talk to them.
+icon: Cloud
+---
+
+## Two ways to connect
+
+### OAuth providers (Google Drive, OneDrive, Dropbox)
+
+The OAuth flow is hosted by the server, so provider tokens never reach the browser.
+
+```text
+SPA ── POST /v1/storage/oauth/:provider/authorize { workspace_id } ──▶ API
+    ◀─ { authorization_url, state, redirect_uri }
+SPA ── browser redirect ──▶ provider consent screen
+provider ── GET /v1/storage/oauth/:provider/callback?code&state ──▶ API
+    API: verify state → exchange code → fetch profile + quota → upsert account + secret
+    ◀─ 302 CLIENT_URL/storage?connected=<provider>&status=ok|error&reason=…
+```
+
+- `state` is an HMAC-SHA256 token signed with `APP_SECRET`, carrying the workspace, user
+  and provider, valid for 10 minutes. No server-side session store is involved, so it
+  works across restarts and replicas.
+- The callback is public; the signed `state` is its only protection.
+- A connect without a refresh token fails: access tokens are never stored alone.
+- Reconnecting the same account in the same workspace updates it instead of duplicating it.
+
+| Provider       | Scopes                                                                         |
+| -------------- | ------------------------------------------------------------------------------ |
+| `google_drive` | `openid email profile https://www.googleapis.com/auth/drive`                   |
+| `onedrive`     | `offline_access Files.ReadWrite.All User.Read`                                 |
+| `dropbox`      | `account_info.read files.metadata.read files.content.read files.content.write` |
+
+The `/storage` page reads `?connected=…&status=…`, shows the result, and strips the params.
+
+### S3-compatible accounts
+
+Posted directly with credentials:
+
+```http
+POST /v1/storage/accounts
+{
+  "workspace_id": "…",
+  "provider_slug": "s3_compatible",
+  "display_name": "Team MinIO",
+  "external_account_id": "minio-team",
+  "credentials": {
+    "endpoint": "minio.example.com:9000",
+    "access_key_id": "…",
+    "secret_access_key": "…",
+    "bucket": "cloudrive",
+    "secure": true
+  }
+}
+```
+
+`secure: false` targets plain-HTTP endpoints such as a local MinIO.
+
+## Managing accounts
+
+| Endpoint                                   | Does                                                              |
+| ------------------------------------------ | ----------------------------------------------------------------- |
+| `GET /v1/storage/accounts?workspace_id=…`  | List a workspace's accounts                                       |
+| `PATCH /v1/storage/accounts/:id`           | Rename, change `status` or `settings`                             |
+| `PUT /v1/storage/accounts/:id/credentials` | Replace (and re-encrypt) the credentials                          |
+| `POST /v1/storage/accounts/:id/refresh`    | Force an OAuth token refresh                                      |
+| `GET /v1/storage/accounts/:id/quota`       | `{ total_bytes, used_bytes }` from the provider (OAuth providers) |
+| `DELETE /v1/storage/accounts/:id`          | Disconnect                                                        |
+
+## Connectors
+
+`internal/connectors` turns S3-shaped operations into each provider's API. The `Registry`
+picks a connector by the provider's `protocol` (and `slug` for `oauth2_cloud`), passing the
+decrypted credentials; connectors never touch the database.
+
+```go
+type Connector interface {
+    PutObject(ctx, key, r, size, contentType) (Object, error)
+    GetObject(ctx, key) (io.ReadCloser, Object, error)
+    StatObject(ctx, key) (Object, error)
+    DeleteObject(ctx, key) error
+    ListObjects(ctx, prefix, delimiter, continuationToken, maxKeys) (ListPage, error)
+    CreateMultipartUpload / UploadPart / CompleteMultipartUpload / AbortMultipartUpload
+}
+```
+
+| File          | Backend                                                            |
+| ------------- | ------------------------------------------------------------------ |
+| `s3.go`       | Any S3 API (AWS, MinIO, R2); multipart passes straight through.    |
+| `gdrive.go`   | Google Drive REST; multipart parts are staged in `S3_STAGING_DIR`. |
+| `dropbox.go`  | Dropbox API.                                                       |
+| `onedrive.go` | Microsoft Graph.                                                   |
+
+OAuth connectors refresh access tokens through an `oauth2.TokenSource` per request; tokens
+are not cached in the database. An operation a provider cannot support returns
+`ErrNotSupported`, which the gateway maps to an S3 error.
+
+## Browsing
+
+- `GET /v1/workspaces/:wsId/drive?prefix=&account=&limit=` lists one level of every active
+  account (folders first), or of one account with `account`. The dashboard's My Drive uses it.
+- `GET /v1/workspaces/:wsId/s3/recent-files?limit=` merges the newest objects across the
+  workspace's gateway buckets. A failing provider degrades to partial results.

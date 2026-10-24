@@ -28,6 +28,9 @@ func parseFlag(cfg *config.Config) {
 	// trusted. Leave empty when the app is exposed directly.
 	flag.StringVar(&trustedProxies, "trusted-proxies", "", "Trusted proxy IPs/CIDRs (comma-separated)")
 
+	// Built single-page app (apps/web) served at /; empty disables it.
+	flag.StringVar(&cfg.App.SPADir, "spa-dir", "", "Directory of a built single-page app served at / (empty disables)")
+
 	// Default admin account seeded at startup, in email:password form.
 	flag.StringVar(&superUser, "super-user", "", "Default admin user (email:password, optional)")
 
@@ -42,9 +45,18 @@ func parseFlag(cfg *config.Config) {
 	flag.StringVar(&cfg.Resend.FromEmail, "resend-from-email", "", "Resend from email")
 	flag.StringVar(&cfg.Resend.DebugToEmail, "resend-debug-to-email", "", "Resend debug to email")
 
-	// Google (used by Authula's OAuth2 plugin)
+	// Google (used by Authula's OAuth2 plugin and the Google Drive connector)
 	flag.StringVar(&cfg.Google.ClientID, "google-client-id", "", "Google client ID")
 	flag.StringVar(&cfg.Google.ClientSecret, "google-client-secret", "", "Google client secret")
+
+	// OneDrive (Microsoft Graph OAuth2, storage provider connector)
+	flag.StringVar(&cfg.OneDrive.ClientID, "onedrive-client-id", "", "OneDrive client ID")
+	flag.StringVar(&cfg.OneDrive.ClientSecret, "onedrive-client-secret", "", "OneDrive client secret")
+	flag.StringVar(&cfg.OneDrive.Tenant, "onedrive-tenant", "common", "OneDrive authority tenant (common|consumers|organizations|directory id)")
+
+	// Dropbox (OAuth2, storage provider connector)
+	flag.StringVar(&cfg.Dropbox.ClientID, "dropbox-client-id", "", "Dropbox client ID")
+	flag.StringVar(&cfg.Dropbox.ClientSecret, "dropbox-client-secret", "", "Dropbox client secret")
 
 	// S3
 	flag.StringVar(&cfg.S3.ClientID, "s3-client-id", "", "S3 client ID")
@@ -54,8 +66,8 @@ func parseFlag(cfg *config.Config) {
 	flag.StringVar(&cfg.S3.Token, "s3-token", "", "S3 token")
 
 	// S3-compatible gateway: separate listener speaking the S3 REST dialect
-	// (SigV4, path-style, XML). Empty disables the gateway listener.
-	flag.StringVar(&cfg.S3.APIAddr, "s3-api-addr", "", "S3 gateway listen address (:9000); empty disables it")
+	// (SigV4, path-style, XML). 0 disables the gateway listener.
+	flag.IntVar(&cfg.S3.APIPort, "s3-api-port", 9000, "S3 gateway listen port; 0 disables it")
 	flag.StringVar(&cfg.S3.StagingDir, "s3-staging-dir", "", "Staging directory for multipart uploads to non-passthrough backends")
 
 	// Storage provider credential vault: comma-separated key_id:base64 entries

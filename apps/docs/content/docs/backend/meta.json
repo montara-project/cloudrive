@@ -1,0 +1,12 @@
+{
+  "title": "Backend",
+  "pages": [
+    "index",
+    "configuration",
+    "authentication",
+    "authorization",
+    "data-model",
+    "storage-providers",
+    "s3-gateway"
+  ]
+}

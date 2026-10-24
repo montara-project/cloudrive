@@ -1,0 +1,72 @@
+---
+title: Backend overview
+description: apps/server is a Go API on Fiber v3 with Bun on Postgres, Authula for auth, and an S3-compatible gateway.
+icon: Server
+---
+
+## Stack
+
+- Go 1.26, [Fiber v3](https://gofiber.io) for HTTP.
+- PostgreSQL 18 through [Bun](https://bun.uptrace.dev); migrations in golang-migrate format.
+- [Authula](https://authula.dev) for authentication (JWT + bearer, email & password,
+  magic link, Google OAuth2), in its own `authula` schema.
+- Resend for transactional email (HTML templates in `templates/emails`).
+- `golang.org/x/oauth2` for storage provider OAuth, an in-house SigV4 verifier for the
+  gateway.
+
+## Layout
+
+```text
+cmd/
+  api/            entrypoint: flags, DB, Authula wiring, middleware, routes, boot recovery
+  migrate/        migration runner (+ --seed)
+internal/
+  app/            the Application struct passed to everything (config, repos, services)
+  config/         typed configuration
+  handlers/       JSON handlers, one file per resource; helpers.go (envelope, roles)
+  middlewares/    Authorization (bearer), SPA serving
+  dtos/           request bodies and their validation rules
+  models/         Bun models
+  repositories/   data access; the vault-backed ones encrypt/decrypt credentials
+  connectors/     one Connector per provider protocol + Registry
+  services/
+    s3/           the S3-compatible gateway (handler, errors, aws-chunked decoder)
+    provideroauth/  provider OAuth flows and the signed `state`
+    email.go      Resend
+  lib/            validator, secretbox (AES-256-GCM), sigv4, bootdiag, context helpers
+  seeders/        provider catalog seeder
+migrations/       SQL, 000001 … 000006
+templates/        email templates
+public/           static files served from / (favicon.ico, static/…)
+scripts/          entrypoint.sh (env → flags)
+```
+
+## Boot sequence (`cmd/api/main.go`)
+
+1. Parse flags (`flag.go`) and validate the required ones.
+2. Connect Postgres; build the credential vault (`secretbox`). A bad key stops startup.
+3. Open a second connection for Authula with `search_path=authula` and run its migrations.
+4. Optionally apply app migrations first (`MIGRATE_ON_BOOT`).
+5. Seed the `SUPER_USER` admin if configured (idempotent).
+6. Start the REST API and, unless `S3_API_PORT=0`, the S3 gateway listener.
+
+If boot fails because tables are missing (SQLSTATE `42P01`), `boot_recovery.go` logs a
+hint, or with `MIGRATE_ON_BOOT=true` runs `/app/migrate up` and retries once. With a
+`TYPESAFE_API_KEY` it also logs a typed root-cause diagnosis.
+
+## Middleware order (REST listener)
+
+`recover` → `logger` → `helmet` (COEP relaxed for the SPA's CDN assets) → `requestid` →
+`compress` → `cors` → rate limiter (100 requests/minute per IP; localhost exempt outside
+production) → static `./public` → routes → SPA fallback (when `SPA_DIR` is set).
+
+## Make targets
+
+| Target                            | Does                                                    |
+| --------------------------------- | ------------------------------------------------------- |
+| `make run`                        | `go run ./cmd/api` with flags from `.env`               |
+| `make db/migrations/up`           | Apply migrations (`/seed` variant also seeds providers) |
+| `make db/migrations/down`         | Roll back                                               |
+| `make db/migrations/refresh`      | Down + up (`/seed` variant available)                   |
+| `make db/migrations/new name=…`   | New migration pair (needs the `migrate` CLI)            |
+| `make build/api`, `build/migrate` | Binaries in `./bin` (+ `linux_amd64`)                   |

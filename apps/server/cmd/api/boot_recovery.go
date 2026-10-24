@@ -64,7 +64,9 @@ func diagnoseBootFailure(application *app.Application, bootErr error) {
 // boot failed on missing application tables (SQLSTATE 42P01) and
 // MIGRATE_ON_BOOT is enabled, the image's own migrate binary is executed
 // against the configured database. Returns true only when migrations were
-// applied, so the caller can retry boot once.
+// applied, so the caller can retry boot once. This stays as the reactive
+// safety net behind applyMigrationsOnBoot, which runs the same command
+// proactively before the schema is first used.
 func recoverWithMigrations(application *app.Application, bootErr error) bool {
 	if !application.Config.Diag.MigrateOnBoot || !isUndefinedTable(bootErr) {
 		return false
@@ -78,22 +80,53 @@ func recoverWithMigrations(application *app.Application, bootErr error) bool {
 
 	application.Logger.Info("boot failed on missing application tables — applying migrations", "binary", binary)
 
+	if err := runMigrations(application); err != nil {
+		application.Logger.Error("on-boot migration failed", "error", err.Error())
+		return false
+	}
+
+	return true
+}
+
+// applyMigrationsOnBoot applies the application migrations before anything
+// reads or writes the schema, so a healthy first boot never has to fail into
+// the recovery path above. `migrate up` is a no-op version check on an
+// up-to-date database. A missing migrate binary only skips the pre-pass (the
+// reactive recovery path still guards) — an environment whose tables already
+// exist must keep booting — while a failing migration run is fatal: continuing
+// would just guarantee the super-user seed failure next.
+func applyMigrationsOnBoot(application *app.Application) {
+	if !application.Config.Diag.MigrateOnBoot {
+		return
+	}
+
+	if findMigrateBinary() == "" {
+		application.Logger.Warn("MIGRATE_ON_BOOT is enabled but the migrate binary was not found — skipping pre-boot migrations")
+		return
+	}
+
+	application.Logger.Info("applying migrations before boot")
+
+	if err := runMigrations(application); err != nil {
+		application.Logger.Error("on-boot migration failed", "error", err.Error())
+		os.Exit(1)
+	}
+}
+
+// runMigrations executes the image's migrate binary against the configured
+// database.
+func runMigrations(application *app.Application) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, binary,
+	cmd := exec.CommandContext(ctx, findMigrateBinary(),
 		"--db-dsn="+application.Config.DB.DSN,
 		"up",
 	)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	if err := cmd.Run(); err != nil {
-		application.Logger.Error("on-boot migration failed", "error", err.Error())
-		return false
-	}
-
-	return true
+	return cmd.Run()
 }
 
 // isUndefinedTable reports whether the error is Postgres SQLSTATE 42P01 —

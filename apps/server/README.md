@@ -27,15 +27,18 @@ make run                   # go run ./cmd/api with flags from .env
 ## Container
 
 The Dockerfile builds a minimal Alpine image (`api` + `migrate` binaries,
-migrations, templates, static assets) running as a non-root user. The API
-listens on 8080; the S3 gateway on 9000 when `S3_API_ADDR` is set.
+migrations, templates, static assets, and the `apps/web` SPA) running as a
+non-root user. Its build context is the repo root, since it also builds the
+SPA; the API serves it at `/` from `SPA_DIR=/app/web` (empty disables it),
+while `/v1` and `/health` stay API-only. The API
+listens on 8080; the S3 gateway on `S3_API_PORT` (default 9000, `0` disables it).
 
 The binary is configured by CLI flags only, so the image entrypoint
 (`scripts/entrypoint.sh`) translates environment variables into flags —
 the same names as `.env.example`:
 
 ```sh
-docker build -t cloudrive-api apps/server
+docker build -f apps/server/Dockerfile -t cloudrive-api .
 docker run -e MACHINE_ID=1 -e APP_SECRET=... -e DB_DSN=... \
     -e CLIENT_URL=... -e SERVER_URL=... \
     -e RESEND_API_KEY=... -e RESEND_FROM_EMAIL=... -e RESEND_DEBUG_TO_EMAIL=... \
@@ -47,7 +50,7 @@ Only set variables become flags, so compose `env_file` or `docker run -e`
 work directly; no `.env` is baked into the image.
 
 Auth endpoints are served by Authula under `/v1/auth`. Everything else under
-`/v1` requires a session.
+`/v1` requires a bearer token (`Authorization: Bearer <jwt>`).
 
 ## S3 gateway
 
@@ -55,15 +58,15 @@ The gateway has two surfaces:
 
 1. **Management API** — JSON endpoints on the main listener for issuing
    SigV4 credentials and mapping bucket names onto storage accounts.
-2. **S3-compatible API** — a dedicated Fiber app on `S3_API_ADDR` (e.g.
-   `:9000`; empty disables it) speaking the AWS S3 REST dialect: XML bodies,
+2. **S3-compatible API** — a dedicated Fiber app on `S3_API_PORT` (default
+   `9000`; `0` disables it) speaking the AWS S3 REST dialect: XML bodies,
    path-style addressing, SigV4 auth (header or presigned URL). Point any
    S3 client at it with the issued access key/secret.
 
 ### Management endpoints
 
 Registered in `cmd/api/routes.go`, implemented in
-`internal/handlers/s3_gateway.go`. All require a session; create/delete
+`internal/handlers/s3_gateway.go`. All require a bearer token; create/delete
 operations additionally require org `owner` or `admin` role.
 
 | Method   | Path                                                | Handler            | Description                                                                               |

@@ -34,7 +34,7 @@ Implementasi in-house (~1 file + middleware): parse `Authorization` header & var
 
 ## Tahap 4 — S3 Gateway handlers (listener kedua)
 
-- Listener Fiber kedua di `cmd/api` (addr dari config baru `S3_API_ADDR`, default `:9000`), **path-style only** (`/{bucket}/{key}`), response XML (`encoding/xml`, format error `Error` S3 standar: `NoSuchBucket`, `NoSuchKey`, `AccessDenied`, `SignatureDoesNotMatch`, dll).
+- Listener Fiber kedua di `cmd/api` (addr dari config baru `S3_API_PORT`, default `:9000`), **path-style only** (`/{bucket}/{key}`), response XML (`encoding/xml`, format error `Error` S3 standar: `NoSuchBucket`, `NoSuchKey`, `AccessDenied`, `SignatureDoesNotMatch`, dll).
 - Operasi: `ListBuckets`, `CreateBucket`/`DeleteBucket`/`HeadBucket` (validasi nama bucket vs `s3_buckets`), `ListObjectsV2` (prefix, delimiter, max-keys, continuation), `PutObject`, `GetObject`, `HeadObject`, `DeleteObject`, dan multipart (`POST ?uploads`, `PUT ?partNumber&uploadId`, `POST ?uploadId`, `DELETE ?uploadId`).
 - Setiap operasi: SigV4 → access key → workspace → bucket → storage account → connector → proxy; tulis `last_used_at` di `s3_credentials`.
 
@@ -52,7 +52,7 @@ Implementasi in-house (~1 file + middleware): parse `Authorization` header & var
 
 - Unit test: sigv4 (test vector AWS), validasi nama bucket, repo.
 - Integration test: MinIO via testcontainers-go (sudah ada di go.mod sebagai indirect) — put/get/list/multipart end-to-end melalui gateway dengan minio-go sebagai client.
-- Update `.env.example` (`S3_API_ADDR`, `S3_STAGING_DIR`), contoh konfigurasi aws-cli/rclone, dan catatan di `docs/erd-cloud-storage.md`.
+- Update `.env.example` (`S3_API_PORT`, `S3_STAGING_DIR`), contoh konfigurasi aws-cli/rclone, dan catatan di `docs/erd-cloud-storage.md`.
 
 ## Keputusan desain yang saya ambil
 

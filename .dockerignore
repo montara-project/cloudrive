@@ -1,0 +1,18 @@
+# Both images (apps/server/Dockerfile, apps/docs/Dockerfile) build from the
+# repo root, so this root file is the one BuildKit reads.
+.git
+**/node_modules
+**/dist
+**/.next
+**/.source
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+**/*.tsbuildinfo
+**/.DS_Store
+.omc
+.trail/cache
+graft
+apps/server/bin
+apps/server/tmp

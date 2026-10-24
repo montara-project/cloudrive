@@ -4,6 +4,7 @@ import (
 	"cloudrive/server/internal/app"
 	"cloudrive/server/internal/connectors"
 	"cloudrive/server/internal/handlers"
+	"cloudrive/server/internal/middlewares"
 	"cloudrive/server/internal/services/s3"
 	"errors"
 	"fmt"
@@ -72,7 +73,11 @@ func serve(app *app.Application) error {
 	// Middleware
 	server.Use(recover.New())
 	server.Use(logger.New())
-	server.Use(helmet.New())
+	server.Use(helmet.New(helmet.Config{
+		// The default require-corp blocks the cross-origin fonts and scripts
+		// the SPA loads from CDNs; the API's JSON is unaffected.
+		CrossOriginEmbedderPolicy: "unsafe-none",
+	}))
 	server.Use(requestid.New())
 	server.Use(compress.New())
 
@@ -118,11 +123,24 @@ func serve(app *app.Application) error {
 	// Initial Routes
 	routes(server, app)
 
+	// The SPA answers whatever the API routes did not: its built files, then
+	// index.html for client-side routes. /v1 and /health stay API-only.
+	if dir := app.Config.App.SPADir; dir != "" {
+		spa, err := middlewares.SPA(middlewares.SPAConfig{
+			FS:      os.DirFS(dir),
+			Exclude: []string{"/v1", "/health"},
+		})
+		if err != nil {
+			return err
+		}
+		server.Use(spa)
+	}
+
 	// S3-compatible gateway: a separate Fiber app with its own listener —
 	// different dialect (XML, path-style, SigV4) from the JSON REST API, so
 	// middlewares like CORS/limiter/compress must not apply. Disabled when
-	// S3_API_ADDR is empty.
-	if app.Config.S3.APIAddr != "" {
+	// S3_API_PORT is 0.
+	if app.Config.S3.APIPort != 0 {
 		gateway := fiber.New(fiber.Config{
 			BodyLimit: 5 * 1024 * 1024 * 1024, // 5GB: object PUT streams through
 			// Body must be a stream, not a buffered copy: object PUTs are
@@ -149,15 +167,23 @@ func serve(app *app.Application) error {
 				StorageAccount: app.Repositories.StorageAccount,
 			},
 			Registry: connectors.Registry{
-				GoogleClientID:     app.Config.Google.ClientID,
-				GoogleClientSecret: app.Config.Google.ClientSecret,
-				StagingDir:         app.Config.S3.StagingDir,
+				GoogleClientID:       app.Config.Google.ClientID,
+				GoogleClientSecret:   app.Config.Google.ClientSecret,
+				OneDriveClientID:     app.Config.OneDrive.ClientID,
+				OneDriveClientSecret: app.Config.OneDrive.ClientSecret,
+				OneDriveTenant:       app.Config.OneDrive.Tenant,
+				DropboxClientID:      app.Config.Dropbox.ClientID,
+				DropboxClientSecret:  app.Config.Dropbox.ClientSecret,
+				ServerURL:            app.Config.App.ServerURL,
+				StagingDir:           app.Config.S3.StagingDir,
 			},
 		})
 
 		go func() {
-			app.Logger.Info("s3 gateway started", "addr", app.Config.S3.APIAddr)
-			if err := gateway.Listen(app.Config.S3.APIAddr); err != nil {
+			app.Logger.Info("s3 gateway started", "addr", app.Config.S3.APIPort)
+			listenPort := fmt.Sprintf(":%d", app.Config.S3.APIPort)
+
+			if err := gateway.Listen(listenPort); err != nil {
 				app.Logger.Error("failed to start s3 gateway", "error", err)
 			}
 		}()
@@ -176,9 +202,9 @@ func serve(app *app.Application) error {
 	// Start server in a goroutine
 	go func() {
 		app.Logger.Info("server started on port", "port", app.Config.App.Port)
-		listerPort := fmt.Sprintf(":%d", app.Config.App.Port)
+		listenPort := fmt.Sprintf(":%d", app.Config.App.Port)
 
-		if err := server.Listen(listerPort); err != nil {
+		if err := server.Listen(listenPort); err != nil {
 			app.Logger.Error("failed to start server", "error", err)
 		}
 	}()

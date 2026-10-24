@@ -20,6 +20,7 @@ for pair in \
 	server-url:SERVER_URL \
 	cors-allowed-origins:CORS_ALLOWED_ORIGINS \
 	trusted-proxies:TRUSTED_PROXIES \
+	spa-dir:SPA_DIR \
 	super-user:SUPER_USER \
 	db-dsn:DB_DSN \
 	db-max-open-conns:DB_MAX_OPEN_CONNS \
@@ -30,12 +31,17 @@ for pair in \
 	resend-debug-to-email:RESEND_DEBUG_TO_EMAIL \
 	google-client-id:GOOGLE_CLIENT_ID \
 	google-client-secret:GOOGLE_CLIENT_SECRET \
+	onedrive-client-id:ONEDRIVE_CLIENT_ID \
+	onedrive-client-secret:ONEDRIVE_CLIENT_SECRET \
+	onedrive-tenant:ONEDRIVE_TENANT_ID \
+	dropbox-client-id:DROPBOX_CLIENT_ID \
+	dropbox-client-secret:DROPBOX_CLIENT_SECRET \
 	s3-client-id:S3_CLIENT_ID \
 	s3-client-secret:S3_CLIENT_SECRET \
 	s3-region:S3_REGION \
 	s3-endpoint:S3_ENDPOINT \
 	s3-token:S3_TOKEN \
-	s3-api-addr:S3_API_ADDR \
+	s3-api-port:S3_API_PORT \
 	s3-staging-dir:S3_STAGING_DIR \
 	storage-credentials-keys:STORAGE_CREDENTIALS_KEYS \
 	typesafe-api-key:TYPESAFE_API_KEY \

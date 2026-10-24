@@ -161,11 +161,11 @@ func (r S3CredentialRepository) ListByWorkspace(workspaceID uuid.UUID, opts *Que
 
 	// Whitelist of allowed columns for ORDER BY to prevent SQL injection
 	allowedOrderByColumns := map[string]bool{
-		"id":             true,
-		"access_key_id":  true,
-		"status":         true,
-		"last_used_at":   true,
-		"created_at":     true,
+		"id":            true,
+		"access_key_id": true,
+		"status":        true,
+		"last_used_at":  true,
+		"created_at":    true,
 	}
 
 	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, "created_at")

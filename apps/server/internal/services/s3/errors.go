@@ -32,17 +32,17 @@ func (e apiError) Error() string {
 
 // Canonical S3 error constructors the gateway raises.
 var (
-	errAccessDenied    = apiError{code: "AccessDenied", status: 403, message: "Access Denied"}
-	errNoSuchBucket    = apiError{code: "NoSuchBucket", status: 404, message: "The specified bucket does not exist"}
-	errNoSuchKey       = apiError{code: "NoSuchKey", status: 404, message: "The specified key does not exist."}
-	errNoSuchUpload    = apiError{code: "NoSuchUpload", status: 404, message: "The specified upload does not exist."}
+	errAccessDenied      = apiError{code: "AccessDenied", status: 403, message: "Access Denied"}
+	errNoSuchBucket      = apiError{code: "NoSuchBucket", status: 404, message: "The specified bucket does not exist"}
+	errNoSuchKey         = apiError{code: "NoSuchKey", status: 404, message: "The specified key does not exist."}
+	errNoSuchUpload      = apiError{code: "NoSuchUpload", status: 404, message: "The specified upload does not exist."}
 	errInvalidBucketName = apiError{code: "InvalidBucketName", status: 400, message: "The specified bucket is not valid."}
 	errInvalidAccessKey  = apiError{code: "InvalidAccessKeyId", status: 403, message: "The AWS Access Key Id you provided does not exist in our records."}
 	errSignatureMismatch = apiError{code: "SignatureDoesNotMatch", status: 403, message: "The request signature we calculated does not match the signature you provided."}
-	errMalformedXML    = apiError{code: "MalformedXML", status: 400, message: "The XML you provided was not well-formed or did not validate against our published schema"}
-	errInvalidPart     = apiError{code: "InvalidPart", status: 400, message: "One or more of the specified parts could not be found."}
-	errNotImplemented  = apiError{code: "NotImplemented", status: 501, message: "A header or query you provided implies functionality that is not implemented."}
-	errInvalidArgument = apiError{code: "InvalidArgument", status: 400, message: "Invalid Argument"}
+	errMalformedXML      = apiError{code: "MalformedXML", status: 400, message: "The XML you provided was not well-formed or did not validate against our published schema"}
+	errInvalidPart       = apiError{code: "InvalidPart", status: 400, message: "One or more of the specified parts could not be found."}
+	errNotImplemented    = apiError{code: "NotImplemented", status: 501, message: "A header or query you provided implies functionality that is not implemented."}
+	errInvalidArgument   = apiError{code: "InvalidArgument", status: 400, message: "Invalid Argument"}
 )
 
 // mapError normalizes any error into an apiError for the XML response.

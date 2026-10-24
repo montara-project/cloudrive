@@ -1,0 +1,39 @@
+---
+title: Styling and theming
+description: One stylesheet, two looks — the dashboard theme with light and dark modes, and a scoped marketing palette.
+icon: Palette
+---
+
+All styles come from `src/styles.css` (Tailwind CSS v4, `@import 'tailwindcss'`).
+
+## Dashboard theme
+
+- Design tokens are CSS variables on `:root` (light) and `.dark` (dark), mapped to Tailwind
+  colors in `@theme inline` (`--color-primary: var(--primary)`, …). The palette follows
+  the OneDrive brand blues.
+- Font: Inter, loaded from Google Fonts in `index.html`.
+- `next-themes` (`lib/providers/themes.tsx`) toggles the `dark` class on `<html>`, with the
+  storage key `cloudrive-theme`, light by default, and system preference available.
+- UI primitives are shadcn/ui components in `components/ui`. Add new ones with
+  `pnpm dlx shadcn@latest add <name>` rather than writing them by hand.
+
+## Marketing scope
+
+The public pages render inside `<div className="marketing">` (from
+`routes/(marketing)/route.tsx`). The `.marketing` block in `styles.css`:
+
+- overrides the same CSS variables (`--primary: #2563eb`, `--accent: #d97706`, …), so
+  marketing components keep using `bg-primary`, `text-muted-foreground` and friends;
+- sets the Poppins font, `color-scheme: light`, and its own focus, cursor and selection
+  styles;
+- always renders light, even when the dashboard theme is dark, because its variables sit
+  on a descendant of `<html class="dark">`.
+
+Shared utilities used by the landing page (`.bg-dotgrid`, `.float-slow`, the
+`data-reveal` scroll animation) are global. The reveal animation only runs when JS is
+available (`html.js`, set in `index.html`) and motion is allowed.
+
+<Callout type="warn" title="Do not use dark: inside the marketing scope">
+  The marketing palette has no dark variant. A `dark:` utility inside a marketing component would
+  apply the dashboard's dark tokens to a light page.
+</Callout>

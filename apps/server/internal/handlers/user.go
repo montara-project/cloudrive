@@ -14,7 +14,7 @@ type userHandler struct {
 	app *app.Application
 }
 
-// Me returns the authenticated user's application profile. The session cookie
+// Me returns the authenticated user's application profile. The bearer token
 // is validated by the Authorization middleware, which also sets the uid local
 // this handler reads.
 func (h *userHandler) Me(c fiber.Ctx) error {

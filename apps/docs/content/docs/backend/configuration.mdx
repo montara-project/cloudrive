@@ -1,0 +1,82 @@
+---
+title: Configuration
+description: Every flag the API reads, and the environment variable that sets it.
+icon: Settings
+---
+
+The binary reads **command-line flags only**. `make run` passes them from `.env`, and the
+container entrypoint (`scripts/entrypoint.sh`) turns every non-empty environment variable
+into its flag. The names below are the environment variables; the flag is the same name
+in kebab case (`DB_DSN` → `--db-dsn`).
+
+## App
+
+| Variable               | Default       | Required | Notes                                                              |
+| ---------------------- | ------------- | -------- | ------------------------------------------------------------------ |
+| `MACHINE_ID`           | `0`           | yes      | Non-zero, fits in uint16.                                          |
+| `ENV`                  | `development` |          | `production` disables the localhost rate-limit exemption.          |
+| `DEBUG`                | `false`       |          | Debug log level for the app and Authula.                           |
+| `PORT`                 | `8080`        |          | REST API listener.                                                 |
+| `APP_NAME`             | `gofi`        |          | Shown in emails and Authula.                                       |
+| `APP_SECRET`           |               | yes      | Authula signing secret; HMAC key for provider OAuth `state`.       |
+| `CLIENT_URL`           |               | yes      | Where provider OAuth callbacks redirect back to (`/storage`).      |
+| `SERVER_URL`           |               | yes      | Public API URL; OAuth redirect URIs are built from it.             |
+| `CORS_ALLOWED_ORIGINS` | `*`           |          | Comma-separated. Also Authula's trusted origins.                   |
+| `TRUSTED_PROXIES`      |               |          | Comma-separated IPs/CIDRs whose `X-Forwarded-For` is trusted.      |
+| `SPA_DIR`              |               |          | Built SPA served at `/`. The image sets `/app/web`.                |
+| `SUPER_USER`           |               |          | `email:password` (password ≥ 8 chars), seeded as a verified admin. |
+
+## Database
+
+| Variable            | Default | Required |
+| ------------------- | ------- | -------- |
+| `DB_DSN`            |         | yes      |
+| `DB_MAX_OPEN_CONNS` | `25`    |          |
+| `DB_MAX_IDLE_CONNS` | `25`    |          |
+| `DB_MAX_IDLE_TIME`  | `15m`   |          |
+
+## Email (Resend)
+
+| Variable                | Required | Notes                                               |
+| ----------------------- | -------- | --------------------------------------------------- |
+| `RESEND_API_KEY`        | yes      |                                                     |
+| `RESEND_FROM_EMAIL`     | yes      |                                                     |
+| `RESEND_DEBUG_TO_EMAIL` | yes      | Checked at boot; not read by the current mail code. |
+
+## Storage providers
+
+| Variable                                                             | Notes                                                                                         |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                           | Google sign-in (Authula) and the Google Drive connector. Both empty disables Google sign-in.  |
+| `ONEDRIVE_CLIENT_ID`, `ONEDRIVE_CLIENT_SECRET`, `ONEDRIVE_TENANT_ID` | Microsoft Graph; tenant defaults to `common`.                                                 |
+| `DROPBOX_CLIENT_ID`, `DROPBOX_CLIENT_SECRET`                         | Dropbox OAuth.                                                                                |
+| `STORAGE_CREDENTIALS_KEYS`                                           | **Required.** Vault keys, `key_id:base64(32 bytes)`, comma-separated; the first one encrypts. |
+
+Provider OAuth redirect URIs are `SERVER_URL + /v1/storage/oauth/<provider>/callback`;
+register exactly that in each provider's console. Google sign-in uses
+`SERVER_URL + /v1/auth/oauth2/callback/google`.
+
+## S3 gateway
+
+| Variable         | Default | Notes                                                         |
+| ---------------- | ------- | ------------------------------------------------------------- |
+| `S3_API_PORT`    | `9000`  | `0` disables the gateway listener.                            |
+| `S3_STAGING_DIR` |         | Where multipart parts are staged for non-S3 backends (Drive). |
+
+`S3_CLIENT_ID`, `S3_CLIENT_SECRET`, `S3_REGION`, `S3_ENDPOINT` and `S3_TOKEN` are parsed
+into the config but not used by the current handlers.
+
+## Boot
+
+| Variable                               | Default | Notes                                                                    |
+| -------------------------------------- | ------- | ------------------------------------------------------------------------ |
+| `MIGRATE_ON_BOOT`                      | `false` | Apply migrations at startup; recommended in containers (single replica). |
+| `TYPESAFE_API_KEY`, `TYPESAFE_API_URL` |         | Optional typed diagnosis of boot failures.                               |
+
+## Rotating the vault key
+
+1. Generate a key: `openssl rand -base64 32`.
+2. Put the new entry **first**, keep the old ones after it:
+   `STORAGE_CREDENTIALS_KEYS=v2:<new>,v1:<old>`.
+3. Restart. New secrets use `v2`; existing ones still decrypt through their `key_id`
+   prefix. Rotating credentials (`PUT /v1/storage/accounts/:id/credentials`) re-encrypts them.

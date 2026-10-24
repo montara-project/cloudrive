@@ -18,5 +18,5 @@
     ],
     "newlinesBetween": true
   },
-  "ignorePatterns": ["tsconfig.tsbuildinfo", "dist"]
+  "ignorePatterns": ["tsconfig.tsbuildinfo", "dist", "src/routeTree.gen.ts"]
 }

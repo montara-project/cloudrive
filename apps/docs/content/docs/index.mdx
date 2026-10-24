@@ -1,0 +1,67 @@
+---
+title: Overview
+description: Cloudrive puts every cloud storage account behind one drive, one REST API, and one S3-compatible endpoint.
+icon: House
+---
+
+Cloudrive connects Google Drive, Dropbox, OneDrive and any S3-compatible bucket to a
+**workspace**, then lets people browse them as one drive and lets any S3 client
+(aws-cli, rclone, SDKs) read and write them through a single S3-compatible gateway.
+Files stay where they are: Cloudrive stores credentials and mappings, never copies of
+your data.
+
+## What is in the repository
+
+| Path          | What it is                                                                                      |
+| ------------- | ----------------------------------------------------------------------------------------------- |
+| `apps/server` | Go API (Fiber v3, Bun on Postgres, Authula auth). Also runs the S3 gateway and serves the SPA.  |
+| `apps/web`    | The whole frontend as one Vite SPA (React 19, TanStack Router/Query/Form, Tailwind, shadcn/ui). |
+| `apps/docs`   | This site (Next.js + Fumadocs).                                                                 |
+| `docs/`       | Design records: ERD, provider OAuth PRD, S3 gateway notes.                                      |
+
+## Core concepts
+
+- **Organization**: the tenant. Members have the role `owner`, `admin` or `member`.
+- **Workspace**: belongs to one organization and holds storage accounts, S3 credentials
+  and S3 buckets. Workspace members have the role `admin`, `member` or `viewer`.
+- **Provider**: a catalog entry (`google_drive`, `onedrive`, `dropbox`, `s3_compatible`)
+  that decides which connector talks to the storage.
+- **Storage account**: one connected account of a provider, bound to one workspace. Its
+  credentials live encrypted in a separate vault table.
+- **S3 bucket mapping**: a bucket name the gateway serves, pointing at one storage
+  account and an optional prefix inside it.
+
+## Where to go next
+
+<Cards>
+  <Card
+    title="Getting started"
+    href="/getting-started"
+    description="Run the API and the web app locally."
+  />
+  <Card
+    title="Architecture"
+    href="/architecture"
+    description="How the pieces fit: one origin, two listeners, one database."
+  />
+  <Card
+    title="Frontend"
+    href="/frontend"
+    description="Routes, layers, auth and styling in apps/web."
+  />
+  <Card
+    title="Backend"
+    href="/backend"
+    description="Configuration, auth, data model and connectors in apps/server."
+  />
+  <Card
+    title="API reference"
+    href="/api-reference"
+    description="Every REST endpoint with its required role."
+  />
+  <Card
+    title="Deployment"
+    href="/deployment"
+    description="The single Docker image and its release flow."
+  />
+</Cards>
