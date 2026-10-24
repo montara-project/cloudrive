@@ -19,8 +19,14 @@ import { getStoredAccessToken } from './token-storage'
 const authulaClient = {
   id: 'authula',
   getActions: ($fetch) => ({
-    /** Application profile for the bearer token — the /v1/me session probe. */
-    me: () => $fetch<Models.User>('/v1/me'),
+    /**
+     * Application profile for the bearer token — the /v1/me session probe.
+     * The API wraps it in the {data} envelope; callers get the user itself.
+     */
+    me: async () => {
+      const res = await $fetch<{ data: Models.User }>('/v1/me')
+      return { ...res, data: res.data?.data ?? null }
+    },
     signInEmail: (body: SignInDto) =>
       $fetch<TokenPairResponse>('/v1/auth/email-password/sign-in', { method: 'POST', body }),
     magicLinkSignIn: (body: MagicLinkDto & { callback_url: string }) =>

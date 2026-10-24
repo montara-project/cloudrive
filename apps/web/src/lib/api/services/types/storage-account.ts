@@ -1,5 +1,3 @@
-import type { AxiosResponse } from 'axios'
-
 import type { AxiosDeleteResponse, AxiosItemResponse, AxiosListResponse } from '@/types/api'
 
 import type { PaginateDto } from '../../dtos/paginate'
@@ -50,7 +48,7 @@ export type StorageAccountResources = {
   authorizeOAuth: (
     providerSlug: string,
     workspaceId: string
-  ) => Promise<AxiosResponse<AuthorizeStorageOAuthResponse>>
-  refreshOAuth: (accountId: string) => Promise<AxiosResponse<{ status: string }>>
-  quota: (accountId: string) => Promise<AxiosResponse<StorageAccountQuota>>
+  ) => Promise<AxiosItemResponse<AuthorizeStorageOAuthResponse>>
+  refreshOAuth: (accountId: string) => Promise<AxiosItemResponse<{ status: string }>>
+  quota: (accountId: string) => Promise<AxiosItemResponse<StorageAccountQuota>>
 }
