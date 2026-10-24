@@ -30,6 +30,13 @@ permissions:
   contents: write
   pull-requests: write
 
+# The repo's husky hooks are for local work: pre-push runs the full workspace
+# build, which this root-only install cannot do (no apps' node_modules). With
+# HUSKY=0, `pnpm install` installs no hooks, so release-it's commit and the
+# PR branch push run without them.
+env:
+  HUSKY: 0
+
 jobs:
   prepare:
     runs-on: ubuntu-latest
