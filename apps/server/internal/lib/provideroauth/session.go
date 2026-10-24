@@ -15,8 +15,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	"braces.dev/errtrace"
 )
 
 const (
@@ -62,7 +60,7 @@ func NewSession(secret string) *Session {
 func (s *Session) Issue(workspaceID, userID, provider string) (string, error) {
 	nonce := make([]byte, 16)
 	if _, err := rand.Read(nonce); err != nil {
-		return "", errtrace.Wrap(err)
+		return "", (err)
 	}
 
 	payload := StatePayload{
@@ -75,7 +73,7 @@ func (s *Session) Issue(workspaceID, userID, provider string) (string, error) {
 
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return "", errtrace.Wrap(err)
+		return "", (err)
 	}
 
 	encoded := base64.RawURLEncoding.EncodeToString(body)

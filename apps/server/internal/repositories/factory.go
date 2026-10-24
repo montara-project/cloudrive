@@ -22,53 +22,16 @@ type Repositories struct {
 
 func New(db *sql.DB, box *secretbox.SecretBox) Repositories {
 	return Repositories{
-		Provider: ProviderRepository{BaseRepository: BaseRepository{
-			DB:         db,
-			TableName:  "providers",
-			SoftDelete: true,
-		}},
-		User: UserRepository{BaseRepository: BaseRepository{
-			DB:        db,
-			TableName: "users",
-		}},
-		Organization: OrganizationRepository{BaseRepository: BaseRepository{
-			DB:         db,
-			TableName:  "organizations",
-			SoftDelete: true,
-		}},
-		OrganizationMember: OrganizationMemberRepository{BaseRepository: BaseRepository{
-			DB:        db,
-			TableName: "organization_members",
-		}},
-		Workspace: WorkspaceRepository{BaseRepository: BaseRepository{
-			DB:         db,
-			TableName:  "workspaces",
-			SoftDelete: true,
-		}},
-		WorkspaceMember: WorkspaceMemberRepository{BaseRepository: BaseRepository{
-			DB:        db,
-			TableName: "workspace_members",
-		}},
-		OrganizationInvitation: OrganizationInvitationRepository{BaseRepository: BaseRepository{
-			DB:        db,
-			TableName: "organization_invitations",
-		}},
-		StorageAccount: StorageAccountRepository{BaseRepository: BaseRepository{
-			DB:         db,
-			TableName:  "storage_accounts",
-			SoftDelete: true,
-		}, Box: box},
-		S3Credential: S3CredentialRepository{BaseRepository: BaseRepository{
-			DB:        db,
-			TableName: "s3_credentials",
-		}, Box: box},
-		S3Bucket: S3BucketRepository{BaseRepository: BaseRepository{
-			DB:        db,
-			TableName: "s3_buckets",
-		}},
-		OnboardingSurvey: OnboardingSurveyRepository{BaseRepository: BaseRepository{
-			DB:        db,
-			TableName: "onboarding_surveys",
-		}},
+		Provider:               ProviderRepository{BaseRepository: BaseRepository{DB: db}},
+		User:                   UserRepository{BaseRepository: BaseRepository{DB: db}},
+		Organization:           OrganizationRepository{BaseRepository: BaseRepository{DB: db}},
+		OrganizationMember:     OrganizationMemberRepository{BaseRepository: BaseRepository{DB: db}},
+		Workspace:              WorkspaceRepository{BaseRepository: BaseRepository{DB: db}},
+		WorkspaceMember:        WorkspaceMemberRepository{BaseRepository: BaseRepository{DB: db}},
+		OrganizationInvitation: OrganizationInvitationRepository{BaseRepository: BaseRepository{DB: db}},
+		StorageAccount:         StorageAccountRepository{BaseRepository: BaseRepository{DB: db}, Box: box},
+		S3Credential:           S3CredentialRepository{BaseRepository: BaseRepository{DB: db}, Box: box},
+		S3Bucket:               S3BucketRepository{BaseRepository: BaseRepository{DB: db}},
+		OnboardingSurvey:       OnboardingSurveyRepository{BaseRepository: BaseRepository{DB: db}},
 	}
 }

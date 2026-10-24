@@ -137,9 +137,9 @@ func serve(app *app.Application) error {
 
 		s3gateway.Register(gateway, &s3gateway.Service{
 			Repos: s3gateway.RepoAdapter{
-				S3Credentials:  app.Repositories.S3Credential,
-				S3Buckets:      app.Repositories.S3Bucket,
-				StorageAccount: app.Repositories.StorageAccount,
+				S3Credentials:  &app.Repositories.S3Credential,
+				S3Buckets:      &app.Repositories.S3Bucket,
+				StorageAccount: &app.Repositories.StorageAccount,
 			},
 			Registry: handlers.ConnectorRegistry(app),
 		})

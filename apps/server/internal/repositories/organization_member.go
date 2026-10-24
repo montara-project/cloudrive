@@ -2,329 +2,121 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
-	"strings"
-	"time"
 
 	"cloudrive/server/internal/models"
 
-	"braces.dev/errtrace"
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 )
 
+// OrganizationMemberRepository manages organization_members.
 type OrganizationMemberRepository struct {
 	BaseRepository
 }
 
+const organizationMemberColumns = `
+	id, organization_id, user_id, role, created_at, updated_at`
+
+func scanOrganizationMember(row rowScanner) (models.OrganizationMember, error) {
+	var m models.OrganizationMember
+	err := row.Scan(&m.ID, &m.OrganizationID, &m.UserID, &m.Role, &m.CreatedAt, &m.UpdatedAt)
+	return m, translateNotFound("organization_members", err)
+}
+
+// organizationMemberSortColumns whitelists the columns a `sorted` value may
+// order by.
+var organizationMemberSortColumns = map[string]string{
+	"id":         "id",
+	"role":       "role",
+	"created_at": "created_at",
+	"updated_at": "updated_at",
+}
+
 // Add inserts a membership row. The unique constraint on
-// (organization_id, user_id) and the partial unique index on the 'owner' role
-// surface as ErrInsertDuplicate.
-func (r OrganizationMemberRepository) Add(member *models.OrganizationMember) error {
-	return r.addExec(r.DB, member)
+// (organization_id, user_id) surfaces as a conflict.
+func (r *OrganizationMemberRepository) Add(ctx context.Context, m models.OrganizationMember) error {
+	_, err := r.execContext(ctx, `
+		INSERT INTO organization_members (id, organization_id, user_id, role)
+		VALUES ($1, $2, $3, $4)`,
+		m.ID, m.OrganizationID, m.UserID, m.Role,
+	)
+	return translateDuplicate(err, "this user is already a member of the organization")
 }
 
-func (r OrganizationMemberRepository) addExec(exc Executor, member *models.OrganizationMember) error {
-	if member.ID == uuid.Nil {
-		id, err := uuid.NewV7()
-		if err != nil {
-			return errtrace.Errorf("error generating id: %w", err)
-		}
-		member.ID = id
-	}
+// ListByOrganization returns one page of an organization's members, ordered
+// by p.Sorted. Callers clamp the offset/limit first (see dtos.ListQuery.Clamp).
+func (r *OrganizationMemberRepository) ListByOrganization(ctx context.Context, organizationID uuid.UUID, p ListParams) ([]models.OrganizationMember, error) {
+	query := fmt.Sprintf(`
+		SELECT %s FROM organization_members
+		WHERE organization_id = $1
+		ORDER BY %s
+		LIMIT $2 OFFSET $3`,
+		organizationMemberColumns,
+		resolveOrder(p.Sorted, organizationMemberSortColumns, "created_at DESC"))
 
-	query := `
-		INSERT INTO "organization_members" ("id", "organization_id", "user_id", "role")
-		VALUES ($1, $2, $3, $4)
-		RETURNING "created_at", "updated_at";
-	`
-
-	r.debugQuery(query)
-
-	args := []any{
-		member.ID,
-		member.OrganizationID,
-		member.UserID,
-		member.Role,
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	err := exc.QueryRowContext(ctx, query, args...).Scan(&member.CreatedAt, &member.UpdatedAt)
+	rows, err := r.queryContext(ctx, query, organizationID, p.Limit, p.Offset)
 	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok {
-			if pqErr.Code == "23505" {
-				return errtrace.Wrap(ErrInsertDuplicate)
-			}
-		}
-		return errtrace.Errorf("error scanning row: %w", err)
+		return nil, err
 	}
-
-	return nil
+	return collectRows(rows, scanOrganizationMember)
 }
 
-func (r OrganizationMemberRepository) Get(organizationID uuid.UUID, userID uuid.UUID) (*models.OrganizationMember, error) {
-	return r.getExec(r.DB, organizationID, userID)
+// CountByOrganization returns how many members the organization has, for the
+// response meta block.
+func (r *OrganizationMemberRepository) CountByOrganization(ctx context.Context, organizationID uuid.UUID) (int64, error) {
+	var count int64
+	query := `SELECT COUNT(*) FROM organization_members WHERE organization_id = $1`
+	err := r.queryRowContext(ctx, query, organizationID).Scan(&count)
+	return count, err
 }
 
-func (r OrganizationMemberRepository) getExec(exc Executor, organizationID uuid.UUID, userID uuid.UUID) (*models.OrganizationMember, error) {
-	query := `
-		SELECT "id", "organization_id", "user_id", "role", "created_at", "updated_at"
-		FROM "organization_members"
-		WHERE "organization_id" = $1 AND "user_id" = $2;
-	`
+// ListByUser returns every organization the user is a member of, newest first.
+func (r *OrganizationMemberRepository) ListByUser(ctx context.Context, userID uuid.UUID) ([]models.OrganizationMember, error) {
+	query := fmt.Sprintf(`
+		SELECT %s FROM organization_members
+		WHERE user_id = $1
+		ORDER BY created_at DESC`, organizationMemberColumns)
 
-	r.debugQuery(query)
+	rows, err := r.queryContext(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	return collectRows(rows, scanOrganizationMember)
+}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
+// Get returns one membership by its (organization, user) pair.
+func (r *OrganizationMemberRepository) Get(ctx context.Context, organizationID uuid.UUID, userID uuid.UUID) (models.OrganizationMember, error) {
+	query := fmt.Sprintf(`
+		SELECT %s FROM organization_members
+		WHERE organization_id = $1 AND user_id = $2`, organizationMemberColumns)
+	return scanOrganizationMember(r.queryRowContext(ctx, query, organizationID, userID))
+}
 
-	member := &models.OrganizationMember{}
-	err := exc.QueryRowContext(ctx, query, organizationID, userID).Scan(
-		&member.ID,
-		&member.OrganizationID,
-		&member.UserID,
-		&member.Role,
-		&member.CreatedAt,
-		&member.UpdatedAt,
+// UpdateRole changes a member's role. The database enforces a single owner
+// per organization, so promoting a second member to 'owner' surfaces as a
+// conflict.
+func (r *OrganizationMemberRepository) UpdateRole(ctx context.Context, organizationID uuid.UUID, userID uuid.UUID, role string) error {
+	res, err := r.execContext(ctx, `
+		UPDATE organization_members
+		SET role = $3, updated_at = now()
+		WHERE organization_id = $1 AND user_id = $2`,
+		organizationID, userID, role,
 	)
 	if err != nil {
-		switch {
-		case errors.Is(err, sql.ErrNoRows):
-			return nil, ErrRecordNotFound
-		default:
-			return nil, errtrace.Errorf("error scanning row: %w", err)
-		}
+		return translateDuplicate(err, "an organization can only have one owner")
 	}
-
-	return member, nil
+	return requireAffected(res, "organization member")
 }
 
-func (r OrganizationMemberRepository) ListByOrganization(organizationID uuid.UUID, opts *QueryOptions) ([]*models.OrganizationMember, PaginationMetadata, error) {
-	return r.listByOrganizationExec(r.DB, organizationID, opts)
-}
-
-func (r OrganizationMemberRepository) listByOrganizationExec(exc Executor, organizationID uuid.UUID, opts *QueryOptions) ([]*models.OrganizationMember, PaginationMetadata, error) {
-	baseQuery := `
-		SELECT "id", "organization_id", "user_id", "role", "created_at", "updated_at"
-		FROM "organization_members"
-		WHERE "organization_id" = $1
-	`
-
-	var args []any
-	argIndex := 2
-
-	var queryBuilder strings.Builder
-	queryBuilder.WriteString(baseQuery)
-
-	// Whitelist of allowed columns for ORDER BY to prevent SQL injection
-	allowedOrderByColumns := map[string]bool{
-		"id":         true,
-		"role":       true,
-		"created_at": true,
-		"updated_at": true,
-	}
-
-	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, "created_at")
-	if err != nil {
-		return nil, PaginationMetadata{}, err
-	}
-
-	queryBuilder.WriteString(fmt.Sprintf(" ORDER BY %q %s", orderBy, order))
-
-	if opts.Limit > 0 {
-		queryBuilder.WriteString(fmt.Sprintf(" LIMIT $%d", argIndex))
-		args = append(args, opts.Limit)
-		argIndex++
-	}
-
-	if opts.Offset > 0 {
-		queryBuilder.WriteString(fmt.Sprintf(" OFFSET $%d", argIndex))
-		args = append(args, opts.Offset)
-		argIndex++
-	}
-
-	query := queryBuilder.String()
-
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	rows, err := exc.QueryContext(ctx, query, append([]any{organizationID}, args...)...)
-	if err != nil {
-		return nil, PaginationMetadata{}, errtrace.Wrap(err)
-	}
-	defer rows.Close()
-
-	var members []*models.OrganizationMember
-	for rows.Next() {
-		member := &models.OrganizationMember{}
-		if err := rows.Scan(
-			&member.ID,
-			&member.OrganizationID,
-			&member.UserID,
-			&member.Role,
-			&member.CreatedAt,
-			&member.UpdatedAt,
-		); err != nil {
-			return nil, PaginationMetadata{}, errtrace.Errorf("error scanning row: %w", err)
-		}
-		members = append(members, member)
-	}
-
-	count, err := r.countByOrganizationExec(exc, organizationID)
-	if err != nil {
-		return nil, PaginationMetadata{}, errtrace.Wrap(err)
-	}
-
-	return members, PaginationMetadata{Total: count}, nil
-}
-
-func (r OrganizationMemberRepository) ListByUser(userID uuid.UUID) ([]*models.OrganizationMember, error) {
-	return r.listByUserExec(r.DB, userID)
-}
-
-func (r OrganizationMemberRepository) listByUserExec(exc Executor, userID uuid.UUID) ([]*models.OrganizationMember, error) {
-	query := `
-		SELECT "id", "organization_id", "user_id", "role", "created_at", "updated_at"
-		FROM "organization_members"
-		WHERE "user_id" = $1
-		ORDER BY "created_at" DESC;
-	`
-
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	rows, err := exc.QueryContext(ctx, query, userID)
-	if err != nil {
-		return nil, errtrace.Wrap(err)
-	}
-	defer rows.Close()
-
-	var members []*models.OrganizationMember
-	for rows.Next() {
-		member := &models.OrganizationMember{}
-		if err := rows.Scan(
-			&member.ID,
-			&member.OrganizationID,
-			&member.UserID,
-			&member.Role,
-			&member.CreatedAt,
-			&member.UpdatedAt,
-		); err != nil {
-			return nil, errtrace.Errorf("error scanning row: %w", err)
-		}
-		members = append(members, member)
-	}
-
-	return members, nil
-}
-
-// UpdateRole changes a member's role. The database enforces a single owner, so
-// promoting a second member to 'owner' fails with ErrInsertDuplicate.
-func (r OrganizationMemberRepository) UpdateRole(organizationID uuid.UUID, userID uuid.UUID, role string) error {
-	return r.updateRoleExec(r.DB, organizationID, userID, role)
-}
-
-func (r OrganizationMemberRepository) updateRoleExec(exc Executor, organizationID uuid.UUID, userID uuid.UUID, role string) error {
-	query := `
-		UPDATE "organization_members"
-		SET "role" = $1, "updated_at" = now()
-		WHERE "organization_id" = $2 AND "user_id" = $3;
-	`
-
-	r.debugQuery(query)
-
-	args := []any{
-		role,
-		organizationID,
-		userID,
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	result, err := exc.ExecContext(ctx, query, args...)
-	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok {
-			if pqErr.Code == "23505" {
-				return errtrace.Wrap(ErrInsertDuplicate)
-			}
-		}
-		return errtrace.Wrap(err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
+// Delete removes the membership row.
+func (r *OrganizationMemberRepository) Delete(ctx context.Context, organizationID uuid.UUID, userID uuid.UUID) error {
+	res, err := r.execContext(ctx, `
+		DELETE FROM organization_members
+		WHERE organization_id = $1 AND user_id = $2`,
+		organizationID, userID,
+	)
 	if err != nil {
 		return err
 	}
-
-	if rowsAffected == 0 {
-		return ErrEditConflict
-	}
-
-	return nil
-}
-
-func (r OrganizationMemberRepository) Delete(organizationID uuid.UUID, userID uuid.UUID) error {
-	return r.deleteExec(r.DB, organizationID, userID)
-}
-
-func (r OrganizationMemberRepository) deleteExec(exc Executor, organizationID uuid.UUID, userID uuid.UUID) error {
-	query := `
-		DELETE FROM "organization_members"
-		WHERE "organization_id" = $1 AND "user_id" = $2;
-	`
-
-	r.debugQuery(query)
-
-	args := []any{
-		organizationID,
-		userID,
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	result, err := exc.ExecContext(ctx, query, args...)
-	if err != nil {
-		return errtrace.Wrap(err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if rowsAffected == 0 {
-		return ErrRecordNotFound
-	}
-
-	return nil
-}
-
-func (r OrganizationMemberRepository) countByOrganizationExec(exc Executor, organizationID uuid.UUID) (int64, error) {
-	query := `
-		SELECT COUNT(*)
-		FROM "organization_members"
-		WHERE "organization_id" = $1;
-	`
-
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	var count int64
-	if err := exc.QueryRowContext(ctx, query, organizationID).Scan(&count); err != nil {
-		return 0, errtrace.Errorf("error scanning row: %w", err)
-	}
-
-	return count, nil
+	return requireAffected(res, "organization member")
 }

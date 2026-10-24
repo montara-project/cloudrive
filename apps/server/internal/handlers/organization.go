@@ -5,12 +5,17 @@ import (
 	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/models"
+	"cloudrive/server/internal/repositories"
 
 	"github.com/gofiber/fiber/v3"
 )
 
 type organizationHandler struct {
 	app *app.Application
+}
+
+func (h *organizationHandler) repo() *repositories.OrganizationRepository {
+	return &h.app.Repositories.Organization
 }
 
 // Create registers a new organization and makes the current user its owner in
@@ -26,7 +31,7 @@ func (h *organizationHandler) Create(c fiber.Ctx) error {
 		return err
 	}
 
-	organization := &models.Organization{
+	organization := models.Organization{
 		Name:      req.Name,
 		Slug:      req.Slug,
 		CreatedBy: userID,
@@ -35,10 +40,15 @@ func (h *organizationHandler) Create(c fiber.Ctx) error {
 		organization.Logo = &req.Logo
 	}
 
-	if err := h.app.Repositories.Organization.CreateWithOwner(organization, userID); err != nil {
-		return dbError(err)
+	if err := h.repo().CreateWithOwner(c.Context(), organization, userID); err != nil {
+		return err
 	}
 
+	// Re-read so the response carries the DB-set timestamps.
+	organization, err = h.repo().Get(c.Context(), organization.ID)
+	if err != nil {
+		return err
+	}
 	return dtos.Created(c, organization, "Organization created")
 }
 
@@ -49,17 +59,24 @@ func (h *organizationHandler) List(c fiber.Ctx) error {
 		return err
 	}
 
-	opts, q, err := pagination(c)
+	var q dtos.ListQuery
+	if err := lib.ValidateRequestQuery(c, &q); err != nil {
+		return err
+	}
+	q.Clamp()
+
+	params := listParams(q)
+
+	organizations, err := h.repo().ListByUser(c.Context(), userID, params)
+	if err != nil {
+		return err
+	}
+	total, err := h.repo().CountByUser(c.Context(), userID)
 	if err != nil {
 		return err
 	}
 
-	organizations, metadata, err := h.app.Repositories.Organization.ListByUser(userID, opts)
-	if err != nil {
-		return dbError(err)
-	}
-
-	return dtos.List(c, organizations, listMeta(q, metadata.Total))
+	return dtos.List(c, organizations, dtos.ListMeta(int(total), q.Offset, q.Limit))
 }
 
 // Get returns one organization. Any member of the organization may read it.
@@ -69,18 +86,18 @@ func (h *organizationHandler) Get(c fiber.Ctx) error {
 		return err
 	}
 
-	orgID, err := pathUUID(c, "orgId", "Invalid organization id")
+	orgID, err := pathID(c, "orgId", "Invalid organization id")
 	if err != nil {
 		return err
 	}
 
-	if _, err := requireOrgMember(h.app, orgID, userID); err != nil {
+	if _, err := requireOrgMember(c.Context(), h.app, orgID, userID); err != nil {
 		return err
 	}
 
-	organization, err := h.app.Repositories.Organization.Get(orgID)
+	organization, err := h.repo().Get(c.Context(), orgID)
 	if err != nil {
-		return dbError(err)
+		return err
 	}
 
 	return dtos.OK(c, organization)
@@ -93,12 +110,12 @@ func (h *organizationHandler) Update(c fiber.Ctx) error {
 		return err
 	}
 
-	orgID, err := pathUUID(c, "orgId", "Invalid organization id")
+	orgID, err := pathID(c, "orgId", "Invalid organization id")
 	if err != nil {
 		return err
 	}
 
-	if _, err := requireOrgMember(h.app, orgID, userID, "owner", "admin"); err != nil {
+	if _, err := requireOrgMember(c.Context(), h.app, orgID, userID, "owner", "admin"); err != nil {
 		return err
 	}
 
@@ -107,9 +124,9 @@ func (h *organizationHandler) Update(c fiber.Ctx) error {
 		return err
 	}
 
-	current, err := h.app.Repositories.Organization.Get(orgID)
+	current, err := h.repo().Get(c.Context(), orgID)
 	if err != nil {
-		return dbError(err)
+		return err
 	}
 
 	current.Name = req.Name
@@ -119,10 +136,14 @@ func (h *organizationHandler) Update(c fiber.Ctx) error {
 		current.Logo = nil
 	}
 
-	if err := h.app.Repositories.Organization.Update(orgID, current); err != nil {
-		return dbError(err)
+	if err := h.repo().Update(c.Context(), current); err != nil {
+		return err
 	}
 
+	current, err = h.repo().Get(c.Context(), orgID)
+	if err != nil {
+		return err
+	}
 	return dtos.OK(c, current)
 }
 
@@ -133,17 +154,17 @@ func (h *organizationHandler) Delete(c fiber.Ctx) error {
 		return err
 	}
 
-	orgID, err := pathUUID(c, "orgId", "Invalid organization id")
+	orgID, err := pathID(c, "orgId", "Invalid organization id")
 	if err != nil {
 		return err
 	}
 
-	if _, err := requireOrgMember(h.app, orgID, userID, "owner"); err != nil {
+	if _, err := requireOrgMember(c.Context(), h.app, orgID, userID, "owner"); err != nil {
 		return err
 	}
 
-	if err := h.app.Repositories.Organization.SoftDelete(orgID); err != nil {
-		return dbError(err)
+	if err := h.repo().Delete(c.Context(), orgID); err != nil {
+		return err
 	}
 
 	return dtos.Message(c, fiber.StatusOK, "Organization deleted")

@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 func fixtureReport(rootCause string, prob map[string]float64, confidence float64, noul float64) string {
@@ -191,7 +191,7 @@ func TestDiagnoseWithoutAPIKey(t *testing.T) {
 }
 
 func TestCollectFactsCapturesPostgresCode(t *testing.T) {
-	bootErr := &pq.Error{Code: "42P01", Message: `relation "users" does not exist`}
+	bootErr := &pgconn.PgError{Code: "42P01", Message: `relation "users" does not exist`}
 	probeCalled := false
 	probe := func(ctx context.Context) bool { probeCalled = true; return true }
 

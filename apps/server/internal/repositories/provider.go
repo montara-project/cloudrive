@@ -2,204 +2,85 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"cloudrive/server/internal/models"
 
-	"braces.dev/errtrace"
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 )
 
+// ProviderRepository manages the provider catalog.
 type ProviderRepository struct {
 	BaseRepository
 }
 
-func (r ProviderRepository) Count() (int64, error) {
-	return r.BaseRepository.countExec(r.DB)
+const providerColumns = `
+	id, slug, name, protocol, auth_type, capabilities, is_active, deleted_at, created_at, updated_at`
+
+func scanProvider(row rowScanner) (models.Provider, error) {
+	var p models.Provider
+	err := row.Scan(&p.ID, &p.Slug, &p.Name, &p.Protocol, &p.AuthType, &p.Capabilities,
+		&p.IsActive, &p.DeletedAt, &p.CreatedAt, &p.UpdatedAt)
+	return p, translateNotFound("providers", err)
 }
 
-func (r ProviderRepository) List(opts *QueryOptions) ([]*models.Provider, PaginationMetadata, error) {
-	return r.listExec(r.DB, opts)
+// providerSortColumns whitelists the columns a `sorted` value may order by.
+var providerSortColumns = map[string]string{
+	"id":         "id",
+	"slug":       "slug",
+	"name":       "name",
+	"created_at": "created_at",
+	"updated_at": "updated_at",
 }
 
-func (r ProviderRepository) listExec(exc Executor, opts *QueryOptions) ([]*models.Provider, PaginationMetadata, error) {
-	selectFields := `"id", "slug", "name", "protocol", "auth_type", "capabilities", "is_active", "deleted_at", "created_at", "updated_at"`
-	baseQuery := fmt.Sprintf(`
-		SELECT %s
-		FROM "providers"
-		WHERE "deleted_at" IS NULL
-	`, selectFields)
+// List returns one page of live catalog entries, ordered by p.Sorted. Callers
+// clamp the offset/limit first (see dtos.ListQuery.Clamp).
+func (r *ProviderRepository) List(ctx context.Context, p ListParams) ([]models.Provider, error) {
+	query := fmt.Sprintf(`
+		SELECT %s FROM providers
+		WHERE deleted_at IS NULL
+		ORDER BY %s
+		LIMIT $1 OFFSET $2`,
+		providerColumns,
+		resolveOrder(p.Sorted, providerSortColumns, "created_at DESC"))
 
-	var args []any
-	argIndex := 1
-
-	var queryBuilder strings.Builder
-	queryBuilder.WriteString(baseQuery)
-
-	// Whitelist of allowed columns for ORDER BY to prevent SQL injection
-	allowedOrderByColumns := map[string]bool{
-		"id":         true,
-		"slug":       true,
-		"name":       true,
-		"created_at": true,
-		"updated_at": true,
-	}
-
-	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, "created_at")
+	rows, err := r.queryContext(ctx, query, p.Limit, p.Offset)
 	if err != nil {
-		return nil, PaginationMetadata{}, err
+		return nil, err
 	}
-
-	queryBuilder.WriteString(fmt.Sprintf(" ORDER BY %q %s", orderBy, order))
-
-	if opts.Limit > 0 {
-		queryBuilder.WriteString(fmt.Sprintf(" LIMIT $%d", argIndex))
-		args = append(args, opts.Limit)
-		argIndex++
-	}
-
-	if opts.Offset > 0 {
-		queryBuilder.WriteString(fmt.Sprintf(" OFFSET $%d", argIndex))
-		args = append(args, opts.Offset)
-		argIndex++
-	}
-
-	query := queryBuilder.String()
-
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	rows, err := exc.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, PaginationMetadata{}, errtrace.Wrap(err)
-	}
-	defer rows.Close()
-
-	var providers []*models.Provider
-	for rows.Next() {
-		provider := &models.Provider{}
-		if err := rows.Scan(
-			&provider.ID,
-			&provider.Slug,
-			&provider.Name,
-			&provider.Protocol,
-			&provider.AuthType,
-			&provider.Capabilities,
-			&provider.IsActive,
-			&provider.DeletedAt,
-			&provider.CreatedAt,
-			&provider.UpdatedAt,
-		); err != nil {
-			return nil, PaginationMetadata{}, errtrace.Errorf("error scanning row: %w", err)
-		}
-		providers = append(providers, provider)
-	}
-
-	count, err := r.countExec(exc)
-	if err != nil {
-		return nil, PaginationMetadata{}, errtrace.Wrap(err)
-	}
-
-	return providers, PaginationMetadata{Total: count}, nil
+	return collectRows(rows, scanProvider)
 }
 
-func (r ProviderRepository) Get(id uuid.UUID) (*models.Provider, error) {
-	return r.getExec(r.DB, id)
+// Count returns how many live catalog entries exist, for the response meta
+// block.
+func (r *ProviderRepository) Count(ctx context.Context) (int64, error) {
+	var count int64
+	query := `SELECT COUNT(*) FROM providers WHERE deleted_at IS NULL`
+	err := r.queryRowContext(ctx, query).Scan(&count)
+	return count, err
 }
 
-func (r ProviderRepository) getExec(exc Executor, id uuid.UUID) (*models.Provider, error) {
-	query := `
-		SELECT "id", "slug", "name", "protocol", "auth_type", "capabilities", "is_active", "deleted_at", "created_at", "updated_at"
-		FROM "providers"
-		WHERE "id" = $1;
-	`
-
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	provider := &models.Provider{}
-	err := exc.QueryRowContext(ctx, query, id).Scan(
-		&provider.ID,
-		&provider.Slug,
-		&provider.Name,
-		&provider.Protocol,
-		&provider.AuthType,
-		&provider.Capabilities,
-		&provider.IsActive,
-		&provider.DeletedAt,
-		&provider.CreatedAt,
-		&provider.UpdatedAt,
-	)
-	if err != nil {
-		switch {
-		case errors.Is(err, sql.ErrNoRows):
-			return nil, ErrRecordNotFound
-		default:
-			return nil, errtrace.Errorf("error scanning row: %w", err)
-		}
-	}
-
-	return provider, nil
+// Get returns one catalog entry by id.
+func (r *ProviderRepository) Get(ctx context.Context, id uuid.UUID) (models.Provider, error) {
+	query := fmt.Sprintf(`SELECT %s FROM providers WHERE id = $1 AND deleted_at IS NULL`, providerColumns)
+	return scanProvider(r.queryRowContext(ctx, query, id))
 }
 
-func (r ProviderRepository) GetBySlug(slug string) (*models.Provider, error) {
-	return r.getBySlugExec(r.DB, slug)
+// GetBySlug returns one catalog entry by its slug.
+func (r *ProviderRepository) GetBySlug(ctx context.Context, slug string) (models.Provider, error) {
+	query := fmt.Sprintf(`SELECT %s FROM providers WHERE slug = $1 AND deleted_at IS NULL`, providerColumns)
+	return scanProvider(r.queryRowContext(ctx, query, slug))
 }
 
-func (r ProviderRepository) getBySlugExec(exc Executor, slug string) (*models.Provider, error) {
-	query := `
-		SELECT "id", "slug", "name", "protocol", "auth_type", "capabilities", "is_active", "deleted_at", "created_at", "updated_at"
-		FROM "providers"
-		WHERE "slug" = $1;
-	`
-
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	provider := &models.Provider{}
-	err := exc.QueryRowContext(ctx, query, slug).Scan(
-		&provider.ID,
-		&provider.Slug,
-		&provider.Name,
-		&provider.Protocol,
-		&provider.AuthType,
-		&provider.Capabilities,
-		&provider.IsActive,
-		&provider.DeletedAt,
-		&provider.CreatedAt,
-		&provider.UpdatedAt,
-	)
-	if err != nil {
-		switch {
-		case errors.Is(err, sql.ErrNoRows):
-			return nil, ErrRecordNotFound
-		default:
-			return nil, errtrace.Errorf("error scanning row: %w", err)
-		}
-	}
-
-	return provider, nil
-}
-
-func (r ProviderRepository) Insert(providers ...*models.Provider) error {
-	return r.insertExec(r.DB, providers...)
-}
-
-func (r ProviderRepository) insertExec(exc Executor, providers ...*models.Provider) error {
+// Insert batch-inserts catalog entries and returns the persisted rows with
+// their surviving ids and DB-set timestamps. The slug is unique, so a
+// collision surfaces as a conflict.
+func (r *ProviderRepository) Insert(ctx context.Context, providers ...models.Provider) ([]models.Provider, error) {
+	out := make([]models.Provider, 0, len(providers))
 	if len(providers) == 0 {
-		return nil
+		return out, nil
 	}
 
 	columns := []string{"id", "slug", "name", "protocol", "auth_type", "capabilities", "is_active"}
@@ -211,12 +92,12 @@ func (r ProviderRepository) insertExec(exc Executor, providers ...*models.Provid
 		if provider.ID == uuid.Nil {
 			id, err := uuid.NewV7()
 			if err != nil {
-				return errtrace.Errorf("error generating id: %w", err)
+				return nil, fmt.Errorf("error generating id: %w", err)
 			}
 			provider.ID = id
 		}
 
-		// lib/pq encodes []byte as a bytea literal, which jsonb rejects; jsonb
+		// pgx encodes []byte as a bytea literal, which jsonb rejects; jsonb
 		// columns are sent as their JSON text instead.
 		var capabilities any
 		if len(provider.Capabilities) > 0 {
@@ -235,89 +116,80 @@ func (r ProviderRepository) insertExec(exc Executor, providers ...*models.Provid
 	}
 
 	query := fmt.Sprintf(`
-		INSERT INTO "providers" (%s)
+		INSERT INTO providers (%s)
 		VALUES %s
-		RETURNING "id", "created_at", "updated_at";
-	`, strings.Join(columns[:], ", "), strings.Join(valueStrings, ", "))
+		RETURNING id, created_at, updated_at`,
+		strings.Join(columns, ", "), strings.Join(valueStrings, ", "))
 
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	rows, err := exc.QueryContext(ctx, query, valueArgs...)
+	rows, err := r.queryContext(ctx, query, valueArgs...)
 	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok {
-			if pqErr.Code == "23505" {
-				return errtrace.Wrap(ErrInsertDuplicate)
-			}
-		}
-		return errtrace.Wrap(err)
+		return nil, translateDuplicate(err, "a provider with this slug already exists")
 	}
 	defer rows.Close()
 
 	for _, provider := range providers {
 		if !rows.Next() {
-			return errtrace.New("error scanning row: no next row")
+			return nil, fmt.Errorf("error scanning row: no next row")
 		}
-
 		if err := rows.Scan(&provider.ID, &provider.CreatedAt, &provider.UpdatedAt); err != nil {
-			return errtrace.Errorf("error scanning row: %w", err)
+			return nil, fmt.Errorf("error scanning row: %w", err)
 		}
+		out = append(out, provider)
 	}
 
-	return nil
+	return out, rows.Err()
 }
 
 // Update changes the mutable columns of a catalog entry. The slug is not
 // updatable here: it is the external identifier used by integrations.
-func (r ProviderRepository) Update(id uuid.UUID, provider *models.Provider) error {
-	return r.updateExec(r.DB, id, provider)
+func (r *ProviderRepository) Update(ctx context.Context, p models.Provider) error {
+	res, err := r.execContext(ctx, `
+		UPDATE providers
+		SET name = $2, is_active = $3, updated_at = now()
+		WHERE id = $1 AND deleted_at IS NULL`,
+		p.ID, p.Name, p.IsActive,
+	)
+	if err != nil {
+		return err
+	}
+	return requireAffected(res, "provider")
 }
 
-func (r ProviderRepository) updateExec(exc Executor, id uuid.UUID, provider *models.Provider) error {
-	query := `
-		UPDATE "providers"
-		SET "name" = $1, "is_active" = $2, "updated_at" = now()
-		WHERE "id" = $3;
-	`
-
-	r.debugQuery(query)
-
-	args := []any{
-		provider.Name,
-		provider.IsActive,
+// Delete soft-removes one catalog entry by stamping deleted_at.
+func (r *ProviderRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	res, err := r.execContext(ctx, `
+		UPDATE providers
+		SET deleted_at = now(), updated_at = now()
+		WHERE id = $1 AND deleted_at IS NULL`,
 		id,
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	result, err := exc.ExecContext(ctx, query, args...)
+	)
 	if err != nil {
 		return err
 	}
+	return requireAffected(res, "provider")
+}
 
-	rowsAffected, err := result.RowsAffected()
+// Restore clears deleted_at on a soft-deleted catalog entry, returning
+// ErrNotFound when the row is absent or not trashed.
+func (r *ProviderRepository) Restore(ctx context.Context, id uuid.UUID) error {
+	res, err := r.execContext(ctx, `
+		UPDATE providers
+		SET deleted_at = NULL, updated_at = now()
+		WHERE id = $1 AND deleted_at IS NOT NULL`,
+		id,
+	)
 	if err != nil {
 		return err
 	}
+	return requireAffected(res, "provider")
+}
 
-	if rowsAffected == 0 {
-		return ErrEditConflict
+// ForceDelete permanently removes the row, whether or not it is trashed.
+// FK violations from referencing tables surface as a conflict.
+func (r *ProviderRepository) ForceDelete(ctx context.Context, id uuid.UUID) error {
+	res, err := r.execContext(ctx, `DELETE FROM providers WHERE id = $1`, id)
+	if err != nil {
+		return translateForeignKey(err, "provider is still referenced by other records")
 	}
-
-	return nil
-}
-
-func (r ProviderRepository) Delete(id uuid.UUID) error {
-	return r.BaseRepository.deleteExec(r.DB, id)
-}
-
-func (r ProviderRepository) SoftDelete(id uuid.UUID) error {
-	return r.BaseRepository.softDeleteExec(r.DB, id)
-}
-
-func (r ProviderRepository) Restore(id uuid.UUID) error {
-	return r.BaseRepository.restoreExec(r.DB, id)
+	return requireAffected(res, "provider")
 }

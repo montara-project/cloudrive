@@ -12,12 +12,18 @@ import (
 	"cloudrive/server/internal/lib/apperr"
 	"cloudrive/server/internal/lib/validator"
 	"cloudrive/server/internal/models"
+	"cloudrive/server/internal/repositories"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
 )
 
 type onboardingHandler struct {
 	app *app.Application
+}
+
+func (h *onboardingHandler) repo() *repositories.OnboardingSurveyRepository {
+	return &h.app.Repositories.OnboardingSurvey
 }
 
 // Submit records the onboarding survey answers of the current user. The
@@ -43,16 +49,20 @@ func (h *onboardingHandler) Submit(c fiber.Ctx) error {
 		return apperr.New(apperr.KindBadRequest, "Invalid use cases payload")
 	}
 
-	survey := &models.OnboardingSurvey{
+	survey := models.OnboardingSurvey{
 		UserID:               userID,
 		ReferralSource:       req.ReferralSource,
 		ReferralSourceDetail: textOrNil(req.ReferralSourceDetail),
 		UseCases:             useCases,
 		UseCaseDetail:        textOrNil(req.UseCaseDetail),
 	}
+	if survey.ID, err = uuid.NewV7(); err != nil {
+		return err
+	}
 
-	if err := h.app.Repositories.OnboardingSurvey.UpsertByUser(survey); err != nil {
-		return dbError(err)
+	survey, err = h.repo().UpsertByUser(c.Context(), survey)
+	if err != nil {
+		return err
 	}
 
 	return dtos.OK(c, survey)

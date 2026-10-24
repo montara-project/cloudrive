@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"braces.dev/errtrace"
 	"golang.org/x/oauth2"
 )
 
@@ -99,25 +99,25 @@ func (c *dropboxConnector) dropboxFull(key string) string {
 
 func (c *dropboxConnector) rpcError(resp *http.Response, op string) error {
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-	return errtrace.Errorf("dropbox %s failed: status %d: %s", op, resp.StatusCode, strings.TrimSpace(string(body)))
+	return fmt.Errorf("dropbox %s failed: status %d: %s", op, resp.StatusCode, strings.TrimSpace(string(body)))
 }
 
 // rpc performs a JSON RPC call against api.dropboxapi.com.
 func (c *dropboxConnector) rpc(ctx context.Context, client *http.Client, path string, body any, out any) error {
 	payload, err := json.Marshal(body)
 	if err != nil {
-		return errtrace.Wrap(err)
+		return (err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, dropboxAPI+path, strings.NewReader(string(payload)))
 	if err != nil {
-		return errtrace.Wrap(err)
+		return (err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return errtrace.Wrap(err)
+		return (err)
 	}
 	defer resp.Body.Close()
 
@@ -126,7 +126,7 @@ func (c *dropboxConnector) rpc(ctx context.Context, client *http.Client, path st
 	}
 
 	if out != nil {
-		return errtrace.Wrap(json.NewDecoder(resp.Body).Decode(out))
+		return (json.NewDecoder(resp.Body).Decode(out))
 	}
 	return nil
 }
@@ -252,14 +252,14 @@ func (c *dropboxConnector) PutObject(ctx context.Context, key string, r io.Reade
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, dropboxContent+"/files/upload", r)
 	if err != nil {
-		return Object{}, errtrace.Wrap(err)
+		return Object{}, (err)
 	}
 	req.Header.Set("Content-Type", "application/octet-stream")
 	req.Header.Set("Dropbox-API-Arg", string(args))
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return Object{}, errtrace.Wrap(err)
+		return Object{}, (err)
 	}
 	defer resp.Body.Close()
 
@@ -269,7 +269,7 @@ func (c *dropboxConnector) PutObject(ctx context.Context, key string, r io.Reade
 
 	var entry dropboxEntry
 	if err := json.NewDecoder(resp.Body).Decode(&entry); err != nil {
-		return Object{}, errtrace.Wrap(err)
+		return Object{}, (err)
 	}
 
 	c.remember(key, entry)
@@ -295,7 +295,7 @@ func (c *dropboxConnector) ensureDir(ctx context.Context, client *http.Client, d
 			return "", err
 		}
 		if ok && !entry.isFolder() {
-			return "", errtrace.Errorf("dropbox: %s exists and is not a folder", current)
+			return "", fmt.Errorf("dropbox: %s exists and is not a folder", current)
 		}
 		if !ok {
 			payload, _ := json.Marshal(map[string]any{
@@ -304,12 +304,12 @@ func (c *dropboxConnector) ensureDir(ctx context.Context, client *http.Client, d
 			})
 			req, err := http.NewRequestWithContext(ctx, http.MethodPost, dropboxAPI+"/files/create_folder_v2", strings.NewReader(string(payload)))
 			if err != nil {
-				return "", errtrace.Wrap(err)
+				return "", (err)
 			}
 			req.Header.Set("Content-Type", "application/json")
 			resp, err := client.Do(req)
 			if err != nil {
-				return "", errtrace.Wrap(err)
+				return "", (err)
 			}
 			defer resp.Body.Close()
 			// 409 = already exists (concurrent create) — fine.
@@ -326,7 +326,7 @@ func (c *dropboxConnector) ensureDir(ctx context.Context, client *http.Client, d
 					Metadata dropboxEntry `json:"metadata"`
 				}
 				if err := json.NewDecoder(resp.Body).Decode(&created); err != nil {
-					return "", errtrace.Wrap(err)
+					return "", (err)
 				}
 				c.remember(current, created.Metadata)
 			}
@@ -346,13 +346,13 @@ func (c *dropboxConnector) lookupFresh(ctx context.Context, client *http.Client,
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, dropboxAPI+"/files/get_metadata", strings.NewReader(string(payload)))
 	if err != nil {
-		return dropboxEntry{}, false, errtrace.Wrap(err)
+		return dropboxEntry{}, false, (err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return dropboxEntry{}, false, errtrace.Wrap(err)
+		return dropboxEntry{}, false, (err)
 	}
 	defer resp.Body.Close()
 
@@ -365,7 +365,7 @@ func (c *dropboxConnector) lookupFresh(ctx context.Context, client *http.Client,
 
 	var entry dropboxEntry
 	if err := json.NewDecoder(resp.Body).Decode(&entry); err != nil {
-		return dropboxEntry{}, false, errtrace.Wrap(err)
+		return dropboxEntry{}, false, (err)
 	}
 
 	c.remember(key, entry)
@@ -386,13 +386,13 @@ func (c *dropboxConnector) GetObject(ctx context.Context, key string) (io.ReadCl
 	args, _ := json.Marshal(map[string]string{"path": c.dropboxFull(key)})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, dropboxContent+"/files/download", nil)
 	if err != nil {
-		return nil, Object{}, errtrace.Wrap(err)
+		return nil, Object{}, (err)
 	}
 	req.Header.Set("Dropbox-API-Arg", string(args))
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, Object{}, errtrace.Wrap(err)
+		return nil, Object{}, (err)
 	}
 
 	if resp.StatusCode >= 300 {
@@ -431,13 +431,13 @@ func (c *dropboxConnector) DeleteObject(ctx context.Context, key string) error {
 	payload, _ := json.Marshal(map[string]any{"path": c.dropboxFull(key)})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, dropboxAPI+"/files/delete_v2", strings.NewReader(string(payload)))
 	if err != nil {
-		return errtrace.Wrap(err)
+		return (err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return errtrace.Wrap(err)
+		return (err)
 	}
 	defer resp.Body.Close()
 
@@ -502,7 +502,7 @@ func (c *dropboxConnector) listContinue(ctx context.Context, client *http.Client
 	// To key cursors to a dir we encode "<dir>\x00<cursor>".
 	dir, cursor, ok := strings.Cut(cursor, "\x00")
 	if !ok {
-		return ListPage{}, errtrace.New("invalid continuation token")
+		return ListPage{}, errors.New("invalid continuation token")
 	}
 	_ = dir
 
@@ -547,11 +547,11 @@ func encodeDropboxCursor(prefix, cursor string) string {
 func decodeDropboxCursor(token string) (string, string, error) {
 	raw, err := base64.RawURLEncoding.DecodeString(token)
 	if err != nil {
-		return "", "", errtrace.Wrap(err)
+		return "", "", (err)
 	}
 	prefix, cursor, ok := strings.Cut(string(raw), "\x00")
 	if !ok {
-		return "", "", errtrace.New("invalid continuation token")
+		return "", "", errors.New("invalid continuation token")
 	}
 	return prefix, cursor, nil
 }
@@ -568,14 +568,14 @@ func (c *dropboxConnector) CreateMultipartUpload(ctx context.Context, key, conte
 	})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, dropboxContent+"/files/upload_session/start", strings.NewReader("{}"))
 	if err != nil {
-		return MultipartInfo{}, errtrace.Wrap(err)
+		return MultipartInfo{}, (err)
 	}
 	req.Header.Set("Content-Type", "application/octet-stream")
 	req.Header.Set("Dropbox-API-Arg", string(payload))
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return MultipartInfo{}, errtrace.Wrap(err)
+		return MultipartInfo{}, (err)
 	}
 	defer resp.Body.Close()
 
@@ -587,7 +587,7 @@ func (c *dropboxConnector) CreateMultipartUpload(ctx context.Context, key, conte
 		SessionID string `json:"session_id"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&started); err != nil {
-		return MultipartInfo{}, errtrace.Wrap(err)
+		return MultipartInfo{}, (err)
 	}
 
 	return MultipartInfo{UploadID: started.SessionID}, nil
@@ -616,14 +616,14 @@ func (c *dropboxConnector) UploadPart(ctx context.Context, key, uploadID string,
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, dropboxContent+"/files/upload_session/append_v2", r)
 	if err != nil {
-		return "", errtrace.Wrap(err)
+		return "", (err)
 	}
 	req.Header.Set("Content-Type", "application/octet-stream")
 	req.Header.Set("Dropbox-API-Arg", string(args))
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", errtrace.Wrap(err)
+		return "", (err)
 	}
 	defer resp.Body.Close()
 
@@ -664,14 +664,14 @@ func (c *dropboxConnector) CompleteMultipartUpload(ctx context.Context, key, upl
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, dropboxContent+"/files/upload_session/finish", strings.NewReader(""))
 	if err != nil {
-		return Object{}, errtrace.Wrap(err)
+		return Object{}, (err)
 	}
 	req.Header.Set("Content-Type", "application/octet-stream")
 	req.Header.Set("Dropbox-API-Arg", string(args))
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return Object{}, errtrace.Wrap(err)
+		return Object{}, (err)
 	}
 	defer resp.Body.Close()
 
@@ -681,7 +681,7 @@ func (c *dropboxConnector) CompleteMultipartUpload(ctx context.Context, key, upl
 
 	var entry dropboxEntry
 	if err := json.NewDecoder(resp.Body).Decode(&entry); err != nil {
-		return Object{}, errtrace.Wrap(err)
+		return Object{}, (err)
 	}
 
 	c.remember(key, entry)
@@ -698,13 +698,13 @@ func (c *dropboxConnector) AbortMultipartUpload(ctx context.Context, key, upload
 	payload, _ := json.Marshal(map[string]string{"session_id": uploadID})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, dropboxContent+"/files/upload_session/abort", strings.NewReader(string(payload)))
 	if err != nil {
-		return errtrace.Wrap(err)
+		return (err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return errtrace.Wrap(err)
+		return (err)
 	}
 	defer resp.Body.Close()
 

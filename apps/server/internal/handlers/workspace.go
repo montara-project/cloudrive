@@ -5,12 +5,18 @@ import (
 	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/models"
+	"cloudrive/server/internal/repositories"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
 )
 
 type workspaceHandler struct {
 	app *app.Application
+}
+
+func (h *workspaceHandler) repo() *repositories.WorkspaceRepository {
+	return &h.app.Repositories.Workspace
 }
 
 // Create adds a workspace to an organization. Requires owner or admin.
@@ -20,12 +26,12 @@ func (h *workspaceHandler) Create(c fiber.Ctx) error {
 		return err
 	}
 
-	orgID, err := pathUUID(c, "orgId", "Invalid organization id")
+	orgID, err := pathID(c, "orgId", "Invalid organization id")
 	if err != nil {
 		return err
 	}
 
-	if _, err := requireOrgMember(h.app, orgID, userID, "owner", "admin"); err != nil {
+	if _, err := requireOrgMember(c.Context(), h.app, orgID, userID, "owner", "admin"); err != nil {
 		return err
 	}
 
@@ -34,7 +40,7 @@ func (h *workspaceHandler) Create(c fiber.Ctx) error {
 		return err
 	}
 
-	workspace := &models.Workspace{
+	workspace := models.Workspace{
 		OrganizationID: orgID,
 		Name:           req.Name,
 		Slug:           req.Slug,
@@ -43,11 +49,19 @@ func (h *workspaceHandler) Create(c fiber.Ctx) error {
 	if req.Description != "" {
 		workspace.Description = &req.Description
 	}
-
-	if err := h.app.Repositories.Workspace.Create(workspace); err != nil {
-		return dbError(err)
+	if workspace.ID, err = uuid.NewV7(); err != nil {
+		return err
 	}
 
+	if err := h.repo().Create(c.Context(), workspace); err != nil {
+		return err
+	}
+
+	// Re-read so the response carries the DB-set timestamps.
+	workspace, err = h.repo().Get(c.Context(), workspace.ID)
+	if err != nil {
+		return err
+	}
 	return dtos.Created(c, workspace, "Workspace created")
 }
 
@@ -58,26 +72,33 @@ func (h *workspaceHandler) List(c fiber.Ctx) error {
 		return err
 	}
 
-	orgID, err := pathUUID(c, "orgId", "Invalid organization id")
+	orgID, err := pathID(c, "orgId", "Invalid organization id")
 	if err != nil {
 		return err
 	}
 
-	if _, err := requireOrgMember(h.app, orgID, userID); err != nil {
+	if _, err := requireOrgMember(c.Context(), h.app, orgID, userID); err != nil {
 		return err
 	}
 
-	opts, q, err := pagination(c)
+	var q dtos.ListQuery
+	if err := lib.ValidateRequestQuery(c, &q); err != nil {
+		return err
+	}
+	q.Clamp()
+
+	params := listParams(q)
+
+	workspaces, err := h.repo().ListByOrganization(c.Context(), orgID, params)
+	if err != nil {
+		return err
+	}
+	total, err := h.repo().CountByOrganization(c.Context(), orgID)
 	if err != nil {
 		return err
 	}
 
-	workspaces, metadata, err := h.app.Repositories.Workspace.ListByOrganization(orgID, opts)
-	if err != nil {
-		return dbError(err)
-	}
-
-	return dtos.List(c, workspaces, listMeta(q, metadata.Total))
+	return dtos.List(c, workspaces, dtos.ListMeta(int(total), q.Offset, q.Limit))
 }
 
 // Get returns one workspace. Any member of the owning organization may read it.
@@ -87,17 +108,17 @@ func (h *workspaceHandler) Get(c fiber.Ctx) error {
 		return err
 	}
 
-	wsID, err := pathUUID(c, "wsId", "Invalid workspace id")
+	wsID, err := pathID(c, "wsId", "Invalid workspace id")
 	if err != nil {
 		return err
 	}
 
-	workspace, err := h.app.Repositories.Workspace.Get(wsID)
+	workspace, err := h.repo().Get(c.Context(), wsID)
 	if err != nil {
-		return dbError(err)
+		return err
 	}
 
-	if _, err := requireOrgMember(h.app, workspace.OrganizationID, userID); err != nil {
+	if _, err := requireOrgMember(c.Context(), h.app, workspace.OrganizationID, userID); err != nil {
 		return err
 	}
 
@@ -112,17 +133,17 @@ func (h *workspaceHandler) Update(c fiber.Ctx) error {
 		return err
 	}
 
-	wsID, err := pathUUID(c, "wsId", "Invalid workspace id")
+	wsID, err := pathID(c, "wsId", "Invalid workspace id")
 	if err != nil {
 		return err
 	}
 
-	workspace, err := h.app.Repositories.Workspace.Get(wsID)
+	workspace, err := h.repo().Get(c.Context(), wsID)
 	if err != nil {
-		return dbError(err)
+		return err
 	}
 
-	if _, err := requireOrgMember(h.app, workspace.OrganizationID, userID, "owner", "admin"); err != nil {
+	if _, err := requireOrgMember(c.Context(), h.app, workspace.OrganizationID, userID, "owner", "admin"); err != nil {
 		return err
 	}
 
@@ -138,10 +159,14 @@ func (h *workspaceHandler) Update(c fiber.Ctx) error {
 		workspace.Description = nil
 	}
 
-	if err := h.app.Repositories.Workspace.Update(wsID, workspace); err != nil {
-		return dbError(err)
+	if err := h.repo().Update(c.Context(), workspace); err != nil {
+		return err
 	}
 
+	workspace, err = h.repo().Get(c.Context(), wsID)
+	if err != nil {
+		return err
+	}
 	return dtos.OK(c, workspace)
 }
 
@@ -153,22 +178,22 @@ func (h *workspaceHandler) Delete(c fiber.Ctx) error {
 		return err
 	}
 
-	wsID, err := pathUUID(c, "wsId", "Invalid workspace id")
+	wsID, err := pathID(c, "wsId", "Invalid workspace id")
 	if err != nil {
 		return err
 	}
 
-	workspace, err := h.app.Repositories.Workspace.Get(wsID)
+	workspace, err := h.repo().Get(c.Context(), wsID)
 	if err != nil {
-		return dbError(err)
-	}
-
-	if _, err := requireOrgMember(h.app, workspace.OrganizationID, userID, "owner", "admin"); err != nil {
 		return err
 	}
 
-	if err := h.app.Repositories.Workspace.SoftDelete(wsID); err != nil {
-		return dbError(err)
+	if _, err := requireOrgMember(c.Context(), h.app, workspace.OrganizationID, userID, "owner", "admin"); err != nil {
+		return err
+	}
+
+	if err := h.repo().Delete(c.Context(), wsID); err != nil {
+		return err
 	}
 
 	return dtos.Message(c, fiber.StatusOK, "Workspace deleted")

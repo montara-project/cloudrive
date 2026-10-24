@@ -102,7 +102,7 @@ func ensureSuperUser(application *app.Application) error {
 	}
 
 	first, last := splitName(user.Name)
-	if err := application.Repositories.User.Upsert(&appmodels.User{
+	if err := application.Repositories.User.Upsert(ctx, appmodels.User{
 		ID:        uuid.MustParse(user.ID),
 		Email:     user.Email,
 		FirstName: first,

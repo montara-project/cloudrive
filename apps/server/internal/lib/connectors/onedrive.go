@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"braces.dev/errtrace"
 	"golang.org/x/oauth2"
 )
 
@@ -137,18 +137,18 @@ func encodeGraphPath(key string) string {
 
 func (c *onedriveConnector) graphError(resp *http.Response, op string) error {
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-	return errtrace.Errorf("onedrive %s failed: status %d: %s", op, resp.StatusCode, strings.TrimSpace(string(body)))
+	return fmt.Errorf("onedrive %s failed: status %d: %s", op, resp.StatusCode, strings.TrimSpace(string(body)))
 }
 
 func (c *onedriveConnector) get(ctx context.Context, client *http.Client, endpoint, op string, out any) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
-		return errtrace.Wrap(err)
+		return (err)
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return errtrace.Wrap(err)
+		return (err)
 	}
 	defer resp.Body.Close()
 
@@ -157,7 +157,7 @@ func (c *onedriveConnector) get(ctx context.Context, client *http.Client, endpoi
 	}
 
 	if out != nil {
-		return errtrace.Wrap(json.NewDecoder(resp.Body).Decode(out))
+		return (json.NewDecoder(resp.Body).Decode(out))
 	}
 	return nil
 }
@@ -247,7 +247,7 @@ func (c *onedriveConnector) PutObject(ctx context.Context, key string, r io.Read
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, endpoint, r)
 	if err != nil {
-		return Object{}, errtrace.Wrap(err)
+		return Object{}, (err)
 	}
 	req.Header.Set("Content-Type", contentType)
 	if size > 0 {
@@ -256,7 +256,7 @@ func (c *onedriveConnector) PutObject(ctx context.Context, key string, r io.Read
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return Object{}, errtrace.Wrap(err)
+		return Object{}, (err)
 	}
 	defer resp.Body.Close()
 
@@ -266,7 +266,7 @@ func (c *onedriveConnector) PutObject(ctx context.Context, key string, r io.Read
 
 	var item graphItem
 	if err := json.NewDecoder(resp.Body).Decode(&item); err != nil {
-		return Object{}, errtrace.Wrap(err)
+		return Object{}, (err)
 	}
 
 	c.remember(key, item)
@@ -293,7 +293,7 @@ func (c *onedriveConnector) ensureDir(ctx context.Context, client *http.Client, 
 			return graphItem{}, err
 		}
 		if ok && !item.isFolder() {
-			return graphItem{}, errtrace.Errorf("onedrive: %s exists and is not a folder", current)
+			return graphItem{}, fmt.Errorf("onedrive: %s exists and is not a folder", current)
 		}
 		if !ok {
 			payload, _ := json.Marshal(map[string]any{
@@ -304,13 +304,13 @@ func (c *onedriveConnector) ensureDir(ctx context.Context, client *http.Client, 
 			endpoint := fmt.Sprintf("%s/drives/%s/items/%s/children", graphAPI, c.driveID, parentID)
 			req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(string(payload)))
 			if err != nil {
-				return graphItem{}, errtrace.Wrap(err)
+				return graphItem{}, (err)
 			}
 			req.Header.Set("Content-Type", "application/json")
 
 			resp, err := client.Do(req)
 			if err != nil {
-				return graphItem{}, errtrace.Wrap(err)
+				return graphItem{}, (err)
 			}
 			defer resp.Body.Close()
 
@@ -321,14 +321,14 @@ func (c *onedriveConnector) ensureDir(ctx context.Context, client *http.Client, 
 					return graphItem{}, err
 				}
 				if !found {
-					return graphItem{}, errtrace.Errorf("onedrive: folder %s vanished during create", current)
+					return graphItem{}, fmt.Errorf("onedrive: folder %s vanished during create", current)
 				}
 				item = fresh
 			} else if resp.StatusCode >= 300 {
 				return graphItem{}, c.graphError(resp, "create folder")
 			} else {
 				if err := json.NewDecoder(resp.Body).Decode(&item); err != nil {
-					return graphItem{}, errtrace.Wrap(err)
+					return graphItem{}, (err)
 				}
 				c.remember(current, item)
 			}
@@ -362,12 +362,12 @@ func (c *onedriveConnector) GetObject(ctx context.Context, key string) (io.ReadC
 	endpoint := fmt.Sprintf("%s/drives/%s/root:/%s:/content", graphAPI, c.driveID, encodeGraphPath(key))
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
-		return nil, Object{}, errtrace.Wrap(err)
+		return nil, Object{}, (err)
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, Object{}, errtrace.Wrap(err)
+		return nil, Object{}, (err)
 	}
 
 	if resp.StatusCode >= 300 {
@@ -406,12 +406,12 @@ func (c *onedriveConnector) DeleteObject(ctx context.Context, key string) error 
 	endpoint := fmt.Sprintf("%s/drives/%s/items/%s", graphAPI, c.driveID, item.ID)
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, endpoint, nil)
 	if err != nil {
-		return errtrace.Wrap(err)
+		return (err)
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return errtrace.Wrap(err)
+		return (err)
 	}
 	defer resp.Body.Close()
 
@@ -488,7 +488,7 @@ func encodeGraphContinuation(nextLink string) string {
 func decodeGraphContinuation(token string) (string, error) {
 	raw, err := base64.RawURLEncoding.DecodeString(token)
 	if err != nil {
-		return "", errtrace.Wrap(err)
+		return "", (err)
 	}
 	return string(raw), nil
 }
@@ -520,13 +520,13 @@ func (c *onedriveConnector) CreateMultipartUpload(ctx context.Context, key, cont
 	endpoint := fmt.Sprintf("%s/drives/%s/items/%s:/%s:/createUploadSession", graphAPI, c.driveID, parentID, url.PathEscape(baseName(key)))
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(string(payload)))
 	if err != nil {
-		return MultipartInfo{}, errtrace.Wrap(err)
+		return MultipartInfo{}, (err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return MultipartInfo{}, errtrace.Wrap(err)
+		return MultipartInfo{}, (err)
 	}
 	defer resp.Body.Close()
 
@@ -538,10 +538,10 @@ func (c *onedriveConnector) CreateMultipartUpload(ctx context.Context, key, cont
 		UploadURL string `json:"uploadUrl"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&session); err != nil {
-		return MultipartInfo{}, errtrace.Wrap(err)
+		return MultipartInfo{}, (err)
 	}
 	if session.UploadURL == "" {
-		return MultipartInfo{}, errtrace.New("onedrive: upload session has no upload url")
+		return MultipartInfo{}, errors.New("onedrive: upload session has no upload url")
 	}
 
 	// The upload URL is the bearer of the session (Graph has no separate id);
@@ -564,7 +564,7 @@ func (c *onedriveConnector) UploadPart(ctx context.Context, key, uploadID string
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uploadURL, r)
 	if err != nil {
-		return "", errtrace.Wrap(err)
+		return "", (err)
 	}
 	req.ContentLength = size
 	req.Header.Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", offset, offset+size-1, offset+size))
@@ -572,7 +572,7 @@ func (c *onedriveConnector) UploadPart(ctx context.Context, key, uploadID string
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", errtrace.Wrap(err)
+		return "", (err)
 	}
 	defer resp.Body.Close()
 
@@ -621,12 +621,12 @@ func (c *onedriveConnector) AbortMultipartUpload(ctx context.Context, key, uploa
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, uploadURL, nil)
 	if err != nil {
-		return errtrace.Wrap(err)
+		return (err)
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return errtrace.Wrap(err)
+		return (err)
 	}
 	defer resp.Body.Close()
 

@@ -2,7 +2,7 @@
 # Build context is the repo root: the image also carries the apps/web SPA,
 # which the API serves at / (SPA_DIR) next to /v1 and /health.
 #
-#   docker build -f apps/server/Dockerfile -t cloudrive-api .
+#   docker build -f apps/server/Dockerfile -t cloudrive .
 
 # ---- SPA: built once on the builder's platform; the output is plain files.
 FROM --platform=$BUILDPLATFORM node:24-alpine AS web
@@ -22,9 +22,9 @@ COPY apps/web/ apps/web/
 RUN pnpm --filter @cloudrive/web exec vite build && test -f apps/web/dist/index.html
 
 # ---- API
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 LABEL author="masb0ymas"
-LABEL name="cloudrive-api"
+LABEL name="cloudrive"
 
 WORKDIR /temp-build
 
@@ -45,7 +45,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s" -o=./bin/migrat
 # Create the final image
 FROM alpine:3.21
 LABEL author="masb0ymas"
-LABEL name="cloudrive-api"
+LABEL name="cloudrive"
 
 WORKDIR /app
 RUN apk add --no-cache ca-certificates tzdata wget \

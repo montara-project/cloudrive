@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"strings"
 	"time"
@@ -47,7 +48,7 @@ const authulaSchema = "authula"
 // existing users/sessions tables via CREATE TABLE IF NOT EXISTS and silently
 // no-op.
 func newAuthulaDB(cfg config.Config) (*bun.DB, error) {
-	admin, err := sql.Open("postgres", cfg.DB.DSN)
+	admin, err := sql.Open("pgx", cfg.DB.DSN)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +65,7 @@ func newAuthulaDB(cfg config.Config) (*bun.DB, error) {
 		dsn += "?search_path=" + authulaSchema
 	}
 
-	sqldb, err := sql.Open("postgres", dsn)
+	sqldb, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -294,7 +295,7 @@ func syncUserToApp(application *app.Application) authulamodels.ServiceHook[authu
 	return func(user *authulamodels.User) error {
 		first, last := splitName(user.Name)
 
-		if err := application.Repositories.User.Upsert(&appmodels.User{
+		if err := application.Repositories.User.Upsert(context.Background(), appmodels.User{
 			ID:        uuid.MustParse(user.ID),
 			Email:     user.Email,
 			FirstName: first,

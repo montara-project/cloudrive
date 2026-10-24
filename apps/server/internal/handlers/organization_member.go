@@ -6,6 +6,7 @@ import (
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/lib/apperr"
 	"cloudrive/server/internal/models"
+	"cloudrive/server/internal/repositories"
 	"slices"
 
 	"github.com/gofiber/fiber/v3"
@@ -16,6 +17,10 @@ type organizationMemberHandler struct {
 	app *app.Application
 }
 
+func (h *organizationMemberHandler) repo() *repositories.OrganizationMemberRepository {
+	return &h.app.Repositories.OrganizationMember
+}
+
 // List returns the members of an organization. Any member may read it.
 func (h *organizationMemberHandler) List(c fiber.Ctx) error {
 	userID, err := currentUser(c)
@@ -23,26 +28,33 @@ func (h *organizationMemberHandler) List(c fiber.Ctx) error {
 		return err
 	}
 
-	orgID, err := pathUUID(c, "orgId", "Invalid organization id")
+	orgID, err := pathID(c, "orgId", "Invalid organization id")
 	if err != nil {
 		return err
 	}
 
-	if _, err := requireOrgMember(h.app, orgID, userID); err != nil {
+	if _, err := requireOrgMember(c.Context(), h.app, orgID, userID); err != nil {
 		return err
 	}
 
-	opts, q, err := pagination(c)
+	var q dtos.ListQuery
+	if err := lib.ValidateRequestQuery(c, &q); err != nil {
+		return err
+	}
+	q.Clamp()
+
+	params := listParams(q)
+
+	members, err := h.repo().ListByOrganization(c.Context(), orgID, params)
+	if err != nil {
+		return err
+	}
+	total, err := h.repo().CountByOrganization(c.Context(), orgID)
 	if err != nil {
 		return err
 	}
 
-	members, metadata, err := h.app.Repositories.OrganizationMember.ListByOrganization(orgID, opts)
-	if err != nil {
-		return dbError(err)
-	}
-
-	return dtos.List(c, members, listMeta(q, metadata.Total))
+	return dtos.List(c, members, dtos.ListMeta(int(total), q.Offset, q.Limit))
 }
 
 // Add attaches an existing user to the organization. Requires owner or admin.
@@ -52,12 +64,12 @@ func (h *organizationMemberHandler) Add(c fiber.Ctx) error {
 		return err
 	}
 
-	orgID, err := pathUUID(c, "orgId", "Invalid organization id")
+	orgID, err := pathID(c, "orgId", "Invalid organization id")
 	if err != nil {
 		return err
 	}
 
-	if _, err := requireOrgMember(h.app, orgID, userID, "owner", "admin"); err != nil {
+	if _, err := requireOrgMember(c.Context(), h.app, orgID, userID, "owner", "admin"); err != nil {
 		return err
 	}
 
@@ -75,19 +87,28 @@ func (h *organizationMemberHandler) Add(c fiber.Ctx) error {
 		return apperr.New(apperr.KindBadRequest, "Role must be admin or member (ownership is transferred, not granted)")
 	}
 
-	if _, err := h.app.Repositories.User.Get(req.UserID); err != nil {
-		return dbError(err)
+	if _, err := h.app.Repositories.User.Get(c.Context(), req.UserID); err != nil {
+		return err
 	}
 
-	member := &models.OrganizationMember{
+	member := models.OrganizationMember{
 		OrganizationID: orgID,
 		UserID:         req.UserID,
 		Role:           req.Role,
 	}
-	if err := h.app.Repositories.OrganizationMember.Add(member); err != nil {
-		return dbError(err)
+	if member.ID, err = uuid.NewV7(); err != nil {
+		return err
 	}
 
+	if err := h.repo().Add(c.Context(), member); err != nil {
+		return err
+	}
+
+	// Re-read so the response carries the DB-set timestamps.
+	member, err = h.repo().Get(c.Context(), orgID, req.UserID)
+	if err != nil {
+		return err
+	}
 	return dtos.Created(c, member, "Member added")
 }
 
@@ -99,16 +120,16 @@ func (h *organizationMemberHandler) UpdateRole(c fiber.Ctx) error {
 		return err
 	}
 
-	orgID, err := pathUUID(c, "orgId", "Invalid organization id")
+	orgID, err := pathID(c, "orgId", "Invalid organization id")
 	if err != nil {
 		return err
 	}
 
-	if _, err := requireOrgMember(h.app, orgID, userID, "owner", "admin"); err != nil {
+	if _, err := requireOrgMember(c.Context(), h.app, orgID, userID, "owner", "admin"); err != nil {
 		return err
 	}
 
-	targetID, err := pathUUID(c, "userId", "Invalid user id")
+	targetID, err := pathID(c, "userId", "Invalid user id")
 	if err != nil {
 		return err
 	}
@@ -123,16 +144,16 @@ func (h *organizationMemberHandler) UpdateRole(c fiber.Ctx) error {
 
 	// The single owner cannot be demoted; ownership moves by promoting
 	// someone else first, never by demoting the current owner directly.
-	target, err := h.app.Repositories.OrganizationMember.Get(orgID, targetID)
+	target, err := h.repo().Get(c.Context(), orgID, targetID)
 	if err != nil {
-		return dbError(err)
+		return err
 	}
 	if target.Role == "owner" && req.Role != "owner" {
 		return apperr.New(apperr.KindConflict, "Promote another member to owner before changing the current owner's role")
 	}
 
-	if err := h.app.Repositories.OrganizationMember.UpdateRole(orgID, targetID, req.Role); err != nil {
-		return dbError(err)
+	if err := h.repo().UpdateRole(c.Context(), orgID, targetID, req.Role); err != nil {
+		return err
 	}
 
 	target.Role = req.Role
@@ -147,30 +168,30 @@ func (h *organizationMemberHandler) Remove(c fiber.Ctx) error {
 		return err
 	}
 
-	orgID, err := pathUUID(c, "orgId", "Invalid organization id")
+	orgID, err := pathID(c, "orgId", "Invalid organization id")
 	if err != nil {
 		return err
 	}
 
-	if _, err := requireOrgMember(h.app, orgID, userID, "owner", "admin"); err != nil {
+	if _, err := requireOrgMember(c.Context(), h.app, orgID, userID, "owner", "admin"); err != nil {
 		return err
 	}
 
-	targetID, err := pathUUID(c, "userId", "Invalid user id")
+	targetID, err := pathID(c, "userId", "Invalid user id")
 	if err != nil {
 		return err
 	}
 
-	target, err := h.app.Repositories.OrganizationMember.Get(orgID, targetID)
+	target, err := h.repo().Get(c.Context(), orgID, targetID)
 	if err != nil {
-		return dbError(err)
+		return err
 	}
 	if target.Role == "owner" {
 		return apperr.New(apperr.KindConflict, "Transfer ownership before removing the owner")
 	}
 
-	if err := h.app.Repositories.OrganizationMember.Delete(orgID, targetID); err != nil {
-		return dbError(err)
+	if err := h.repo().Delete(c.Context(), orgID, targetID); err != nil {
+		return err
 	}
 
 	return dtos.Message(c, fiber.StatusOK, "Member removed")

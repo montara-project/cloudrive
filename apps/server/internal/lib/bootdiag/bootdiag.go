@@ -25,7 +25,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 const (
@@ -298,9 +298,9 @@ func CollectFacts(ctx context.Context, db *sql.DB, appTablesPresent func(ctx con
 		Environment:            environment,
 	}
 
-	var pqErr *pq.Error
-	if errors.As(bootErr, &pqErr) {
-		facts.PostgresErrorCode = string(pqErr.Code)
+	var pgErr *pgconn.PgError
+	if errors.As(bootErr, &pgErr) {
+		facts.PostgresErrorCode = string(pgErr.Code)
 	}
 
 	if db == nil {

@@ -61,6 +61,11 @@ db/migrations/refresh:
 db/migrations/refresh/seed:
 	@go run ./cmd/migrate --db-dsn=$(DB_DSN) --seed=dev refresh
 
+## db/migrations/force version=$1: force the schema version (clears a dirty state)
+.PHONY: db/migrations/force
+db/migrations/force:
+	@go run ./cmd/migrate --db-dsn=$(DB_DSN) force --version=$(version)
+
 # ==================================================================================== #
 # BUILD
 # ==================================================================================== #

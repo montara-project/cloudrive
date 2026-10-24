@@ -17,7 +17,6 @@ import (
 	"sync"
 	"time"
 
-	"braces.dev/errtrace"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
@@ -100,7 +99,7 @@ func (c *gdriveConnector) client(ctx context.Context) (*http.Client, error) {
 
 func (c *gdriveConnector) driveError(resp *http.Response, op string) error {
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-	return errtrace.Errorf("drive %s failed: status %d: %s", op, resp.StatusCode, strings.TrimSpace(string(body)))
+	return fmt.Errorf("drive %s failed: status %d: %s", op, resp.StatusCode, strings.TrimSpace(string(body)))
 }
 
 // PutObject uploads the payload as one Drive file via the simple media
@@ -128,19 +127,19 @@ func (c *gdriveConnector) PutObject(ctx context.Context, key string, r io.Reader
 	body.WriteString(contentType)
 	body.WriteString("\r\n\r\n")
 	if _, err := io.Copy(body, r); err != nil {
-		return Object{}, errtrace.Wrap(err)
+		return Object{}, (err)
 	}
 	body.WriteString("\r\n--crboundary--")
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uploadURL, body)
 	if err != nil {
-		return Object{}, errtrace.Wrap(err)
+		return Object{}, (err)
 	}
 	req.Header.Set("Content-Type", "multipart/related; boundary=crboundary")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return Object{}, errtrace.Wrap(err)
+		return Object{}, (err)
 	}
 	defer resp.Body.Close()
 
@@ -150,7 +149,7 @@ func (c *gdriveConnector) PutObject(ctx context.Context, key string, r io.Reader
 
 	var file driveFile
 	if err := json.NewDecoder(resp.Body).Decode(&file); err != nil {
-		return Object{}, errtrace.Wrap(err)
+		return Object{}, (err)
 	}
 
 	c.remember(key, file)
@@ -203,12 +202,12 @@ func (c *gdriveConnector) lookup(ctx context.Context, client *http.Client, key, 
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
-		return driveFile{}, false, errtrace.Wrap(err)
+		return driveFile{}, false, (err)
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return driveFile{}, false, errtrace.Wrap(err)
+		return driveFile{}, false, (err)
 	}
 	defer resp.Body.Close()
 
@@ -220,7 +219,7 @@ func (c *gdriveConnector) lookup(ctx context.Context, client *http.Client, key, 
 		Files []driveFile `json:"files"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return driveFile{}, false, errtrace.Wrap(err)
+		return driveFile{}, false, (err)
 	}
 
 	if len(result.Files) == 0 {
@@ -240,13 +239,13 @@ func (c *gdriveConnector) createFolder(ctx context.Context, client *http.Client,
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, driveAPI+"/files?fields=id,name,mimeType", bytes.NewReader(meta))
 	if err != nil {
-		return driveFile{}, errtrace.Wrap(err)
+		return driveFile{}, (err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return driveFile{}, errtrace.Wrap(err)
+		return driveFile{}, (err)
 	}
 	defer resp.Body.Close()
 
@@ -256,7 +255,7 @@ func (c *gdriveConnector) createFolder(ctx context.Context, client *http.Client,
 
 	var file driveFile
 	if err := json.NewDecoder(resp.Body).Decode(&file); err != nil {
-		return driveFile{}, errtrace.Wrap(err)
+		return driveFile{}, (err)
 	}
 
 	return file, nil
@@ -278,12 +277,12 @@ func (c *gdriveConnector) GetObject(ctx context.Context, key string) (io.ReadClo
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, driveAPI+"/files/"+file.ID+"?alt=media", nil)
 	if err != nil {
-		return nil, Object{}, errtrace.Wrap(err)
+		return nil, Object{}, (err)
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, Object{}, errtrace.Wrap(err)
+		return nil, Object{}, (err)
 	}
 
 	if resp.StatusCode >= 300 {
@@ -327,12 +326,12 @@ func (c *gdriveConnector) DeleteObject(ctx context.Context, key string) error {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, driveAPI+"/files/"+file.ID, nil)
 	if err != nil {
-		return errtrace.Wrap(err)
+		return (err)
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return errtrace.Wrap(err)
+		return (err)
 	}
 	defer resp.Body.Close()
 
@@ -378,12 +377,12 @@ func (c *gdriveConnector) ListObjects(ctx context.Context, prefix, delimiter, co
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
-		return ListPage{}, errtrace.Wrap(err)
+		return ListPage{}, (err)
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return ListPage{}, errtrace.Wrap(err)
+		return ListPage{}, (err)
 	}
 	defer resp.Body.Close()
 
@@ -396,7 +395,7 @@ func (c *gdriveConnector) ListObjects(ctx context.Context, prefix, delimiter, co
 		Files         []driveFile `json:"files"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return ListPage{}, errtrace.Wrap(err)
+		return ListPage{}, (err)
 	}
 
 	page := ListPage{IsTruncated: result.NextPageToken != "", NextContinuationToken: result.NextPageToken}
@@ -444,14 +443,14 @@ func (c *gdriveConnector) CreateMultipartUpload(ctx context.Context, key, conten
 
 	dir := c.stagingDir(uploadID)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return MultipartInfo{}, errtrace.Wrap(err)
+		return MultipartInfo{}, (err)
 	}
 
 	if err := os.WriteFile(filepath.Join(dir, "key"), []byte(key), 0o600); err != nil {
-		return MultipartInfo{}, errtrace.Wrap(err)
+		return MultipartInfo{}, (err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "content_type"), []byte(contentType), 0o600); err != nil {
-		return MultipartInfo{}, errtrace.Wrap(err)
+		return MultipartInfo{}, (err)
 	}
 
 	return MultipartInfo{UploadID: uploadID}, nil
@@ -463,13 +462,13 @@ func (c *gdriveConnector) UploadPart(ctx context.Context, key, uploadID string, 
 
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
 	if err != nil {
-		return "", errtrace.Wrap(err)
+		return "", (err)
 	}
 	defer f.Close()
 
 	written, err := io.Copy(f, r)
 	if err != nil {
-		return "", errtrace.Wrap(err)
+		return "", (err)
 	}
 
 	// The etag returned to the client is the staging filename's checksum-free
@@ -482,17 +481,17 @@ func (c *gdriveConnector) CompleteMultipartUpload(ctx context.Context, key, uplo
 
 	storedKey, err := os.ReadFile(filepath.Join(dir, "key"))
 	if err != nil {
-		return Object{}, errtrace.Errorf("unknown upload id %s", uploadID)
+		return Object{}, fmt.Errorf("unknown upload id %s", uploadID)
 	}
 	if string(storedKey) != key {
-		return Object{}, errtrace.Errorf("upload id %s does not match key %q", uploadID, key)
+		return Object{}, fmt.Errorf("upload id %s does not match key %q", uploadID, key)
 	}
 
 	sort.Slice(parts, func(i, j int) bool { return parts[i].PartNumber < parts[j].PartNumber })
 
 	joined, err := os.CreateTemp(dir, "joined-*")
 	if err != nil {
-		return Object{}, errtrace.Wrap(err)
+		return Object{}, (err)
 	}
 	defer os.Remove(joined.Name())
 	defer joined.Close()
@@ -502,18 +501,18 @@ func (c *gdriveConnector) CompleteMultipartUpload(ctx context.Context, key, uplo
 		partPath := filepath.Join(dir, fmt.Sprintf("part-%05d", p.PartNumber))
 		partFile, err := os.Open(partPath)
 		if err != nil {
-			return Object{}, errtrace.Errorf("missing part %d", p.PartNumber)
+			return Object{}, fmt.Errorf("missing part %d", p.PartNumber)
 		}
 		n, err := io.Copy(joined, partFile)
 		partFile.Close()
 		if err != nil {
-			return Object{}, errtrace.Wrap(err)
+			return Object{}, (err)
 		}
 		total += n
 	}
 
 	if _, err := joined.Seek(0, io.SeekStart); err != nil {
-		return Object{}, errtrace.Wrap(err)
+		return Object{}, (err)
 	}
 
 	contentTypeBytes, err := os.ReadFile(filepath.Join(dir, "content_type"))
@@ -531,7 +530,7 @@ func (c *gdriveConnector) CompleteMultipartUpload(ctx context.Context, key, uplo
 }
 
 func (c *gdriveConnector) AbortMultipartUpload(ctx context.Context, key, uploadID string) error {
-	return errtrace.Wrap(os.RemoveAll(c.stagingDir(uploadID)))
+	return (os.RemoveAll(c.stagingDir(uploadID)))
 }
 
 // --- path helpers and the path → file cache ---
@@ -571,7 +570,7 @@ func pathDir(key string) string {
 
 func validatePartSize(written, expected int64) error {
 	if expected > 0 && written != expected {
-		return errtrace.Errorf("part size mismatch: expected %d bytes, read %d", expected, written)
+		return fmt.Errorf("part size mismatch: expected %d bytes, read %d", expected, written)
 	}
 	return nil
 }
@@ -579,7 +578,7 @@ func validatePartSize(written, expected int64) error {
 func newUploadID() (string, error) {
 	b := make([]byte, 16)
 	if _, err := randRead(b); err != nil {
-		return "", errtrace.Wrap(err)
+		return "", (err)
 	}
 	return fmt.Sprintf("%x", b), nil
 }
