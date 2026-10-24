@@ -1,24 +1,25 @@
-import { cloudflare } from '@cloudflare/vite-plugin'
-import { cdnAdapter } from '@vinext/cloudflare/cache/cdn-adapter'
-import { imagesOptimizer } from '@vinext/cloudflare/images/images-optimizer'
-import vinext from 'vinext'
+import tailwindcss from '@tailwindcss/vite'
+import { devtools } from '@tanstack/devtools-vite'
+import { tanstackRouter } from '@tanstack/router-plugin/vite'
+import viteReact from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
-export default defineConfig({
-  server: {
-    port: 3000,
-  },
+// The Go API owns /v1; override the target when it is not on :8080.
+const apiTarget = process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:8080'
+
+const config = defineConfig({
+  resolve: { tsconfigPaths: true },
   plugins: [
-    vinext({
-      cache: { cdn: cdnAdapter() },
-      images: { optimizer: imagesOptimizer() },
-    }),
-    cloudflare({
-      viteEnvironment: {
-        name: 'rsc',
-        childEnvironments: ['ssr'],
-      },
-      inspectorPort: false,
-    }),
+    devtools(),
+    tailwindcss(),
+    tanstackRouter({ target: 'react', autoCodeSplitting: true }),
+    viteReact(),
   ],
+  server: {
+    proxy: {
+      '/v1': { target: apiTarget, changeOrigin: true },
+    },
+  },
 })
+
+export default config
