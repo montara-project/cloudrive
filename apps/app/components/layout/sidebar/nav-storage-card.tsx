@@ -35,7 +35,7 @@ export default function NavStorageCard() {
       href={href}
       className="block overflow-hidden rounded-2xl border border-sidebar-border bg-background shadow-xs transition-colors hover:bg-accent/40"
     >
-      <div className="relative h-16 bg-gradient-to-br from-primary/20 via-primary/5 to-violet-500/20">
+      <div className="relative h-16 bg-gradient-to-br from-primary/20 via-primary/5 to-sky-400/25">
         <span className="absolute top-3 left-3 flex size-9 items-center justify-center rounded-lg border border-sidebar-border bg-background text-primary shadow-xs">
           <IconRocket className="size-4.5" />
         </span>

@@ -17,7 +17,7 @@ export default function InsightBanner() {
 
   return (
     <div className="flex items-center gap-3 rounded-xl border border-primary/15 bg-primary/[0.04] py-3 pr-2 pl-4">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-violet-500 text-white shadow-xs">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-sky-400 text-white shadow-xs">
         <IconSparkles className="size-4.5" />
       </span>
       <p className="line-clamp-2 min-w-0 flex-1 text-sm text-foreground/90">{MOCK_INSIGHT}</p>

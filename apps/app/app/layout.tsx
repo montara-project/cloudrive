@@ -19,7 +19,7 @@ const inter = Inter({
 })
 
 export const viewport: Viewport = {
-  themeColor: '#2563eb',
+  themeColor: '#0078d4',
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

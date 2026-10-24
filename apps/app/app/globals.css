@@ -10,7 +10,8 @@
   --card-foreground: oklch(0.208 0.042 265.755);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.208 0.042 265.755);
-  --primary: oklch(0.546 0.245 262.881);
+  /* OneDrive brand palette (brandcolorcode.com/onedrive): Blue #0078D4 */
+  --primary: oklch(0.568 0.167 251.3);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.968 0.007 247.896);
   --secondary-foreground: oklch(0.208 0.042 265.755);
@@ -22,46 +23,50 @@
   --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.929 0.013 255.508);
   --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.623 0.214 259.815);
+  /* Sky Blue #1490DF */
+  --ring: oklch(0.631 0.153 244.9);
   --radius: 0.75rem;
-  --sidebar-background: 220 25% 97.5%;
-  --sidebar-foreground: 222 47% 13%;
-  --sidebar-primary: 224 76% 48%;
+  --sidebar-background: 206 33% 97.5%;
+  --sidebar-foreground: 211 47% 13%;
+  --sidebar-primary: 206 100% 42%;
   --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 220 20% 93.5%;
-  --sidebar-accent-foreground: 222 47% 13%;
-  --sidebar-border: 220 15% 90%;
-  --sidebar-ring: 217.2 91.2% 59.8%;
+  --sidebar-accent: 206 25% 93.5%;
+  --sidebar-accent-foreground: 211 47% 13%;
+  --sidebar-border: 206 18% 90%;
+  --sidebar-ring: 206 100% 42%;
 }
 
 .dark {
-  --background: oklch(0.208 0.042 265.755);
+  /* Deep OneDrive navy — the brand blue family pushed to a dark surface */
+  --background: oklch(0.2 0.05 250);
   --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.279 0.041 260.031);
+  --card: oklch(0.27 0.055 250);
   --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.279 0.041 260.031);
+  --popover: oklch(0.27 0.055 250);
   --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.623 0.214 259.815);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.279 0.041 260.031);
+  /* Light Blue #28A8EA — the bright end of the OneDrive ramp for dark ground */
+  --primary: oklch(0.695 0.142 237.7);
+  --primary-foreground: oklch(0.18 0.05 250);
+  --secondary: oklch(0.27 0.055 250);
   --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
+  --muted: oklch(0.27 0.055 250);
+  --muted-foreground: oklch(0.704 0.045 250);
+  --accent: oklch(0.27 0.055 250);
   --accent-foreground: oklch(0.984 0.003 247.858);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.546 0.245 262.881);
-  --sidebar-background: 222 47% 11%;
+  /* Sky Blue #1490DF */
+  --ring: oklch(0.631 0.153 244.9);
+  --sidebar-background: 211 55% 10%;
   --sidebar-foreground: 210 40% 96%;
-  --sidebar-primary: 217 91% 60%;
-  --sidebar-primary-foreground: 222 47% 11%;
-  --sidebar-accent: 217 30% 17%;
+  --sidebar-primary: 199 82% 54%;
+  --sidebar-primary-foreground: 211 55% 10%;
+  --sidebar-accent: 209 45% 17%;
   --sidebar-accent-foreground: 210 40% 96%;
-  --sidebar-border: 217 25% 20%;
-  --sidebar-ring: 217.2 91.2% 59.8%;
+  --sidebar-border: 209 40% 24%;
+  --sidebar-ring: 199 82% 54%;
 }
 
 @theme inline {
