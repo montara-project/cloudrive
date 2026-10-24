@@ -34,12 +34,12 @@ const NAV_ITEMS = [
   { title: 'Recent', url: '/recent', icon: IconClock },
   { title: 'Starred', url: '/starred', icon: IconStar },
   { title: 'Storage', url: '/storage', icon: IconCloud },
-  { title: 'S3 Gateway', url: '/s3', icon: IconBucket },
+  { title: 'S3 Gateway', url: '/settings?tab=s3', icon: IconBucket },
   { title: 'Settings', url: '/settings', icon: IconSettings },
 ]
 
 /**
- * GlobalSearch is the topbar search pill ("Search in Cloudrive…"). It opens a
+ * GlobalSearch is the sidebar search pill ("Search in Cloudrive…"). It opens a
  * command palette with the app's destinations plus the active workspace's
  * connected storage accounts. ⌘K / Ctrl+K toggles it from anywhere.
  */
@@ -66,11 +66,12 @@ export default function GlobalSearch() {
 
   const scopedHref = useCallback(
     (url: string) => {
-      const params = new URLSearchParams()
+      const [path, existing] = url.split('?')
+      const params = new URLSearchParams(existing)
       if (orgId) params.set('org', orgId)
-      if (wsId && (url === '/storage' || url === '/s3')) params.set('ws', wsId)
+      if (wsId && (path === '/storage' || params.get('tab') === 's3')) params.set('ws', wsId)
       const query = params.toString()
-      return query ? `${url}?${query}` : url
+      return query ? `${path}?${query}` : path
     },
     [orgId, wsId]
   )

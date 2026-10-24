@@ -1,8 +1,10 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
-import S3Content from '@/components/block/s3/content'
-
+// The S3 gateway lives under Settings → S3 Gateway now; keep the route as a
+// redirect so old links and bookmarks still land in the right place, with
+// their workspace (?org/?ws) and bucket deep link (?view/?bucket) intact.
 export const Route = createFileRoute('/(dashboard)/s3/')({
-  head: () => ({ meta: [{ title: 'S3 Gateway | Cloudrive' }] }),
-  component: S3Content,
+  beforeLoad: ({ search }) => {
+    throw redirect({ to: '/settings', search: { ...search, tab: 's3' }, replace: true })
+  },
 })

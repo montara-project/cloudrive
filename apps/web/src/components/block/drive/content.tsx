@@ -15,6 +15,7 @@ import type { DriveEntry } from '@/lib/api/services/types/s3'
 
 import ProviderIcon from '@/components/block/common/provider-icon'
 import FileIcon, { fileCategory, type FileCategory } from '@/components/block/dashboard/file-icon'
+import PageHeader from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { Input } from '@/components/ui/input'
@@ -138,52 +139,59 @@ export default function DriveContent() {
     setPrefix((prefix ?? '') + name + '/')
   }
 
+  const header = (
+    <PageHeader
+      title="My Drive"
+      description="Manage the storage inside each connected provider account."
+      actions={
+        <>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn('rounded-full', view === 'list' && 'bg-primary/10 text-primary')}
+              aria-label="List view"
+              onClick={() => setView('list')}
+            >
+              <IconList className="size-4.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn('rounded-full', view === 'grid' && 'bg-primary/10 text-primary')}
+              aria-label="Grid view"
+              onClick={() => setView('grid')}
+            >
+              <IconLayoutGrid className="size-4.5" />
+            </Button>
+          </div>
+        </>
+      }
+    />
+  )
+
   if (!wsId) {
     return (
-      <Empty className="rounded-2xl border">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <IconFolder />
-          </EmptyMedia>
-          <EmptyTitle>No workspace selected</EmptyTitle>
-          <EmptyDescription>
-            Pick a workspace in the sidebar to browse its provider drives.
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <div className="flex flex-col gap-5">
+        {header}
+        <Empty className="rounded-2xl border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <IconFolder />
+            </EmptyMedia>
+            <EmptyTitle>No workspace selected</EmptyTitle>
+            <EmptyDescription>
+              Pick a workspace in the sidebar to browse its provider drives.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </div>
     )
   }
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">My Drive</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage the storage inside each connected provider account.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn('rounded-full', view === 'list' && 'bg-primary/10 text-primary')}
-            aria-label="List view"
-            onClick={() => setView('list')}
-          >
-            <IconList className="size-4.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn('rounded-full', view === 'grid' && 'bg-primary/10 text-primary')}
-            aria-label="Grid view"
-            onClick={() => setView('grid')}
-          >
-            <IconLayoutGrid className="size-4.5" />
-          </Button>
-        </div>
-      </div>
+      {header}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">

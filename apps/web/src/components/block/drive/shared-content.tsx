@@ -2,6 +2,7 @@ import { IconUsers } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 
+import PageHeader from '@/components/layout/page-header'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
@@ -32,37 +33,46 @@ export default function SharedContent() {
   const membersQuery = useQuery(queries.workspaces.members.list(wsId, { limit: 100 }))
   const members = useMemo(() => membersQuery.data?.data ?? [], [membersQuery.data])
 
+  const header = (
+    <PageHeader
+      title="Shared"
+      description={
+        <>
+          {workspace
+            ? `People with access to ${workspace.name} and the drive inside it.`
+            : 'People with access to this workspace and the drive inside it.'}
+        </>
+      }
+      leading={
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <IconUsers className="size-5.5" />
+        </div>
+      }
+    />
+  )
+
   if (!wsId) {
     return (
-      <Empty className="rounded-2xl border">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <IconUsers />
-          </EmptyMedia>
-          <EmptyTitle>No workspace selected</EmptyTitle>
-          <EmptyDescription>
-            Pick a workspace in the sidebar to see who it is shared with.
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <div className="flex flex-col gap-5">
+        {header}
+        <Empty className="rounded-2xl border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <IconUsers />
+            </EmptyMedia>
+            <EmptyTitle>No workspace selected</EmptyTitle>
+            <EmptyDescription>
+              Pick a workspace in the sidebar to see who it is shared with.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </div>
     )
   }
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center gap-3">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <IconUsers className="size-5.5" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Shared</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {workspace
-              ? `People with access to ${workspace.name} and the drive inside it.`
-              : 'People with access to this workspace and the drive inside it.'}
-          </p>
-        </div>
-      </div>
+      {header}
 
       {membersQuery.isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

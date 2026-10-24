@@ -7,22 +7,21 @@ icon: Route
 Routes live in `src/routes`. Folders in parentheses are **pathless groups**: they add a
 layout without adding a URL segment.
 
-| URL                                           | File                                   | Notes                                                         |
-| --------------------------------------------- | -------------------------------------- | ------------------------------------------------------------- |
-| `/`                                           | `(marketing)/index.tsx`                | Landing page                                                  |
-| `/contact`, `/privacy`, `/terms`              | `(marketing)/*/index.tsx`              | Public pages                                                  |
-| `/sign-in`                                    | `sign-in/index.tsx`                    | Redirects to `/dashboard` with a session                      |
-| `/auth/callback`                              | `auth/callback.tsx`                    | Magic-link and Google sign-in landing                         |
-| `/onboarding`                                 | `onboarding/index.tsx`                 | First-run wizard                                              |
-| `/dashboard`                                  | `(dashboard)/dashboard/index.tsx`      | Workspace overview                                            |
-| `/drive`, `/shared`, `/recent`, `/starred`    | `(dashboard)/*/index.tsx`              | Views over the merged drive                                   |
-| `/storage`                                    | `(dashboard)/storage/index.tsx`        | Connected storage accounts                                    |
-| `/s3`                                         | `(dashboard)/s3/index.tsx`             | S3 gateway credentials and buckets                            |
-| `/settings`                                   | `(dashboard)/settings/index.tsx`       | Tabs via `?tab=`: storage, account, organizations, workspaces |
-| `/organizations/$orgId`                       | `(dashboard)/organizations/$orgId.tsx` | Organization detail                                           |
-| `/workspaces/$wsId`                           | `(dashboard)/workspaces/$wsId.tsx`     | Workspace detail                                              |
-| `/organizations`, `/workspaces`, `/providers` | `(dashboard)/*/index.tsx`              | Redirects into the matching settings tab                      |
-| `/preview`                                    | `preview/index.tsx`                    | Dev-only mock dashboard (404 in production)                   |
+| URL                                                  | File                                   | Notes                                                             |
+| ---------------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------- |
+| `/`                                                  | `(marketing)/index.tsx`                | Landing page                                                      |
+| `/contact`, `/privacy`, `/terms`                     | `(marketing)/*/index.tsx`              | Public pages                                                      |
+| `/sign-in`                                           | `sign-in/index.tsx`                    | Redirects to `/dashboard` with a session                          |
+| `/auth/callback`                                     | `auth/callback.tsx`                    | Magic-link and Google sign-in landing                             |
+| `/onboarding`                                        | `onboarding/index.tsx`                 | First-run wizard                                                  |
+| `/dashboard`                                         | `(dashboard)/dashboard/index.tsx`      | Workspace overview                                                |
+| `/drive`, `/shared`, `/recent`, `/starred`           | `(dashboard)/*/index.tsx`              | Views over the merged drive                                       |
+| `/storage`                                           | `(dashboard)/storage/index.tsx`        | Connected storage accounts                                        |
+| `/settings`                                          | `(dashboard)/settings/index.tsx`       | Tabs via `?tab=`: storage, s3, account, organizations, workspaces |
+| `/organizations/$orgId`                              | `(dashboard)/organizations/$orgId.tsx` | Organization detail                                               |
+| `/workspaces/$wsId`                                  | `(dashboard)/workspaces/$wsId.tsx`     | Workspace detail                                                  |
+| `/organizations`, `/workspaces`, `/providers`, `/s3` | `(dashboard)/*/index.tsx`              | Redirects into the matching settings tab                          |
+| `/preview`                                           | `preview/index.tsx`                    | Dev-only mock dashboard (404 in production)                       |
 
 ## Layout routes
 
@@ -58,7 +57,7 @@ TanStack Router matches `to` as a path only, so never put a query string in `to`
 <Link to="/settings" search={{ tab: 'workspaces' }}>Workspaces</Link>
 
 // built URLs (scoped hrefs): split them with hrefToLocation
-<Link {...hrefToLocation(scopedHref('/s3'))}>S3 gateway</Link>
+<Link {...hrefToLocation(scopedHref('/storage'))}>Storage</Link>
 void navigate(hrefToLocation('/storage?org=…&ws=…'))
 ```
 

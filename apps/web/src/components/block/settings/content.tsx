@@ -1,5 +1,6 @@
-import { useQueryState } from 'nuqs'
+import { useQueryStates, parseAsString } from 'nuqs'
 
+import PageHeader from '@/components/layout/page-header'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -7,40 +8,54 @@ import { useSession, useSignOut } from '@/hooks/use-session'
 
 import SectionCard from '../common/section-card'
 import OrganizationContent from '../organizations/content'
+import S3Content from '../s3/content'
 import WorkspaceContent from '../workspaces/content'
 import StorageSettingsPanel from './storage-panel'
 
 export default function SettingContent() {
   // Tab lives in `?tab=` so links can deep-link a panel; the default stays
-  // out of the URL to keep it clean.
-  const [tab, setTab] = useQueryState('tab')
+  // out of the URL to keep it clean. `?view=` is each panel's own sub-tab
+  // (storage: overview/providers, s3: buckets), so switching panels clears it.
+  const [{ tab }, setParams] = useQueryStates({ tab: parseAsString, view: parseAsString })
 
   return (
-    <Tabs
-      value={tab ?? 'storage'}
-      onValueChange={(value) => setTab(value === 'storage' ? null : value)}
-      className="flex flex-col gap-4"
-    >
-      <TabsList className="w-fit">
-        <TabsTrigger value="storage">Storage</TabsTrigger>
-        <TabsTrigger value="account">Account</TabsTrigger>
-        <TabsTrigger value="organizations">Organizations</TabsTrigger>
-        <TabsTrigger value="workspaces">Workspaces</TabsTrigger>
-      </TabsList>
+    <div className="flex flex-col gap-5">
+      <PageHeader
+        title="Settings"
+        description="Storage, the S3 gateway, your account, organizations and workspaces."
+      />
+      <Tabs
+        value={tab ?? 'storage'}
+        onValueChange={(value) =>
+          setParams({ tab: value === 'storage' ? null : value, view: null })
+        }
+        className="flex flex-col gap-4"
+      >
+        <TabsList className="w-fit">
+          <TabsTrigger value="storage">Storage</TabsTrigger>
+          <TabsTrigger value="s3">S3 Gateway</TabsTrigger>
+          <TabsTrigger value="account">Account</TabsTrigger>
+          <TabsTrigger value="organizations">Organizations</TabsTrigger>
+          <TabsTrigger value="workspaces">Workspaces</TabsTrigger>
+        </TabsList>
 
-      <TabsContent value="storage" className="mt-0">
-        <StorageSettingsPanel />
-      </TabsContent>
-      <TabsContent value="account">
-        <AccountCard />
-      </TabsContent>
-      <TabsContent value="organizations" className="mt-0">
-        <OrganizationContent />
-      </TabsContent>
-      <TabsContent value="workspaces" className="mt-0">
-        <WorkspaceContent />
-      </TabsContent>
-    </Tabs>
+        <TabsContent value="storage" className="mt-0">
+          <StorageSettingsPanel />
+        </TabsContent>
+        <TabsContent value="s3" className="mt-0">
+          <S3Content />
+        </TabsContent>
+        <TabsContent value="account">
+          <AccountCard />
+        </TabsContent>
+        <TabsContent value="organizations" className="mt-0">
+          <OrganizationContent />
+        </TabsContent>
+        <TabsContent value="workspaces" className="mt-0">
+          <WorkspaceContent />
+        </TabsContent>
+      </Tabs>
+    </div>
   )
 }
 

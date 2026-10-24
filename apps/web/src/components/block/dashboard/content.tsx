@@ -66,7 +66,7 @@ export default function DashboardContent() {
   }
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-360 flex-col gap-5 p-4 md:gap-6 md:p-6">
+    <div className="flex min-w-0 flex-col gap-5 md:gap-6">
       <WelcomeHeader />
       <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
         <DashboardToolbar filter={filter} onFilterChange={setFilter} />

@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 
 import SectionCard from '@/components/block/common/section-card'
 import SimpleAlertDialog from '@/components/block/common/simple-alert-dialog'
+import PageHeader from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toastAxiosError } from '@/lib/api/axios-error'
@@ -25,44 +26,56 @@ export default function OrganizationDetailContent({ orgId }: { orgId: string }) 
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-20">
-        <span className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <div className="flex flex-col gap-5">
+        <PageHeader title="Organization" />
+        <div className="flex justify-center py-20">
+          <span className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
       </div>
     )
   }
 
   if (isError || !org?.data) {
     return (
-      <div className="flex flex-col items-center gap-3 py-20 text-center">
-        <p className="text-muted-foreground">Organization not found or unavailable.</p>
-        <Button
-          variant="outline"
-          onClick={() => navigate({ to: '/settings', search: { tab: 'organizations' } })}
-        >
-          <IconArrowLeft className="size-4" /> Back to organizations
-        </Button>
+      <div className="flex flex-col gap-5">
+        <PageHeader title="Organization" />
+        <div className="flex flex-col items-center gap-3 py-20 text-center">
+          <p className="text-muted-foreground">Organization not found or unavailable.</p>
+          <Button
+            variant="outline"
+            onClick={() => navigate({ to: '/settings', search: { tab: 'organizations' } })}
+          >
+            <IconArrowLeft className="size-4" /> Back to organizations
+          </Button>
+        </div>
       </div>
     )
   }
 
+  const header = (
+    <PageHeader
+      title={org.data.name}
+      description={<>@{org.data.slug}</>}
+      leading={
+        <Button variant="ghost" size="icon" className="size-8" asChild>
+          <Link to="/settings" search={{ tab: 'organizations' }}>
+            <IconArrowLeft className="size-4" />
+          </Link>
+        </Button>
+      }
+      actions={
+        <>
+          <Button variant="destructive" size="sm" onClick={() => setDeleting(true)}>
+            <IconTrash className="size-4" /> Delete
+          </Button>
+        </>
+      }
+    />
+  )
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="size-8" asChild>
-            <Link to="/settings" search={{ tab: 'organizations' }}>
-              <IconArrowLeft className="size-4" />
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{org.data.name}</h1>
-            <p className="text-sm text-muted-foreground">@{org.data.slug}</p>
-          </div>
-        </div>
-        <Button variant="destructive" size="sm" onClick={() => setDeleting(true)}>
-          <IconTrash className="size-4" /> Delete
-        </Button>
-      </div>
+      {header}
 
       <SectionCard title={org.data.name} description={`@${org.data.slug}`}>
         <Tabs defaultValue="workspaces">

@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 
 import type { Models } from '@/lib/api/models'
 
+import PageHeader from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -48,22 +49,28 @@ export default function WorkspaceDetailContent({ wsId }: { wsId: string }) {
 
   if (workspace.isLoading) {
     return (
-      <div className="flex justify-center py-20">
-        <span className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <div className="flex flex-col gap-5">
+        <PageHeader title="Workspace" />
+        <div className="flex justify-center py-20">
+          <span className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
       </div>
     )
   }
 
   if (workspace.isError || !workspace.data) {
     return (
-      <div className="flex flex-col items-center gap-3 py-20 text-center">
-        <p className="text-muted-foreground">Workspace not found or unavailable.</p>
-        <Button
-          variant="outline"
-          onClick={() => navigate({ to: '/settings', search: { tab: 'workspaces' } })}
-        >
-          <IconArrowLeft className="size-4" /> Back to workspaces
-        </Button>
+      <div className="flex flex-col gap-5">
+        <PageHeader title="Workspace" />
+        <div className="flex flex-col items-center gap-3 py-20 text-center">
+          <p className="text-muted-foreground">Workspace not found or unavailable.</p>
+          <Button
+            variant="outline"
+            onClick={() => navigate({ to: '/settings', search: { tab: 'workspaces' } })}
+          >
+            <IconArrowLeft className="size-4" /> Back to workspaces
+          </Button>
+        </div>
       </div>
     )
   }
@@ -158,32 +165,40 @@ export default function WorkspaceDetailContent({ wsId }: { wsId: string }) {
     ]
   }, [membersLoading, updateRole])
 
+  const header = (
+    <PageHeader
+      title={ws.name}
+      description={
+        <>
+          {ws.slug}
+          {ws.description ? ` · ${ws.description}` : ''}
+        </>
+      }
+      leading={
+        <Button variant="ghost" size="icon" className="size-8" asChild>
+          <Link to="/settings" search={{ tab: 'workspaces' }}>
+            <IconArrowLeft className="size-4" />
+          </Link>
+        </Button>
+      }
+      actions={
+        <>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+              Edit
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => setDeleting(true)}>
+              <IconTrash className="size-4" /> Delete
+            </Button>
+          </div>
+        </>
+      }
+    />
+  )
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="size-8" asChild>
-            <Link to="/settings" search={{ tab: 'workspaces' }}>
-              <IconArrowLeft className="size-4" />
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{ws.name}</h1>
-            <p className="text-sm text-muted-foreground">
-              {ws.slug}
-              {ws.description ? ` · ${ws.description}` : ''}
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-            Edit
-          </Button>
-          <Button variant="destructive" size="sm" onClick={() => setDeleting(true)}>
-            <IconTrash className="size-4" /> Delete
-          </Button>
-        </div>
-      </div>
+      {header}
 
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" asChild>
@@ -192,7 +207,7 @@ export default function WorkspaceDetailContent({ wsId }: { wsId: string }) {
           </Link>
         </Button>
         <Button variant="outline" size="sm" asChild>
-          <Link to="/s3" search={{ org: ws.organization_id, ws: ws.id }}>
+          <Link to="/settings" search={{ tab: 's3', org: ws.organization_id, ws: ws.id }}>
             S3 gateway
           </Link>
         </Button>

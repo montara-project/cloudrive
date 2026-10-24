@@ -2,6 +2,7 @@ import { IconFolderOpen, IconStar } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 
+import PageHeader from '@/components/layout/page-header'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { useWorkspaceContext } from '@/hooks/use-workspace-context'
 import { queries } from '@/lib/api/queries'
@@ -40,35 +41,40 @@ export default function StarredContent() {
     [filesQuery.data, starred]
   )
 
+  const header = (
+    <PageHeader
+      title="Starred"
+      description="Files you starred in this workspace, kept on this device."
+      leading={
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
+          <IconStar className="size-5.5" />
+        </div>
+      }
+    />
+  )
+
   if (!wsId) {
     return (
-      <Empty className="rounded-2xl border">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <IconStar />
-          </EmptyMedia>
-          <EmptyTitle>No workspace selected</EmptyTitle>
-          <EmptyDescription>
-            Pick a workspace in the sidebar to see its starred files.
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <div className="flex flex-col gap-5">
+        {header}
+        <Empty className="rounded-2xl border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <IconStar />
+            </EmptyMedia>
+            <EmptyTitle>No workspace selected</EmptyTitle>
+            <EmptyDescription>
+              Pick a workspace in the sidebar to see its starred files.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </div>
     )
   }
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center gap-3">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
-          <IconStar className="size-5.5" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Starred</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Files you starred in this workspace, kept on this device.
-          </p>
-        </div>
-      </div>
+      {header}
 
       <div className="rounded-2xl border bg-card">
         <DriveFileList

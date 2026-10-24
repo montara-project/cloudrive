@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useWorkspaceContext } from '@/hooks/use-workspace-context'
-import { cn, hrefToLocation } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 
 export type OverviewFilter =
   | 'all'
@@ -49,14 +49,6 @@ export default function DashboardToolbar({ filter, onFilterChange }: DashboardTo
   const { orgId, wsId } = useWorkspaceContext()
   const [month, setMonth] = useState<Date>(new Date())
   const monthLabel = useMemo(() => format(month, 'MMMM yyyy'), [month])
-
-  const scopedHref = (url: string) => {
-    const params = new URLSearchParams()
-    if (orgId) params.set('org', orgId)
-    if (wsId) params.set('ws', wsId)
-    const query = params.toString()
-    return query ? `${url}?${query}` : url
-  }
 
   const activeFilter = FILTER_OPTIONS.find((option) => option.value === filter)
 
@@ -99,7 +91,7 @@ export default function DashboardToolbar({ filter, onFilterChange }: DashboardTo
       </DropdownMenu>
 
       <Button variant="mono" size="lg" asChild className="ml-auto">
-        <Link {...hrefToLocation(scopedHref('/s3'))}>
+        <Link to="/settings" search={{ tab: 's3', org: orgId || undefined, ws: wsId || undefined }}>
           <IconUpload className="size-4" />
           Upload File
         </Link>

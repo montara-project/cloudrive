@@ -2,6 +2,7 @@ import { IconPlugConnected } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
+import PageHeader from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { useWorkspaceContext } from '@/hooks/use-workspace-context'
 
@@ -62,27 +63,35 @@ export default function StorageContent() {
   useOAuthCallbackToast()
   const { workspace, wsId } = useWorkspaceContext()
 
+  const header = (
+    <PageHeader
+      title="Storage"
+      description={
+        <>
+          {workspace
+            ? `View all cloud accounts connected to ${workspace.name}, then connect or disconnect accounts.`
+            : 'View all cloud accounts, their quotas, then connect or disconnect accounts.'}
+        </>
+      }
+      actions={
+        <>
+          <Button
+            variant="primary"
+            size="md"
+            className="rounded-full"
+            disabled={!wsId}
+            onClick={() => setOpenAdd(true)}
+          >
+            <IconPlugConnected className="size-4" /> Connect
+          </Button>
+        </>
+      }
+    />
+  )
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Storage</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {workspace
-              ? `View all cloud accounts connected to ${workspace.name}, then connect or disconnect accounts.`
-              : 'View all cloud accounts, their quotas, then connect or disconnect accounts.'}
-          </p>
-        </div>
-        <Button
-          variant="primary"
-          size="md"
-          className="rounded-full"
-          disabled={!wsId}
-          onClick={() => setOpenAdd(true)}
-        >
-          <IconPlugConnected className="size-4" /> Connect
-        </Button>
-      </div>
+      {header}
 
       <StorageOverview onConnect={() => setOpenAdd(true)} />
 

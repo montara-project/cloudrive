@@ -43,7 +43,7 @@ export default function StorageSettingsPanel() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Storage</h1>
+          <h2 className="text-xl font-semibold tracking-tight">Storage</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {workspace
               ? `View all cloud accounts connected to ${workspace.name}, then connect or disconnect accounts.`

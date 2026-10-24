@@ -118,19 +118,19 @@ export default function DriveFileList({
 
 /**
  * useDriveFileHref builds the link back to a file's origin. Recent and Starred
- * list gateway objects, which live under their bucket's keys; the `s3` view
- * param keeps the destination tab stable so the row does not land on the
+ * list gateway objects, which live under their bucket's keys; Settings → S3
+ * Gateway with the `buckets` view keeps the destination tab stable so the row does not land on the
  * credentials tab by default.
  */
 export function useDriveFileHref() {
   const { orgId, wsId } = useWorkspaceContext()
 
   return (bucket?: string) => {
-    const params = new URLSearchParams()
+    const params = new URLSearchParams({ tab: 's3' })
     if (orgId) params.set('org', orgId)
     if (wsId) params.set('ws', wsId)
     params.set('view', 'buckets')
     if (bucket) params.set('bucket', bucket)
-    return `/s3?${params.toString()}`
+    return `/settings?${params.toString()}`
   }
 }

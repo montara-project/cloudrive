@@ -31,7 +31,7 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar>
  * The redesigned shell: a slim organization rail (logo, org switcher, collapse
  * toggle) beside the main sidebar (workspace selector, search, main menu,
  * workspace folders, utilities, upgrade card). The account menu lives in the
- * top bar (UserMenu), not the sidebar.
+ * page header (UserMenu in PageHeader), not the sidebar.
  */
 export default function AppSidebar(props: AppSidebarProps) {
   const menu = SIDEBAR_MENU

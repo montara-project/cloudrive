@@ -1,5 +1,4 @@
 import {
-  IconBucket,
   IconClock,
   IconCloud,
   IconFolder,
@@ -77,20 +76,11 @@ const NAV_DRIVE: NavMainItem[] = [
 ]
 
 /**
- * Secondary destinations. The S3 gateway is configuration rather than a place
- * to browse, so it sits outside the Drive group — Providers now live under
- * Settings → Storage → Providers, so they are not listed here. Entries keep
- * their places so no routed page disappears from the sidebar.
+ * Secondary destinations. The S3 gateway and providers are configuration
+ * rather than places to browse, so they live in Settings (tabs S3 Gateway and
+ * Storage → Providers) instead of the sidebar.
  */
 const NAV_SETTINGS: NavMainItem[] = [
-  {
-    title: 'S3 Gateway',
-    url: '/s3',
-    icon: IconBucket,
-    isActive: false,
-    scope: 'workspace',
-    items: [],
-  },
   {
     title: 'Settings',
     url: '/settings',
