@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"strings"
 	"time"
@@ -8,8 +9,8 @@ import (
 	"cloudrive/server/internal/app"
 	"cloudrive/server/internal/config"
 	"cloudrive/server/internal/lib"
+	"cloudrive/server/internal/lib/email"
 	appmodels "cloudrive/server/internal/models"
-	"cloudrive/server/internal/services"
 
 	authula "github.com/Authula/authula"
 	authulaconfig "github.com/Authula/authula/config"
@@ -33,8 +34,8 @@ import (
 
 // authBasePath is the prefix under which Authula serves every auth endpoint
 // (sign-up, sign-in, magic link, OAuth2, /me, sign-out, ...) — every Authula
-// endpoint must carry the /v1/auth prefix.
-const authBasePath = "/v1/auth"
+// endpoint must carry the /api/v1/auth prefix.
+const authBasePath = "/api/v1/auth"
 
 // authulaSchema keeps Authula's tables (its own users, sessions, accounts,
 // verifications) out of the application's public schema, whose users/sessions
@@ -47,7 +48,7 @@ const authulaSchema = "authula"
 // existing users/sessions tables via CREATE TABLE IF NOT EXISTS and silently
 // no-op.
 func newAuthulaDB(cfg config.Config) (*bun.DB, error) {
-	admin, err := sql.Open("postgres", cfg.DB.DSN)
+	admin, err := sql.Open("pgx", cfg.DB.DSN)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +65,7 @@ func newAuthulaDB(cfg config.Config) (*bun.DB, error) {
 		dsn += "?search_path=" + authulaSchema
 	}
 
-	sqldb, err := sql.Open("postgres", dsn)
+	sqldb, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +247,7 @@ type emailTemplateData struct {
 // request the email again.
 func sendVerificationEmail(application *app.Application) func(emailpasswordplugintypes.SendEmailVerificationParams, *authulamodels.RequestContext) error {
 	return func(params emailpasswordplugintypes.SendEmailVerificationParams, _ *authulamodels.RequestContext) error {
-		if _, err := application.Services.Email.SendEmail(services.SendEmailParams{
+		if _, err := mailer(application).SendEmail(email.SendEmailParams{
 			Subject:      "Verify your email address",
 			To:           params.User.Email,
 			Data:         emailTemplateData{Fullname: params.User.Name, Link: params.URL, AppName: application.Config.App.Name},
@@ -260,7 +261,7 @@ func sendVerificationEmail(application *app.Application) func(emailpasswordplugi
 
 func sendPasswordResetEmail(application *app.Application) func(emailpasswordplugintypes.SendPasswordResetEmailParams, *authulamodels.RequestContext) error {
 	return func(params emailpasswordplugintypes.SendPasswordResetEmailParams, _ *authulamodels.RequestContext) error {
-		if _, err := application.Services.Email.SendEmail(services.SendEmailParams{
+		if _, err := mailer(application).SendEmail(email.SendEmailParams{
 			Subject:      "Reset your password",
 			To:           params.User.Email,
 			Data:         emailTemplateData{Fullname: params.User.Name, Link: params.URL, AppName: application.Config.App.Name},
@@ -274,7 +275,7 @@ func sendPasswordResetEmail(application *app.Application) func(emailpasswordplug
 
 func sendMagicLinkEmail(application *app.Application) func(magiclinkplugintypes.SendMagicLinkVerificationEmailParams, *authulamodels.RequestContext) error {
 	return func(params magiclinkplugintypes.SendMagicLinkVerificationEmailParams, _ *authulamodels.RequestContext) error {
-		if _, err := application.Services.Email.SendEmail(services.SendEmailParams{
+		if _, err := mailer(application).SendEmail(email.SendEmailParams{
 			Subject:      "Your sign-in link",
 			To:           params.Email,
 			Data:         emailTemplateData{Fullname: "there", Link: params.URL, AppName: application.Config.App.Name},
@@ -294,7 +295,7 @@ func syncUserToApp(application *app.Application) authulamodels.ServiceHook[authu
 	return func(user *authulamodels.User) error {
 		first, last := splitName(user.Name)
 
-		if err := application.Repositories.User.Upsert(&appmodels.User{
+		if err := application.Repositories.User.Upsert(context.Background(), appmodels.User{
 			ID:        uuid.MustParse(user.ID),
 			Email:     user.Email,
 			FirstName: first,
@@ -333,4 +334,11 @@ func splitName(name string) (string, *string) {
 	}
 
 	return first, lib.StringPtr(strings.TrimSpace(last))
+}
+
+// mailer sends Authula's verification, reset and magic-link mail through the
+// application's Resend account.
+func mailer(application *app.Application) email.Service {
+	cfg := application.Config
+	return email.Service{AppName: cfg.App.Name, APIKey: cfg.Resend.ApiKey, FromEmail: cfg.Resend.FromEmail}
 }

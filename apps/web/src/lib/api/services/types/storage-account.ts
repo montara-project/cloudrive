@@ -1,5 +1,3 @@
-import type { AxiosResponse } from 'axios'
-
 import type { AxiosDeleteResponse, AxiosItemResponse, AxiosListResponse } from '@/types/api'
 
 import type { PaginateDto } from '../../dtos/paginate'
@@ -16,7 +14,7 @@ export type ConnectStorageAccountBody = {
   credentials: Record<string, unknown>
 }
 
-// AuthorizeStorageOAuthResponse is the body of POST /v1/storage/oauth/:slug/authorize.
+// AuthorizeStorageOAuthResponse is the body of POST /api/v1/storage/oauth/:slug/authorize.
 // The frontend redirects the browser to authorization_url; state is opaque.
 export type AuthorizeStorageOAuthResponse = {
   provider: string
@@ -25,7 +23,7 @@ export type AuthorizeStorageOAuthResponse = {
   redirect_uri: string
 }
 
-// StorageAccountQuota is the body of GET /v1/storage/accounts/:id/quota.
+// StorageAccountQuota is the body of GET /api/v1/storage/accounts/:id/quota.
 export type StorageAccountQuota = {
   total_bytes: number
   used_bytes: number
@@ -50,7 +48,7 @@ export type StorageAccountResources = {
   authorizeOAuth: (
     providerSlug: string,
     workspaceId: string
-  ) => Promise<AxiosResponse<AuthorizeStorageOAuthResponse>>
-  refreshOAuth: (accountId: string) => Promise<AxiosResponse<{ status: string }>>
-  quota: (accountId: string) => Promise<AxiosResponse<StorageAccountQuota>>
+  ) => Promise<AxiosItemResponse<AuthorizeStorageOAuthResponse>>
+  refreshOAuth: (accountId: string) => Promise<AxiosItemResponse<{ status: string }>>
+  quota: (accountId: string) => Promise<AxiosItemResponse<StorageAccountQuota>>
 }

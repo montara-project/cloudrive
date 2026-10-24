@@ -1,4 +1,6 @@
 -include .env
+# Exported so the binaries read their configuration from the environment.
+export
 
 # ==================================================================================== #
 # HELPERS
@@ -14,46 +16,10 @@ help:
 # APPLICATION
 # ==================================================================================== #
 
-## run: run the application
+## run: run the application (configuration comes from .env)
 .PHONY: run
 run:
-	go run ./cmd/api \
-		--machine-id=$(MACHINE_ID) \
-		--debug=$(DEBUG) \
-		--env=$(ENV) \
-		--port=$(PORT) \
-		--app-name=$(APP_NAME) \
-		--app-secret=$(APP_SECRET) \
-		--client-url=$(CLIENT_URL) \
-		--server-url=$(SERVER_URL) \
-		--cors-allowed-origins=$(CORS_ALLOWED_ORIGINS) \
-		--spa-dir=$(SPA_DIR) \
-		--super-user=$(SUPER_USER) \
-		--db-dsn=$(DB_DSN) \
-		--db-max-open-conns=$(DB_MAX_OPEN_CONNS) \
-		--db-max-idle-conns=$(DB_MAX_IDLE_CONNS) \
-		--db-max-idle-time=$(DB_MAX_IDLE_TIME) \
-		--resend-api-key=$(RESEND_API_KEY) \
-		--resend-from-email=$(RESEND_FROM_EMAIL) \
-		--resend-debug-to-email=$(RESEND_DEBUG_TO_EMAIL) \
-		--google-client-id=$(GOOGLE_CLIENT_ID) \
-		--google-client-secret=$(GOOGLE_CLIENT_SECRET) \
-		--onedrive-client-id=$(ONEDRIVE_CLIENT_ID) \
-		--onedrive-client-secret=$(ONEDRIVE_CLIENT_SECRET) \
-		--onedrive-tenant=$(ONEDRIVE_TENANT_ID) \
-		--dropbox-client-id=$(DROPBOX_CLIENT_ID) \
-		--dropbox-client-secret=$(DROPBOX_CLIENT_SECRET) \
-		--s3-client-id=$(S3_CLIENT_ID) \
-		--s3-client-secret=$(S3_CLIENT_SECRET) \
-		--s3-region=$(S3_REGION) \
-		--s3-endpoint=$(S3_ENDPOINT) \
-		--s3-token=$(S3_TOKEN) \
-		--s3-api-port=$(S3_API_PORT) \
-		--s3-staging-dir=$(S3_STAGING_DIR) \
-		--storage-credentials-keys=$(STORAGE_CREDENTIALS_KEYS) \
-		--typesafe-api-key=$(TYPESAFE_API_KEY) \
-		--typesafe-api-url=$(TYPESAFE_API_URL) \
-		--migrate-on-boot=$(MIGRATE_ON_BOOT)
+	go run ./cmd/api
 
 # ==================================================================================== #
 # MIGRATIONS
@@ -94,6 +60,11 @@ db/migrations/refresh:
 .PHONY: db/migrations/refresh/seed
 db/migrations/refresh/seed:
 	@go run ./cmd/migrate --db-dsn=$(DB_DSN) --seed=dev refresh
+
+## db/migrations/force version=$1: force the schema version (clears a dirty state)
+.PHONY: db/migrations/force
+db/migrations/force:
+	@go run ./cmd/migrate --db-dsn=$(DB_DSN) force --version=$(version)
 
 # ==================================================================================== #
 # BUILD

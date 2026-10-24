@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"braces.dev/errtrace"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
@@ -88,7 +87,7 @@ func newS3Connector(account AccountInput, creds Credentials) (*s3Connector, erro
 
 	client, err := minio.New(endpoint, opts)
 	if err != nil {
-		return nil, errtrace.Wrap(err)
+		return nil, (err)
 	}
 
 	return &s3Connector{
@@ -141,7 +140,7 @@ func (c *s3Connector) PutObject(ctx context.Context, key string, r io.Reader, si
 		ContentType: contentType,
 	})
 	if err != nil {
-		return Object{}, errtrace.Wrap(err)
+		return Object{}, (err)
 	}
 
 	return Object{
@@ -156,7 +155,7 @@ func (c *s3Connector) PutObject(ctx context.Context, key string, r io.Reader, si
 func (c *s3Connector) GetObject(ctx context.Context, key string) (io.ReadCloser, Object, error) {
 	reader, info, _, err := c.core.GetObject(ctx, c.bucket, c.fullKey(key), minio.GetObjectOptions{})
 	if err != nil {
-		return nil, Object{}, errtrace.Wrap(err)
+		return nil, Object{}, (err)
 	}
 
 	return reader, toObject(info), nil
@@ -165,14 +164,14 @@ func (c *s3Connector) GetObject(ctx context.Context, key string) (io.ReadCloser,
 func (c *s3Connector) StatObject(ctx context.Context, key string) (Object, error) {
 	info, err := c.core.Client.StatObject(ctx, c.bucket, c.fullKey(key), minio.StatObjectOptions{})
 	if err != nil {
-		return Object{}, errtrace.Wrap(err)
+		return Object{}, (err)
 	}
 
 	return toObject(info), nil
 }
 
 func (c *s3Connector) DeleteObject(ctx context.Context, key string) error {
-	return errtrace.Wrap(c.core.Client.RemoveObject(ctx, c.bucket, c.fullKey(key), minio.RemoveObjectOptions{}))
+	return (c.core.Client.RemoveObject(ctx, c.bucket, c.fullKey(key), minio.RemoveObjectOptions{}))
 }
 
 func (c *s3Connector) ListObjects(ctx context.Context, prefix, delimiter, continuationToken string, maxKeys int) (ListPage, error) {
@@ -182,7 +181,7 @@ func (c *s3Connector) ListObjects(ctx context.Context, prefix, delimiter, contin
 
 	result, err := c.core.ListObjectsV2(c.bucket, c.fullPrefix(prefix), "", continuationToken, delimiter, maxKeys)
 	if err != nil {
-		return ListPage{}, errtrace.Wrap(err)
+		return ListPage{}, (err)
 	}
 
 	page := ListPage{
@@ -217,7 +216,7 @@ func (c *s3Connector) CreateMultipartUpload(ctx context.Context, key, contentTyp
 		ContentType: contentType,
 	})
 	if err != nil {
-		return MultipartInfo{}, errtrace.Wrap(err)
+		return MultipartInfo{}, (err)
 	}
 
 	return MultipartInfo{UploadID: uploadID}, nil
@@ -226,7 +225,7 @@ func (c *s3Connector) CreateMultipartUpload(ctx context.Context, key, contentTyp
 func (c *s3Connector) UploadPart(ctx context.Context, key, uploadID string, partNumber int, r io.Reader, size int64) (string, error) {
 	part, err := c.core.PutObjectPart(ctx, c.bucket, c.fullKey(key), uploadID, partNumber, r, size, minio.PutObjectPartOptions{})
 	if err != nil {
-		return "", errtrace.Wrap(err)
+		return "", (err)
 	}
 
 	return strings.Trim(part.ETag, `"`), nil
@@ -240,7 +239,7 @@ func (c *s3Connector) CompleteMultipartUpload(ctx context.Context, key, uploadID
 
 	info, err := c.core.CompleteMultipartUpload(ctx, c.bucket, c.fullKey(key), uploadID, complete, minio.PutObjectOptions{})
 	if err != nil {
-		return Object{}, errtrace.Wrap(err)
+		return Object{}, (err)
 	}
 
 	return Object{
@@ -252,5 +251,5 @@ func (c *s3Connector) CompleteMultipartUpload(ctx context.Context, key, uploadID
 }
 
 func (c *s3Connector) AbortMultipartUpload(ctx context.Context, key, uploadID string) error {
-	return errtrace.Wrap(c.core.AbortMultipartUpload(ctx, c.bucket, c.fullKey(key), uploadID))
+	return (c.core.AbortMultipartUpload(ctx, c.bucket, c.fullKey(key), uploadID))
 }

@@ -1,4 +1,4 @@
-package s3
+package s3gateway
 
 import (
 	"bytes"
@@ -13,7 +13,7 @@ import (
 	"sync"
 	"testing"
 
-	"cloudrive/server/internal/connectors"
+	"cloudrive/server/internal/lib/connectors"
 	"cloudrive/server/internal/models"
 
 	"github.com/gofiber/fiber/v3"
@@ -45,7 +45,7 @@ func newFakeRepos() *fakeRepos {
 	}
 }
 
-func (f *fakeRepos) S3CredentialByAccessKey(accessKeyID string) (*models.S3Credential, []byte, error) {
+func (f *fakeRepos) S3CredentialByAccessKey(_ context.Context, accessKeyID string) (*models.S3Credential, []byte, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	c, ok := f.credentials[accessKeyID]
@@ -55,13 +55,13 @@ func (f *fakeRepos) S3CredentialByAccessKey(accessKeyID string) (*models.S3Crede
 	return c, f.secrets[c.ID], nil
 }
 
-func (f *fakeRepos) S3CredentialTouch(id uuid.UUID) {
+func (f *fakeRepos) S3CredentialTouch(_ context.Context, id uuid.UUID) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.touched[id] = true
 }
 
-func (f *fakeRepos) BucketByName(name string) (*models.S3Bucket, error) {
+func (f *fakeRepos) BucketByName(_ context.Context, name string) (*models.S3Bucket, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	b, ok := f.buckets[name]
@@ -71,7 +71,7 @@ func (f *fakeRepos) BucketByName(name string) (*models.S3Bucket, error) {
 	return b, nil
 }
 
-func (f *fakeRepos) BucketsByWorkspace(wsID uuid.UUID) ([]*models.S3Bucket, error) {
+func (f *fakeRepos) BucketsByWorkspace(_ context.Context, wsID uuid.UUID) ([]*models.S3Bucket, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	var out []*models.S3Bucket
@@ -83,7 +83,7 @@ func (f *fakeRepos) BucketsByWorkspace(wsID uuid.UUID) ([]*models.S3Bucket, erro
 	return out, nil
 }
 
-func (f *fakeRepos) StorageAccountWithProvider(id uuid.UUID) (*models.StorageAccount, *models.Provider, string, error) {
+func (f *fakeRepos) StorageAccountWithProvider(_ context.Context, id uuid.UUID) (*models.StorageAccount, *models.Provider, string, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	a, ok := f.accounts[id]

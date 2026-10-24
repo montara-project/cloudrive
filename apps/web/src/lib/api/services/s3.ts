@@ -14,13 +14,13 @@ const api = new ClientFetchApi({
 const s3CredentialResources = (): S3CredentialResources => {
   return {
     list: (wsId, params) => {
-      return api.get(`/v1/workspaces/${wsId}/s3/credentials`, { params })
+      return api.get(`/api/v1/workspaces/${wsId}/s3/credentials`, { params })
     },
     create: (wsId, reqBody) => {
-      return api.post(`/v1/workspaces/${wsId}/s3/credentials`, reqBody)
+      return api.post(`/api/v1/workspaces/${wsId}/s3/credentials`, reqBody)
     },
     revoke: (wsId, credentialId) => {
-      return api.delete(`/v1/workspaces/${wsId}/s3/credentials/${credentialId}`)
+      return api.delete(`/api/v1/workspaces/${wsId}/s3/credentials/${credentialId}`)
     },
   }
 }
@@ -28,16 +28,16 @@ const s3CredentialResources = (): S3CredentialResources => {
 const s3BucketResources = (): S3BucketResources => {
   return {
     list: (wsId, params) => {
-      return api.get(`/v1/workspaces/${wsId}/s3/buckets`, { params })
+      return api.get(`/api/v1/workspaces/${wsId}/s3/buckets`, { params })
     },
     create: (wsId, reqBody) => {
-      return api.post(`/v1/workspaces/${wsId}/s3/buckets`, reqBody)
+      return api.post(`/api/v1/workspaces/${wsId}/s3/buckets`, reqBody)
     },
     delete: (wsId, bucketId) => {
-      return api.delete(`/v1/workspaces/${wsId}/s3/buckets/${bucketId}`)
+      return api.delete(`/api/v1/workspaces/${wsId}/s3/buckets/${bucketId}`)
     },
     recentFiles: (wsId, params) => {
-      return api.get(`/v1/workspaces/${wsId}/s3/recent-files`, { params })
+      return api.get(`/api/v1/workspaces/${wsId}/s3/recent-files`, { params })
     },
   }
 }
@@ -46,7 +46,7 @@ const s3BucketResources = (): S3BucketResources => {
 const driveResources = (): DriveResources => {
   return {
     list: (wsId, params) => {
-      return api.get(`/v1/workspaces/${wsId}/drive`, {
+      return api.get(`/api/v1/workspaces/${wsId}/drive`, {
         params: {
           prefix: params?.prefix || undefined,
           account: params?.account || undefined,

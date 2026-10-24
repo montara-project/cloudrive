@@ -2,11 +2,10 @@ package main
 
 import (
 	"cloudrive/server/internal/app"
-	"cloudrive/server/internal/connectors"
+	"cloudrive/server/internal/config"
 	"cloudrive/server/internal/handlers"
+	"cloudrive/server/internal/handlers/s3gateway"
 	"cloudrive/server/internal/middlewares"
-	"cloudrive/server/internal/services/s3"
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -42,32 +41,9 @@ func serve(app *app.Application) error {
 		TrustProxyConfig: fiber.TrustProxyConfig{
 			Proxies: trustedProxies,
 		},
-		ErrorHandler: func(c fiber.Ctx, err error) error {
-			// Handler helpers that already wrote a response report
-			// ErrResponded; leave the buffered response untouched.
-			if errors.Is(err, handlers.ErrResponded) {
-				return nil
-			}
-
-			// never echo internal error strings to the client; map Fiber's
-			// typed errors to their real status and log everything else.
-			code := fiber.StatusInternalServerError
-			message := "Internal server error"
-
-			var fiberErr *fiber.Error
-			if errors.As(err, &fiberErr) {
-				code = fiberErr.Code
-				message = fiberErr.Message
-			} else if app.Config.App.Env != "production" {
-				message = err.Error()
-			} else {
-				app.Logger.Error("unhandled request error", "error", err, "path", c.Path())
-			}
-
-			return c.Status(code).JSON(fiber.Map{
-				"error": message,
-			})
-		},
+		// Validation → 422 {message, errors[]}, apperr kinds → their status,
+		// anything else → a logged, generic 500.
+		ErrorHandler: middlewares.ErrorHandler(app.Logger),
 	})
 
 	// Middleware
@@ -110,7 +86,7 @@ func serve(app *app.Application) error {
 		},
 	}
 
-	if app.Config.App.Env != "production" {
+	if app.Config.App.Env == config.EnvDevelopment {
 		rateLimitConfig.Next = func(c fiber.Ctx) bool {
 			return c.IP() == "127.0.0.1" || c.IP() == "::1"
 		}
@@ -128,7 +104,7 @@ func serve(app *app.Application) error {
 	if dir := app.Config.App.SPADir; dir != "" {
 		spa, err := middlewares.SPA(middlewares.SPAConfig{
 			FS:      os.DirFS(dir),
-			Exclude: []string{"/v1", "/health"},
+			Exclude: []string{"/api"},
 		})
 		if err != nil {
 			return err
@@ -159,24 +135,13 @@ func serve(app *app.Application) error {
 		gateway.Use(recover.New())
 		gateway.Use(logger.New())
 
-		s3.Register(gateway, &s3.Service{
-			Repos: s3.RepoAdapter{
-				DB:             app.Repositories.StorageAccount.DB,
-				S3Credentials:  app.Repositories.S3Credential,
-				S3Buckets:      app.Repositories.S3Bucket,
-				StorageAccount: app.Repositories.StorageAccount,
+		s3gateway.Register(gateway, &s3gateway.Service{
+			Repos: s3gateway.RepoAdapter{
+				S3Credentials:  &app.Repositories.S3Credential,
+				S3Buckets:      &app.Repositories.S3Bucket,
+				StorageAccount: &app.Repositories.StorageAccount,
 			},
-			Registry: connectors.Registry{
-				GoogleClientID:       app.Config.Google.ClientID,
-				GoogleClientSecret:   app.Config.Google.ClientSecret,
-				OneDriveClientID:     app.Config.OneDrive.ClientID,
-				OneDriveClientSecret: app.Config.OneDrive.ClientSecret,
-				OneDriveTenant:       app.Config.OneDrive.Tenant,
-				DropboxClientID:      app.Config.Dropbox.ClientID,
-				DropboxClientSecret:  app.Config.Dropbox.ClientSecret,
-				ServerURL:            app.Config.App.ServerURL,
-				StagingDir:           app.Config.S3.StagingDir,
-			},
+			Registry: handlers.ConnectorRegistry(app),
 		})
 
 		go func() {

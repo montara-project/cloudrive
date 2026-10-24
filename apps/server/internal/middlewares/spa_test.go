@@ -17,13 +17,13 @@ func TestSPA(t *testing.T) {
 		"favicon.ico":       {Data: []byte("ico")},
 	}
 
-	spa, err := SPA(SPAConfig{FS: files, Exclude: []string{"/v1", "/health"}})
+	spa, err := SPA(SPAConfig{FS: files, Exclude: []string{"/api"}})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	app := fiber.New()
-	app.Get("/v1/ping", func(c fiber.Ctx) error { return c.SendString("pong") })
+	app.Get("/api/ping", func(c fiber.Ctx) error { return c.SendString("pong") })
 	app.Use(spa)
 
 	cases := []struct {
@@ -39,9 +39,9 @@ func TestSPA(t *testing.T) {
 		// An old bundle hash must not come back as HTML.
 		{"GET", "/assets/app-old.js", 404, "", ""},
 		// The API keeps its own routes and its own 404s.
-		{"GET", "/v1/ping", 200, "pong", ""},
-		{"GET", "/v1/missing", 404, "", ""},
-		{"GET", "/health/deep", 404, "", ""},
+		{"GET", "/api/ping", 200, "pong", ""},
+		{"GET", "/api/missing", 404, "", ""},
+		{"GET", "/api/v1/missing", 404, "", ""},
 		// Writes are never answered by the app shell.
 		{"POST", "/dashboard", 404, "", ""},
 	}

@@ -72,7 +72,7 @@ function readEpochCookie(name: string): number | null {
 }
 
 /**
- * Persist the last `/v1/me` user snapshot so the session query can paint an
+ * Persist the last `/api/v1/me` user snapshot so the session query can paint an
  * optimistic session instantly instead of blocking on a network round-trip.
  */
 export function setStoredUser(user: unknown) {

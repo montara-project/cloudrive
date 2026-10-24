@@ -56,7 +56,7 @@ export async function signInWithEmail({ email, password }: SignInWithEmailParams
  */
 export function signInWithGoogle() {
   const redirectTo = `${window.location.origin}/auth/callback`
-  window.location.href = `${env.VITE_API_URL}/v1/auth/oauth2/authorize/google?redirect_to=${encodeURIComponent(redirectTo)}`
+  window.location.href = `${env.VITE_API_URL}/api/v1/auth/oauth2/authorize/google?redirect_to=${encodeURIComponent(redirectTo)}`
 }
 
 /**

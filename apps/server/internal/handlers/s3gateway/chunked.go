@@ -1,4 +1,4 @@
-package s3
+package s3gateway
 
 import (
 	"bufio"
@@ -8,8 +8,6 @@ import (
 	"io"
 	"strconv"
 	"strings"
-
-	"braces.dev/errtrace"
 )
 
 // errMalformedChunk signals a broken aws-chunked body.
@@ -98,7 +96,7 @@ func (r *awsChunkedReader) Read(p []byte) (int, error) {
 		sizePart, _, _ := strings.Cut(line, ";")
 		size, perr := strconv.ParseInt(sizePart, 16, 64)
 		if perr != nil {
-			return 0, errtrace.Wrap(fmt.Errorf("%w: %q", errMalformedChunk, line))
+			return 0, (fmt.Errorf("%w: %q", errMalformedChunk, line))
 		}
 
 		if size == 0 {

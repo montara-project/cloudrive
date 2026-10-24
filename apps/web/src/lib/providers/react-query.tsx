@@ -6,7 +6,7 @@ const queryClient = new QueryClient({
       staleTime: 5 * 60 * 1000,
       // Revalidate stale queries when the tab regains focus. The session query
       // sets `staleTime: 0`, so returning to a tab whose token has since
-      // expired re-probes /v1/me and the gate redirects, instead of leaving
+      // expired re-probes /api/v1/me and the gate redirects, instead of leaving
       // the user on a dashboard whose every request 401s.
       refetchOnWindowFocus: true,
     },

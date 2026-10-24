@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
 # Build context is the repo root: the image also carries the apps/web SPA,
-# which the API serves at / (SPA_DIR) next to /v1 and /health.
+# which the API serves at / (SPA_DIR) next to the /api endpoints.
 #
-#   docker build -f apps/server/Dockerfile -t cloudrive-api .
+#   docker build -f apps/server/Dockerfile -t cloudrive .
 
 # ---- SPA: built once on the builder's platform; the output is plain files.
 FROM --platform=$BUILDPLATFORM node:24-alpine AS web
@@ -22,9 +22,9 @@ COPY apps/web/ apps/web/
 RUN pnpm --filter @cloudrive/web exec vite build && test -f apps/web/dist/index.html
 
 # ---- API
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 LABEL author="masb0ymas"
-LABEL name="cloudrive-api"
+LABEL name="cloudrive"
 
 WORKDIR /temp-build
 
@@ -45,7 +45,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s" -o=./bin/migrat
 # Create the final image
 FROM alpine:3.21
 LABEL author="masb0ymas"
-LABEL name="cloudrive-api"
+LABEL name="cloudrive"
 
 WORKDIR /app
 RUN apk add --no-cache ca-certificates tzdata wget \
@@ -61,7 +61,6 @@ COPY --from=builder /temp-build/migrations /app/migrations
 COPY --from=builder /temp-build/templates /app/templates
 COPY --from=builder /temp-build/public /app/public
 COPY --from=web /repo/apps/web/dist /app/web
-COPY --chmod=0755 apps/server/scripts/entrypoint.sh /app/entrypoint.sh
 
 # The API serves the SPA at /; an empty SPA_DIR at runtime disables it.
 ENV SPA_DIR=/app/web
@@ -72,10 +71,9 @@ USER cloudrive
 EXPOSE 8080 9000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
-    CMD wget -qO- "http://127.0.0.1:${PORT:-8080}/health" >/dev/null || exit 1
+    CMD wget -qO- "http://127.0.0.1:${PORT:-8080}/api/health" >/dev/null || exit 1
 
-# Configuration comes from environment variables; entrypoint.sh maps them
-# onto the binary's flags. CMD holds image defaults that env vars override
-# (env-derived flags are appended after these).
-ENTRYPOINT ["./entrypoint.sh"]
-CMD ["--env=production", "--port=8080"]
+# Configuration comes from environment variables, read by the binary itself
+# (ENV defaults to production, PORT to 8080); a flag passed after the image
+# name still overrides its variable.
+ENTRYPOINT ["/app/api"]

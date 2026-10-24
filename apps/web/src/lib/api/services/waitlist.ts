@@ -9,5 +9,5 @@ import { ClientFetchApi } from '../client-fetch'
 const api = new ClientFetchApi({ baseURL: String(env.VITE_API_URL) }).default
 
 export const waitlistServices = {
-  join: (data: WaitlistDto) => api.post<Models.WaitlistEntry>('/v1/waitlist', data),
+  join: (data: WaitlistDto) => api.post<Models.WaitlistEntry>('/api/v1/waitlist', data),
 } as const

@@ -13,7 +13,7 @@ const api = new ClientFetchApi({
 const providerResources = (): ProviderResources => {
   return {
     list: (params) => {
-      return api.get(`/v1/providers`, { params })
+      return api.get(`/api/v1/providers`, { params })
     },
   }
 }

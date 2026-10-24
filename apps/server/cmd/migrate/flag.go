@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
 	"slices"
 	"strings"
 )
@@ -11,6 +12,7 @@ const (
 	modeUp      = "up"
 	modeDown    = "down"
 	modeRefresh = "refresh"
+	modeForce   = "force"
 )
 
 const (
@@ -19,14 +21,17 @@ const (
 )
 
 type config struct {
-	mode  string
-	dbDSN string
-	seed  string
+	mode    string
+	dbDSN   string
+	seed    string
+	version int
 }
 
 func parseFlag(cfg *config) {
-	flag.StringVar(&cfg.dbDSN, "db-dsn", "", "PostgreSQL DSN")
+	// Defaults to DB_DSN so `make` targets and the container need no argument.
+	flag.StringVar(&cfg.dbDSN, "db-dsn", os.Getenv("DB_DSN"), "PostgreSQL DSN (default $DB_DSN)")
 	flag.StringVar(&cfg.seed, "seed", "", "seed")
+	flag.IntVar(&cfg.version, "version", -1, "schema version to force (mode force)")
 
 	flag.Parse()
 	validateFlag(cfg)
@@ -34,7 +39,7 @@ func parseFlag(cfg *config) {
 
 func validateFlag(cfg *config) {
 	cfg.mode = flag.Arg(0)
-	availableModes := []string{modeUp, modeDown, modeRefresh}
+	availableModes := []string{modeUp, modeDown, modeRefresh, modeForce}
 
 	if !slices.Contains(availableModes, cfg.mode) {
 		log.Fatalf("command must be provided: %s", strings.Join(availableModes, ", "))
@@ -46,6 +51,10 @@ func validateFlag(cfg *config) {
 
 	if cfg.mode == modeDown && cfg.seed != "" {
 		log.Fatal("flag --seed must not be provided when mode is down")
+	}
+
+	if cfg.mode == modeForce && cfg.version < -1 {
+		log.Fatal("flag --version must be provided when mode is force")
 	}
 
 	if cfg.seed != "" {

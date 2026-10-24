@@ -66,7 +66,7 @@ function createAxios({ baseURL, storageKey }: CreateAxiosProps) {
           // exempt: their 401 means bad credentials, not a stale token.
           const config = error.config as RetriedConfig | undefined
 
-          if (config && !config._authRetried && !config.url?.includes('/v1/auth/')) {
+          if (config && !config._authRetried && !config.url?.includes('/api/v1/auth/')) {
             config._authRetried = true
             const accessToken = await refreshTokens()
             if (accessToken) {

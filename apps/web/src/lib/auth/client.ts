@@ -19,23 +19,29 @@ import { getStoredAccessToken } from './token-storage'
 const authulaClient = {
   id: 'authula',
   getActions: ($fetch) => ({
-    /** Application profile for the bearer token — the /v1/me session probe. */
-    me: () => $fetch<Models.User>('/v1/me'),
+    /**
+     * Application profile for the bearer token — the /api/v1/me session probe.
+     * The API wraps it in the {data} envelope; callers get the user itself.
+     */
+    me: async () => {
+      const res = await $fetch<{ data: Models.User }>('/api/v1/me')
+      return { ...res, data: res.data?.data ?? null }
+    },
     signInEmail: (body: SignInDto) =>
-      $fetch<TokenPairResponse>('/v1/auth/email-password/sign-in', { method: 'POST', body }),
+      $fetch<TokenPairResponse>('/api/v1/auth/email-password/sign-in', { method: 'POST', body }),
     magicLinkSignIn: (body: MagicLinkDto & { callback_url: string }) =>
-      $fetch<{ message?: string }>('/v1/auth/magic-link/sign-in', { method: 'POST', body }),
+      $fetch<{ message?: string }>('/api/v1/auth/magic-link/sign-in', { method: 'POST', body }),
     magicLinkExchange: (body: { token: string }) =>
-      $fetch<TokenPairResponse>('/v1/auth/magic-link/exchange', { method: 'POST', body }),
+      $fetch<TokenPairResponse>('/api/v1/auth/magic-link/exchange', { method: 'POST', body }),
     refreshTokenPair: (body: RefreshDto) =>
-      $fetch<TokenPairResponse>('/v1/auth/token/refresh', { method: 'POST', body }),
-    authSignOut: () => $fetch('/v1/auth/sign-out', { method: 'POST' }),
+      $fetch<TokenPairResponse>('/api/v1/auth/token/refresh', { method: 'POST', body }),
+    authSignOut: () => $fetch('/api/v1/auth/sign-out', { method: 'POST' }),
   }),
 } satisfies BetterAuthClientPlugin
 
 /**
  * better-auth client used as the app's auth transport. `basePath: '/'` keeps
- * $fetch paths as real server routes (`/v1/me`, `/v1/auth/...`) instead of
+ * $fetch paths as real server routes (`/api/v1/me`, `/api/v1/auth/...`) instead of
  * better-auth's default `/api/auth` prefix.
  *
  * The bearer token is read per request from cookie storage; callers that need

@@ -8,14 +8,22 @@ import (
 
 	"cloudrive/server/internal/app"
 	"cloudrive/server/internal/dtos"
+	"cloudrive/server/internal/lib"
+	"cloudrive/server/internal/lib/apperr"
 	"cloudrive/server/internal/lib/validator"
 	"cloudrive/server/internal/models"
+	"cloudrive/server/internal/repositories"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
 )
 
 type onboardingHandler struct {
 	app *app.Application
+}
+
+func (h *onboardingHandler) repo() *repositories.OnboardingSurveyRepository {
+	return &h.app.Repositories.OnboardingSurvey
 }
 
 // Submit records the onboarding survey answers of the current user. The
@@ -28,32 +36,36 @@ func (h *onboardingHandler) Submit(c fiber.Ctx) error {
 	}
 
 	req := &dtos.CreateOnboardingSurveyRequest{}
-	if err := bindBody(c, req); err != nil {
+	if err := lib.ValidateRequestBody(c, req); err != nil {
 		return err
 	}
 
 	if mr := validateSurvey(req); !mr.Empty() {
-		return unprocessable(c, mr)
+		return &lib.ErrValidationFailed{MessageRecord: mr}
 	}
 
 	useCases, err := json.Marshal(req.UseCases)
 	if err != nil {
-		return badRequest(c, "Invalid use cases payload")
+		return apperr.New(apperr.KindBadRequest, "Invalid use cases payload")
 	}
 
-	survey := &models.OnboardingSurvey{
+	survey := models.OnboardingSurvey{
 		UserID:               userID,
 		ReferralSource:       req.ReferralSource,
 		ReferralSourceDetail: textOrNil(req.ReferralSourceDetail),
 		UseCases:             useCases,
 		UseCaseDetail:        textOrNil(req.UseCaseDetail),
 	}
-
-	if err := h.app.Repositories.OnboardingSurvey.UpsertByUser(survey); err != nil {
-		return respondError(c, err)
+	if survey.ID, err = uuid.NewV7(); err != nil {
+		return err
 	}
 
-	return c.Status(fiber.StatusOK).JSON(survey)
+	survey, err = h.repo().UpsertByUser(c.Context(), survey)
+	if err != nil {
+		return err
+	}
+
+	return dtos.OK(c, survey)
 }
 
 // validateSurvey enforces the rules the per-field validator cannot express on

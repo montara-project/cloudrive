@@ -25,7 +25,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 const (
@@ -284,7 +284,12 @@ func buildReport(resp *response) *Report {
 // CollectFacts gathers best-effort state about the failed boot. Database
 // probes are capped at probeTimeout so diagnosis never hangs the shutdown
 // path; unreachable databases simply report reachable=false.
-func CollectFacts(ctx context.Context, db *sql.DB, bootErr error, runningInContainer bool, migrateBinary string, environment string) Facts {
+//
+// appTablesPresent answers "does the application schema exist yet" and is a
+// repository call supplied by the caller — raw SQL lives in the repositories
+// layer, not here. It is only consulted after the ping succeeds; pass nil to
+// skip the question.
+func CollectFacts(ctx context.Context, db *sql.DB, appTablesPresent func(ctx context.Context) bool, bootErr error, runningInContainer bool, migrateBinary string, environment string) Facts {
 	facts := Facts{
 		ErrorMessage:           bootErr.Error(),
 		RunningInContainer:     runningInContainer,
@@ -293,9 +298,9 @@ func CollectFacts(ctx context.Context, db *sql.DB, bootErr error, runningInConta
 		Environment:            environment,
 	}
 
-	var pqErr *pq.Error
-	if errors.As(bootErr, &pqErr) {
-		facts.PostgresErrorCode = string(pqErr.Code)
+	var pgErr *pgconn.PgError
+	if errors.As(bootErr, &pgErr) {
+		facts.PostgresErrorCode = string(pgErr.Code)
 	}
 
 	if db == nil {
@@ -310,12 +315,8 @@ func CollectFacts(ctx context.Context, db *sql.DB, bootErr error, runningInConta
 	}
 	facts.DatabaseReachable = true
 
-	var count int
-	err := db.QueryRowContext(probeCtx,
-		`SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users'`,
-	).Scan(&count)
-	if err == nil {
-		facts.AppTablesPresent = count > 0
+	if appTablesPresent != nil {
+		facts.AppTablesPresent = appTablesPresent(probeCtx)
 	}
 
 	return facts

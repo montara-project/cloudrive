@@ -1,57 +1,35 @@
 package repositories
 
 import (
-	"context"
 	"database/sql"
-	"strings"
+	"fmt"
 
-	"braces.dev/errtrace"
+	"cloudrive/server/internal/lib/apperr"
 )
 
-type Executor interface {
-	Exec(query string, args ...any) (sql.Result, error)
-	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
-	Query(query string, args ...any) (*sql.Rows, error)
-	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
-	QueryRow(query string, args ...any) *sql.Row
-	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+// rowScanner is the scan surface shared by *sql.Row and *sql.Rows, so a single
+// scan function serves both single-row and multi-row reads.
+type rowScanner interface {
+	Scan(dest ...any) error
 }
 
-type QueryOptions struct {
-	Offset int64
-	Limit  int64
-
-	OrderBy string
-	Order   string // asc | desc
-}
-
-type PaginationMetadata struct {
-	Total int64 `json:"total"`
-}
-
-// buildOrderBy resolves the ORDER BY column and direction from user-supplied
-// options. Both the default and the resolved OrderBy are bare column names
-// (matching allowedColumns keys); the caller owns identifier quoting and any
-// table qualification, so never pass a pre-quoted default. Order is
-// case-insensitively matched to ASC/DESC.
-func buildOrderBy(opts *QueryOptions, allowedColumns map[string]bool, defaultOrderBy string) (string, string, error) {
-	orderBy := defaultOrderBy
-	order := "DESC"
-
-	if opts.OrderBy != "" {
-		if !allowedColumns[opts.OrderBy] {
-			return "", "", errtrace.New("invalid order by column")
-		}
-		orderBy = opts.OrderBy
+// requireAffected turns a write that touched no row into apperr.ErrNotFound,
+// so callers can tell "updated nothing" apart from a successful write.
+func requireAffected(res sql.Result, what string) error {
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
 	}
-
-	if opts.Order != "" {
-		upperOrder := strings.ToUpper(opts.Order)
-		if upperOrder != "ASC" && upperOrder != "DESC" {
-			return "", "", errtrace.New("invalid order")
-		}
-		order = upperOrder
+	if n == 0 {
+		return fmt.Errorf("%w: %s", apperr.ErrNotFound, what)
 	}
+	return nil
+}
 
-	return orderBy, order, nil
+// ListParams carries the list controls bound from the request query:
+// pagination plus a "<column>:asc|desc" sort value.
+type ListParams struct {
+	Offset int
+	Limit  int
+	Sorted string
 }

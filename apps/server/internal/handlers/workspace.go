@@ -5,12 +5,18 @@ import (
 	"cloudrive/server/internal/dtos"
 	"cloudrive/server/internal/lib"
 	"cloudrive/server/internal/models"
+	"cloudrive/server/internal/repositories"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
 )
 
 type workspaceHandler struct {
 	app *app.Application
+}
+
+func (h *workspaceHandler) repo() *repositories.WorkspaceRepository {
+	return &h.app.Repositories.Workspace
 }
 
 // Create adds a workspace to an organization. Requires owner or admin.
@@ -20,21 +26,21 @@ func (h *workspaceHandler) Create(c fiber.Ctx) error {
 		return err
 	}
 
-	orgID, err := lib.ContextParamUUID(c, "orgId")
+	orgID, err := pathID(c, "orgId", "Invalid organization id")
 	if err != nil {
-		return badRequest(c, "Invalid organization id")
+		return err
 	}
 
-	if _, err := requireOrgMember(c, h.app, orgID, userID, "owner", "admin"); err != nil {
+	if _, err := requireOrgMember(c.Context(), h.app, orgID, userID, "owner", "admin"); err != nil {
 		return err
 	}
 
 	req := &dtos.CreateWorkspaceRequest{}
-	if err := bindBody(c, req); err != nil {
+	if err := lib.ValidateRequestBody(c, req); err != nil {
 		return err
 	}
 
-	workspace := &models.Workspace{
+	workspace := models.Workspace{
 		OrganizationID: orgID,
 		Name:           req.Name,
 		Slug:           req.Slug,
@@ -43,12 +49,20 @@ func (h *workspaceHandler) Create(c fiber.Ctx) error {
 	if req.Description != "" {
 		workspace.Description = &req.Description
 	}
-
-	if err := h.app.Repositories.Workspace.Create(workspace); err != nil {
-		return respondError(c, err)
+	if workspace.ID, err = uuid.NewV7(); err != nil {
+		return err
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(workspace)
+	if err := h.repo().Create(c.Context(), workspace); err != nil {
+		return err
+	}
+
+	// Re-read so the response carries the DB-set timestamps.
+	workspace, err = h.repo().Get(c.Context(), workspace.ID)
+	if err != nil {
+		return err
+	}
+	return dtos.Created(c, workspace, "Workspace created")
 }
 
 // List returns the organization's workspaces. Any member may read them.
@@ -58,26 +72,33 @@ func (h *workspaceHandler) List(c fiber.Ctx) error {
 		return err
 	}
 
-	orgID, err := lib.ContextParamUUID(c, "orgId")
-	if err != nil {
-		return badRequest(c, "Invalid organization id")
-	}
-
-	if _, err := requireOrgMember(c, h.app, orgID, userID); err != nil {
-		return err
-	}
-
-	opts, q, err := pagination(c)
+	orgID, err := pathID(c, "orgId", "Invalid organization id")
 	if err != nil {
 		return err
 	}
 
-	workspaces, metadata, err := h.app.Repositories.Workspace.ListByOrganization(orgID, opts)
-	if err != nil {
-		return respondError(c, err)
+	if _, err := requireOrgMember(c.Context(), h.app, orgID, userID); err != nil {
+		return err
 	}
 
-	return listResponse(c, q, metadata.Total, workspaces)
+	var q dtos.ListQuery
+	if err := lib.ValidateRequestQuery(c, &q); err != nil {
+		return err
+	}
+	q.Clamp()
+
+	params := listParams(q)
+
+	workspaces, err := h.repo().ListByOrganization(c.Context(), orgID, params)
+	if err != nil {
+		return err
+	}
+	total, err := h.repo().CountByOrganization(c.Context(), orgID)
+	if err != nil {
+		return err
+	}
+
+	return dtos.List(c, workspaces, dtos.ListMeta(int(total), q.Offset, q.Limit))
 }
 
 // Get returns one workspace. Any member of the owning organization may read it.
@@ -87,21 +108,21 @@ func (h *workspaceHandler) Get(c fiber.Ctx) error {
 		return err
 	}
 
-	wsID, err := lib.ContextParamUUID(c, "wsId")
+	wsID, err := pathID(c, "wsId", "Invalid workspace id")
 	if err != nil {
-		return badRequest(c, "Invalid workspace id")
-	}
-
-	workspace, err := h.app.Repositories.Workspace.Get(wsID)
-	if err != nil {
-		return respondError(c, err)
-	}
-
-	if _, err := requireOrgMember(c, h.app, workspace.OrganizationID, userID); err != nil {
 		return err
 	}
 
-	return c.JSON(workspace)
+	workspace, err := h.repo().Get(c.Context(), wsID)
+	if err != nil {
+		return err
+	}
+
+	if _, err := requireOrgMember(c.Context(), h.app, workspace.OrganizationID, userID); err != nil {
+		return err
+	}
+
+	return dtos.OK(c, workspace)
 }
 
 // Update changes the workspace profile. Requires owner or admin of the
@@ -112,22 +133,22 @@ func (h *workspaceHandler) Update(c fiber.Ctx) error {
 		return err
 	}
 
-	wsID, err := lib.ContextParamUUID(c, "wsId")
+	wsID, err := pathID(c, "wsId", "Invalid workspace id")
 	if err != nil {
-		return badRequest(c, "Invalid workspace id")
+		return err
 	}
 
-	workspace, err := h.app.Repositories.Workspace.Get(wsID)
+	workspace, err := h.repo().Get(c.Context(), wsID)
 	if err != nil {
-		return respondError(c, err)
+		return err
 	}
 
-	if _, err := requireOrgMember(c, h.app, workspace.OrganizationID, userID, "owner", "admin"); err != nil {
+	if _, err := requireOrgMember(c.Context(), h.app, workspace.OrganizationID, userID, "owner", "admin"); err != nil {
 		return err
 	}
 
 	req := &dtos.UpdateWorkspaceRequest{}
-	if err := bindBody(c, req); err != nil {
+	if err := lib.ValidateRequestBody(c, req); err != nil {
 		return err
 	}
 
@@ -138,11 +159,15 @@ func (h *workspaceHandler) Update(c fiber.Ctx) error {
 		workspace.Description = nil
 	}
 
-	if err := h.app.Repositories.Workspace.Update(wsID, workspace); err != nil {
-		return respondError(c, err)
+	if err := h.repo().Update(c.Context(), workspace); err != nil {
+		return err
 	}
 
-	return c.JSON(workspace)
+	workspace, err = h.repo().Get(c.Context(), wsID)
+	if err != nil {
+		return err
+	}
+	return dtos.OK(c, workspace)
 }
 
 // Delete soft-deletes the workspace. Requires owner or admin of the
@@ -153,23 +178,23 @@ func (h *workspaceHandler) Delete(c fiber.Ctx) error {
 		return err
 	}
 
-	wsID, err := lib.ContextParamUUID(c, "wsId")
+	wsID, err := pathID(c, "wsId", "Invalid workspace id")
 	if err != nil {
-		return badRequest(c, "Invalid workspace id")
-	}
-
-	workspace, err := h.app.Repositories.Workspace.Get(wsID)
-	if err != nil {
-		return respondError(c, err)
-	}
-
-	if _, err := requireOrgMember(c, h.app, workspace.OrganizationID, userID, "owner", "admin"); err != nil {
 		return err
 	}
 
-	if err := h.app.Repositories.Workspace.SoftDelete(wsID); err != nil {
-		return respondError(c, err)
+	workspace, err := h.repo().Get(c.Context(), wsID)
+	if err != nil {
+		return err
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Workspace deleted"})
+	if _, err := requireOrgMember(c.Context(), h.app, workspace.OrganizationID, userID, "owner", "admin"); err != nil {
+		return err
+	}
+
+	if err := h.repo().Delete(c.Context(), wsID); err != nil {
+		return err
+	}
+
+	return dtos.Message(c, fiber.StatusOK, "Workspace deleted")
 }

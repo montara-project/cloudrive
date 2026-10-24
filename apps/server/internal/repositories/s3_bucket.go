@@ -2,17 +2,11 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
-	"strings"
-	"time"
 
 	"cloudrive/server/internal/models"
 
-	"braces.dev/errtrace"
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 )
 
 // S3BucketRepository owns the s3_buckets rows — the mapping from an S3 bucket
@@ -21,228 +15,86 @@ type S3BucketRepository struct {
 	BaseRepository
 }
 
-func (r S3BucketRepository) Create(bucket *models.S3Bucket) error {
-	if bucket.ID == uuid.Nil {
-		id, err := uuid.NewV7()
-		if err != nil {
-			return errtrace.Errorf("error generating id: %w", err)
-		}
-		bucket.ID = id
-	}
+const s3BucketColumns = `
+	id, organization_id, workspace_id, name, storage_account_id,
+	root_prefix, created_by, created_at, updated_at`
 
-	query := `
-		INSERT INTO "s3_buckets"
-			("id", "organization_id", "workspace_id", "name", "storage_account_id", "root_prefix", "created_by")
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING "created_at", "updated_at";
-	`
-
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	err := r.DB.QueryRowContext(ctx, query,
-		bucket.ID,
-		bucket.OrganizationID,
-		bucket.WorkspaceID,
-		bucket.Name,
-		bucket.StorageAccountID,
-		bucket.RootPrefix,
-		bucket.CreatedBy,
-	).Scan(&bucket.CreatedAt, &bucket.UpdatedAt)
-	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok {
-			if pqErr.Code == "23505" {
-				return errtrace.Wrap(ErrInsertDuplicate)
-			}
-		}
-		return errtrace.Errorf("error scanning row: %w", err)
-	}
-
-	return nil
+func scanS3Bucket(row rowScanner) (models.S3Bucket, error) {
+	var b models.S3Bucket
+	err := row.Scan(&b.ID, &b.OrganizationID, &b.WorkspaceID, &b.Name, &b.StorageAccountID,
+		&b.RootPrefix, &b.CreatedBy, &b.CreatedAt, &b.UpdatedAt)
+	return b, translateNotFound("s3_buckets", err)
 }
 
-const s3BucketSelect = `
-	SELECT "id", "organization_id", "workspace_id", "name", "storage_account_id",
-	       "root_prefix", "created_by", "created_at", "updated_at"
-	FROM "s3_buckets"
-`
+// s3BucketSortColumns whitelists the columns a `sorted` value may order by.
+var s3BucketSortColumns = map[string]string{
+	"id":         "id",
+	"name":       "name",
+	"created_at": "created_at",
+	"updated_at": "updated_at",
+}
 
-func (r S3BucketRepository) Get(id uuid.UUID) (*models.S3Bucket, error) {
-	query := s3BucketSelect + ` WHERE "id" = $1;`
+// Create inserts a bucket mapping. The bucket name is globally unique, so a
+// collision surfaces as a conflict.
+func (r *S3BucketRepository) Create(ctx context.Context, bucket models.S3Bucket) error {
+	_, err := r.execContext(ctx, `
+		INSERT INTO s3_buckets
+			(id, organization_id, workspace_id, name, storage_account_id, root_prefix, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		bucket.ID, bucket.OrganizationID, bucket.WorkspaceID, bucket.Name,
+		bucket.StorageAccountID, bucket.RootPrefix, bucket.CreatedBy,
+	)
+	return translateDuplicate(err, "an S3 bucket with this name already exists")
+}
 
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	return r.scanBucket(r.DB.QueryRowContext(ctx, query, id))
+// Get returns one bucket mapping by id.
+func (r *S3BucketRepository) Get(ctx context.Context, id uuid.UUID) (models.S3Bucket, error) {
+	query := fmt.Sprintf(`SELECT %s FROM s3_buckets WHERE id = $1`, s3BucketColumns)
+	return scanS3Bucket(r.queryRowContext(ctx, query, id))
 }
 
 // GetByName resolves a bucket name for the gateway. Bucket names are a global
 // namespace, so no workspace scoping applies here — authorization is derived
 // from the bucket's workspace afterwards.
-func (r S3BucketRepository) GetByName(name string) (*models.S3Bucket, error) {
-	query := s3BucketSelect + ` WHERE "name" = $1;`
-
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	return r.scanBucket(r.DB.QueryRowContext(ctx, query, name))
+func (r *S3BucketRepository) GetByName(ctx context.Context, name string) (models.S3Bucket, error) {
+	query := fmt.Sprintf(`SELECT %s FROM s3_buckets WHERE name = $1`, s3BucketColumns)
+	return scanS3Bucket(r.queryRowContext(ctx, query, name))
 }
 
-func (r S3BucketRepository) scanBucket(row *sql.Row) (*models.S3Bucket, error) {
-	bucket := &models.S3Bucket{}
-	err := row.Scan(
-		&bucket.ID,
-		&bucket.OrganizationID,
-		&bucket.WorkspaceID,
-		&bucket.Name,
-		&bucket.StorageAccountID,
-		&bucket.RootPrefix,
-		&bucket.CreatedBy,
-		&bucket.CreatedAt,
-		&bucket.UpdatedAt,
-	)
-	if err != nil {
-		switch {
-		case errors.Is(err, sql.ErrNoRows):
-			return nil, ErrRecordNotFound
-		default:
-			return nil, errtrace.Errorf("error scanning row: %w", err)
-		}
-	}
+// ListByWorkspace returns one page of a workspace's bucket mappings, ordered
+// by p.Sorted. Callers clamp the offset/limit first (see
+// dtos.ListQuery.Clamp).
+func (r *S3BucketRepository) ListByWorkspace(ctx context.Context, workspaceID uuid.UUID, p ListParams) ([]models.S3Bucket, error) {
+	query := fmt.Sprintf(`
+		SELECT %s FROM s3_buckets
+		WHERE workspace_id = $1
+		ORDER BY %s
+		LIMIT $2 OFFSET $3`,
+		s3BucketColumns,
+		resolveOrder(p.Sorted, s3BucketSortColumns, "created_at DESC"))
 
-	return bucket, nil
+	rows, err := r.queryContext(ctx, query, workspaceID, p.Limit, p.Offset)
+	if err != nil {
+		return nil, err
+	}
+	return collectRows(rows, scanS3Bucket)
 }
 
-func (r S3BucketRepository) ListByWorkspace(workspaceID uuid.UUID, opts *QueryOptions) ([]*models.S3Bucket, PaginationMetadata, error) {
-	baseQuery := s3BucketSelect + `
-		WHERE "workspace_id" = $1
-	`
-
-	var args []any
-	argIndex := 2
-
-	var queryBuilder strings.Builder
-	queryBuilder.WriteString(baseQuery)
-
-	// Whitelist of allowed columns for ORDER BY to prevent SQL injection
-	allowedOrderByColumns := map[string]bool{
-		"id":         true,
-		"name":       true,
-		"created_at": true,
-		"updated_at": true,
-	}
-
-	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, "created_at")
-	if err != nil {
-		return nil, PaginationMetadata{}, err
-	}
-
-	queryBuilder.WriteString(fmt.Sprintf(" ORDER BY %q %s", orderBy, order))
-
-	if opts.Limit > 0 {
-		queryBuilder.WriteString(fmt.Sprintf(" LIMIT $%d", argIndex))
-		args = append(args, opts.Limit)
-		argIndex++
-	}
-
-	if opts.Offset > 0 {
-		queryBuilder.WriteString(fmt.Sprintf(" OFFSET $%d", argIndex))
-		args = append(args, opts.Offset)
-		argIndex++
-	}
-
-	query := queryBuilder.String()
-
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	rows, err := r.DB.QueryContext(ctx, query, append([]any{workspaceID}, args...)...)
-	if err != nil {
-		return nil, PaginationMetadata{}, errtrace.Wrap(err)
-	}
-	defer rows.Close()
-
-	var buckets []*models.S3Bucket
-	for rows.Next() {
-		bucket := &models.S3Bucket{}
-		if err := rows.Scan(
-			&bucket.ID,
-			&bucket.OrganizationID,
-			&bucket.WorkspaceID,
-			&bucket.Name,
-			&bucket.StorageAccountID,
-			&bucket.RootPrefix,
-			&bucket.CreatedBy,
-			&bucket.CreatedAt,
-			&bucket.UpdatedAt,
-		); err != nil {
-			return nil, PaginationMetadata{}, errtrace.Errorf("error scanning row: %w", err)
-		}
-		buckets = append(buckets, bucket)
-	}
-
-	count, err := r.countByWorkspace(r.DB, workspaceID)
-	if err != nil {
-		return nil, PaginationMetadata{}, errtrace.Wrap(err)
-	}
-
-	return buckets, PaginationMetadata{Total: count}, nil
+// CountByWorkspace returns how many bucket mappings the workspace has, for
+// the response meta block.
+func (r *S3BucketRepository) CountByWorkspace(ctx context.Context, workspaceID uuid.UUID) (int64, error) {
+	var count int64
+	query := `SELECT COUNT(*) FROM s3_buckets WHERE workspace_id = $1`
+	err := r.queryRowContext(ctx, query, workspaceID).Scan(&count)
+	return count, err
 }
 
 // Delete removes the bucket mapping. Objects in the backing storage account
 // are untouched.
-func (r S3BucketRepository) Delete(id uuid.UUID) error {
-	query := `
-		DELETE FROM "s3_buckets"
-		WHERE "id" = $1;
-	`
-
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	result, err := r.DB.ExecContext(ctx, query, id)
-	if err != nil {
-		return errtrace.Wrap(err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
+func (r *S3BucketRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	res, err := r.execContext(ctx, `DELETE FROM s3_buckets WHERE id = $1`, id)
 	if err != nil {
 		return err
 	}
-
-	if rowsAffected == 0 {
-		return ErrRecordNotFound
-	}
-
-	return nil
-}
-
-func (r S3BucketRepository) countByWorkspace(exc Executor, workspaceID uuid.UUID) (int64, error) {
-	query := `
-		SELECT COUNT(*)
-		FROM "s3_buckets"
-		WHERE "workspace_id" = $1;
-	`
-
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	var count int64
-	if err := exc.QueryRowContext(ctx, query, workspaceID).Scan(&count); err != nil {
-		return 0, errtrace.Errorf("error scanning row: %w", err)
-	}
-
-	return count, nil
+	return requireAffected(res, "s3 bucket")
 }

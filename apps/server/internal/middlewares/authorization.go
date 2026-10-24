@@ -15,16 +15,8 @@ import (
 // "Authorization: Bearer <jwt>" header (tokens minted by the jwt plugin) and
 // exposes the parsed user id to handlers through fiber locals. There is no
 // session-cookie path — bearer tokens are the only credential.
-func (m Middlewares) Authorization() fiber.Handler {
-	return func(c fiber.Ctx) error {
-		return m.authorizeByBearer(c, c.Get(fiber.HeaderAuthorization))
-	}
-}
-
-// authorizeByBearer validates a Bearer token from the Authorization header
-// and sets the user ID in the context if valid.
-func (m Middlewares) authorizeByBearer(c fiber.Ctx, authorization string) error {
-	token, ok := bearerToken(authorization)
+func (m *Middlewares) Authorization(c fiber.Ctx) error {
+	token, ok := bearerToken(c.Get(fiber.HeaderAuthorization))
 	if !ok {
 		return unauthorized(c)
 	}

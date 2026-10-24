@@ -1,4 +1,4 @@
-package s3
+package s3gateway
 
 import (
 	"bytes"
@@ -14,11 +14,10 @@ import (
 	"strings"
 	"time"
 
-	"cloudrive/server/internal/connectors"
+	"cloudrive/server/internal/lib/connectors"
 	"cloudrive/server/internal/lib/sigv4"
 	"cloudrive/server/internal/models"
 
-	"braces.dev/errtrace"
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 )
@@ -36,16 +35,16 @@ type Service struct {
 type Repos interface {
 	// S3CredentialByAccessKey returns the active credential row and its
 	// decrypted secret for signature verification.
-	S3CredentialByAccessKey(accessKeyID string) (*models.S3Credential, []byte, error)
+	S3CredentialByAccessKey(ctx context.Context, accessKeyID string) (*models.S3Credential, []byte, error)
 	// S3CredentialTouch records last-used time; failures are ignored.
-	S3CredentialTouch(id uuid.UUID)
+	S3CredentialTouch(ctx context.Context, id uuid.UUID)
 	// BucketByName resolves a bucket mapping (global namespace).
-	BucketByName(name string) (*models.S3Bucket, error)
+	BucketByName(ctx context.Context, name string) (*models.S3Bucket, error)
 	// BucketsByWorkspace lists the bucket mappings of one workspace.
-	BucketsByWorkspace(workspaceID uuid.UUID) ([]*models.S3Bucket, error)
+	BucketsByWorkspace(ctx context.Context, workspaceID uuid.UUID) ([]*models.S3Bucket, error)
 	// StorageAccountWithProvider loads the account, its provider catalog row,
 	// and the decrypted credentials JSON for connector construction.
-	StorageAccountWithProvider(id uuid.UUID) (*models.StorageAccount, *models.Provider, string, error)
+	StorageAccountWithProvider(ctx context.Context, id uuid.UUID) (*models.StorageAccount, *models.Provider, string, error)
 }
 
 type handler struct {
@@ -97,7 +96,7 @@ func (h *handler) authenticate(c fiber.Ctx) (*models.S3Credential, error) {
 		return nil, err
 	}
 
-	credential, secret, err := h.service.Repos.S3CredentialByAccessKey(res.AccessKeyID)
+	credential, secret, err := h.service.Repos.S3CredentialByAccessKey(c.Context(), res.AccessKeyID)
 	if err != nil {
 		return nil, errInvalidAccessKey
 	}
@@ -106,7 +105,7 @@ func (h *handler) authenticate(c fiber.Ctx) (*models.S3Credential, error) {
 		return nil, err
 	}
 
-	h.service.Repos.S3CredentialTouch(credential.ID)
+	h.service.Repos.S3CredentialTouch(c.Context(), credential.ID)
 	return credential, nil
 }
 
@@ -143,8 +142,8 @@ func rebuildRequest(c fiber.Ctx) *http.Request {
 // connectorFor resolves bucket → storage account → provider → connector with
 // freshly decrypted credentials, enforcing that the signed credential's
 // workspace owns the bucket and the backing account is active.
-func (h *handler) connectorFor(credential *models.S3Credential, bucketName string) (connectors.Connector, *models.S3Bucket, error) {
-	bucket, err := h.service.Repos.BucketByName(bucketName)
+func (h *handler) connectorFor(ctx context.Context, credential *models.S3Credential, bucketName string) (connectors.Connector, *models.S3Bucket, error) {
+	bucket, err := h.service.Repos.BucketByName(ctx, bucketName)
 	if err != nil {
 		return nil, nil, errNoSuchBucket
 	}
@@ -153,7 +152,7 @@ func (h *handler) connectorFor(credential *models.S3Credential, bucketName strin
 		return nil, nil, errAccessDenied
 	}
 
-	account, provider, credsJSON, err := h.service.Repos.StorageAccountWithProvider(bucket.StorageAccountID)
+	account, provider, credsJSON, err := h.service.Repos.StorageAccountWithProvider(ctx, bucket.StorageAccountID)
 	if err != nil {
 		return nil, nil, errAccessDenied
 	}
@@ -164,7 +163,7 @@ func (h *handler) connectorFor(credential *models.S3Credential, bucketName strin
 
 	conn, err := h.service.Registry.New(
 		connectors.AccountInput{ID: account.ID, Settings: account.Settings},
-		provider,
+		provider.Protocol, provider.Slug,
 		credsJSON,
 	)
 	if err != nil {
@@ -182,7 +181,7 @@ func (h *handler) listBuckets(c fiber.Ctx) error {
 		return h.sendError(c, err)
 	}
 
-	all, err := h.service.Repos.BucketsByWorkspace(credential.WorkspaceID)
+	all, err := h.service.Repos.BucketsByWorkspace(c.Context(), credential.WorkspaceID)
 	if err != nil {
 		return h.sendError(c, err)
 	}
@@ -212,7 +211,7 @@ func (h *handler) bucketOps(c fiber.Ctx, credential *models.S3Credential, bucket
 		// clients that probe bucket existence.
 		return h.sendError(c, errAccessDenied)
 	case http.MethodHead:
-		if _, _, err := h.connectorFor(credential, bucket); err != nil {
+		if _, _, err := h.connectorFor(c.Context(), credential, bucket); err != nil {
 			return h.sendError(c, err)
 		}
 		return c.SendStatus(200)
@@ -224,7 +223,7 @@ func (h *handler) bucketOps(c fiber.Ctx, credential *models.S3Credential, bucket
 }
 
 func (h *handler) listObjects(c fiber.Ctx, credential *models.S3Credential, bucketName string) error {
-	conn, bucket, err := h.connectorFor(credential, bucketName)
+	conn, bucket, err := h.connectorFor(c.Context(), credential, bucketName)
 	if err != nil {
 		return h.sendError(c, err)
 	}
@@ -242,7 +241,7 @@ func (h *handler) listObjects(c fiber.Ctx, credential *models.S3Credential, buck
 
 	page, err := conn.ListObjects(ctx, prefix, delimiter, continuation, maxKeys)
 	if err != nil {
-		return h.sendError(c, errtrace.Wrap(err))
+		return h.sendError(c, (err))
 	}
 
 	result := listBucketResult{
@@ -273,7 +272,7 @@ func (h *handler) listObjects(c fiber.Ctx, credential *models.S3Credential, buck
 // empty list: staging-based multipart state lives per connector instance, so
 // cross-request upload discovery is not implemented for v1.
 func (h *handler) listMultipartUploadsStub(c fiber.Ctx, credential *models.S3Credential, bucketName string) error {
-	if _, _, err := h.connectorFor(credential, bucketName); err != nil {
+	if _, _, err := h.connectorFor(c.Context(), credential, bucketName); err != nil {
 		return h.sendError(c, err)
 	}
 
@@ -314,7 +313,7 @@ func (h *handler) objectOps(c fiber.Ctx, credential *models.S3Credential, bucket
 }
 
 func (h *handler) getObject(c fiber.Ctx, credential *models.S3Credential, bucketName, key string) error {
-	conn, _, err := h.connectorFor(credential, bucketName)
+	conn, _, err := h.connectorFor(c.Context(), credential, bucketName)
 	if err != nil {
 		return h.sendError(c, err)
 	}
@@ -360,7 +359,7 @@ func (h *handler) getObject(c fiber.Ctx, credential *models.S3Credential, bucket
 }
 
 func (h *handler) putObject(c fiber.Ctx, credential *models.S3Credential, bucketName, key string) error {
-	conn, _, err := h.connectorFor(credential, bucketName)
+	conn, _, err := h.connectorFor(c.Context(), credential, bucketName)
 	if err != nil {
 		return h.sendError(c, err)
 	}
@@ -393,7 +392,7 @@ func (h *handler) putObject(c fiber.Ctx, credential *models.S3Credential, bucket
 
 	obj, err := conn.PutObject(ctx, key, body, size, contentType)
 	if err != nil {
-		return h.sendError(c, errtrace.Wrap(err))
+		return h.sendError(c, (err))
 	}
 	if h.service.Logger != nil {
 		h.service.Logger.Debug("s3 put object done", "key", key, "stored_size", obj.Size, "etag", obj.ETag)
@@ -414,7 +413,7 @@ func requestBody(c fiber.Ctx) io.Reader {
 }
 
 func (h *handler) deleteObject(c fiber.Ctx, credential *models.S3Credential, bucketName, key string) error {
-	conn, _, err := h.connectorFor(credential, bucketName)
+	conn, _, err := h.connectorFor(c.Context(), credential, bucketName)
 	if err != nil {
 		return h.sendError(c, err)
 	}
@@ -424,7 +423,7 @@ func (h *handler) deleteObject(c fiber.Ctx, credential *models.S3Credential, buc
 
 	if err := conn.DeleteObject(ctx, key); err != nil {
 		// S3 DeleteObject succeeds idempotently even when the key is absent.
-		return h.sendError(c, errtrace.Wrap(err))
+		return h.sendError(c, (err))
 	}
 
 	return c.Status(204).Send(nil)
@@ -433,7 +432,7 @@ func (h *handler) deleteObject(c fiber.Ctx, credential *models.S3Credential, buc
 // --- multipart operations ---
 
 func (h *handler) multipartOps(c fiber.Ctx, credential *models.S3Credential, bucketName, key string) error {
-	conn, bucket, err := h.connectorFor(credential, bucketName)
+	conn, bucket, err := h.connectorFor(c.Context(), credential, bucketName)
 	if err != nil {
 		return h.sendError(c, err)
 	}
@@ -447,7 +446,7 @@ func (h *handler) multipartOps(c fiber.Ctx, credential *models.S3Credential, buc
 	if hasQuery("uploads") && string(c.Method()) == http.MethodPost {
 		info, err := conn.CreateMultipartUpload(ctx, key, c.Get("Content-Type"))
 		if err != nil {
-			return h.sendError(c, errtrace.Wrap(err))
+			return h.sendError(c, (err))
 		}
 		return h.sendXML(c, 200, initiateMultipartUploadResult{
 			Bucket: bucket.Name, Key: key, UploadID: info.UploadID,
@@ -477,7 +476,7 @@ func (h *handler) multipartOps(c fiber.Ctx, credential *models.S3Credential, buc
 
 		etag, err := conn.UploadPart(ctx, key, uploadID, partNumber, body, size)
 		if err != nil {
-			return h.sendError(c, errtrace.Wrap(err))
+			return h.sendError(c, (err))
 		}
 
 		c.Set("ETag", `"`+etag+`"`)
@@ -498,7 +497,7 @@ func (h *handler) multipartOps(c fiber.Ctx, credential *models.S3Credential, buc
 
 		obj, err := conn.CompleteMultipartUpload(ctx, key, uploadID, parts)
 		if err != nil {
-			return h.sendError(c, errtrace.Wrap(err))
+			return h.sendError(c, (err))
 		}
 
 		return h.sendXML(c, 200, completeMultipartUploadResult{
@@ -512,7 +511,7 @@ func (h *handler) multipartOps(c fiber.Ctx, credential *models.S3Credential, buc
 	// DELETE /{bucket}/{key}?uploadId=… — abort.
 	if string(c.Method()) == http.MethodDelete && hasQuery("uploadId") {
 		if err := conn.AbortMultipartUpload(ctx, key, uploadID); err != nil {
-			return h.sendError(c, errtrace.Wrap(err))
+			return h.sendError(c, (err))
 		}
 		return c.Status(204).Send(nil)
 	}
@@ -525,7 +524,7 @@ func (h *handler) multipartOps(c fiber.Ctx, credential *models.S3Credential, buc
 func (h *handler) sendXML(c fiber.Ctx, status int, v any) error {
 	body, err := xml.Marshal(v)
 	if err != nil {
-		return errtrace.Wrap(err)
+		return (err)
 	}
 	c.Set("Content-Type", "application/xml")
 	return c.Status(status).Send([]byte(xml.Header + string(body)))

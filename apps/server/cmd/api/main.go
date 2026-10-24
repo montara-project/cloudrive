@@ -6,11 +6,8 @@ import (
 
 	"cloudrive/server/internal/app"
 	"cloudrive/server/internal/config"
-	"cloudrive/server/internal/connectors"
 	"cloudrive/server/internal/lib/secretbox"
 	"cloudrive/server/internal/repositories"
-	"cloudrive/server/internal/services"
-	"cloudrive/server/internal/services/provideroauth"
 )
 
 func main() {
@@ -55,24 +52,8 @@ func main() {
 	application := &app.Application{
 		Config:       cfg,
 		Logger:       logger,
-		Repositories: repositories.New(db, &cfg.App, box),
-		Services: services.Services{
-			Email: services.EmailService{AppName: cfg.App.Name, Config: cfg.Resend},
-		},
-		Connectors: app.Connectors{
-			Registry: connectors.Registry{
-				GoogleClientID:       cfg.Google.ClientID,
-				GoogleClientSecret:   cfg.Google.ClientSecret,
-				OneDriveClientID:     cfg.OneDrive.ClientID,
-				OneDriveClientSecret: cfg.OneDrive.ClientSecret,
-				OneDriveTenant:       cfg.OneDrive.Tenant,
-				DropboxClientID:      cfg.Dropbox.ClientID,
-				DropboxClientSecret:  cfg.Dropbox.ClientSecret,
-				ServerURL:            cfg.App.ServerURL,
-				StagingDir:           cfg.S3.StagingDir,
-			},
-			Session: provideroauth.NewSession(cfg.App.Secret),
-		},
+		DB:           db,
+		Repositories: repositories.New(db, box),
 	}
 	// MIGRATE_ON_BOOT applies application migrations before anything reads or
 	// writes the schema — including the super-user seed below, which would

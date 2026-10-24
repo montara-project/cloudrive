@@ -3,6 +3,7 @@ package provideroauth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,9 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"cloudrive/server/internal/config"
-
-	"braces.dev/errtrace"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
@@ -96,7 +94,7 @@ type Flow interface {
 // errScrubbed converts provider HTTP failures into a stable message that
 // never echoes response bodies (token or user data could appear there).
 func errScrubbed(op string, status int) error {
-	return errtrace.Errorf("%s failed: provider returned status %d", op, status)
+	return fmt.Errorf("%s failed: provider returned status %d", op, status)
 }
 
 // errBody reads a bounded JSON error body for messages that are safe by
@@ -109,9 +107,9 @@ func errBody(resp *http.Response, fallback string) error {
 		Description string `json:"error_description"`
 	}
 	if json.Unmarshal(body, &payload) == nil && payload.Description != "" {
-		return errtrace.Errorf("%s", payload.Description)
+		return fmt.Errorf("%s", payload.Description)
 	}
-	return errtrace.Errorf("%s", fallback)
+	return fmt.Errorf("%s", fallback)
 }
 
 // --- Google Drive ---
@@ -122,7 +120,16 @@ type GoogleDriveFlow struct {
 	nowFunc func() time.Time
 }
 
-func NewGoogleDriveFlow(cfg config.ConfigGoogle, serverURL string, client *http.Client) *GoogleDriveFlow {
+// Client is a provider's OAuth client registration. Tenant is only read by
+// the OneDrive flow (Microsoft authority: common, consumers, organizations or
+// a directory id).
+type Client struct {
+	ClientID     string
+	ClientSecret string
+	Tenant       string
+}
+
+func NewGoogleDriveFlow(cfg Client, serverURL string, client *http.Client) *GoogleDriveFlow {
 	return &GoogleDriveFlow{
 		conf: &oauth2.Config{
 			ClientID:     cfg.ClientID,
@@ -163,12 +170,12 @@ type driveAboutQuota struct {
 func (f *GoogleDriveFlow) Exchange(ctx context.Context, code string) (Credentials, Profile, error) {
 	tok, err := f.conf.Exchange(ctx, code)
 	if err != nil {
-		return Credentials{}, Profile{}, errtrace.Wrap(err)
+		return Credentials{}, Profile{}, (err)
 	}
 
 	creds := credentialsFromOAuth2Token(tok)
 	if creds.RefreshToken == "" {
-		return Credentials{}, Profile{}, errtrace.New("provider did not return a refresh token; reconnect with offline access")
+		return Credentials{}, Profile{}, errors.New("provider did not return a refresh token; reconnect with offline access")
 	}
 
 	profile, err := f.Profile(ctx, creds)
@@ -185,12 +192,12 @@ func (f *GoogleDriveFlow) Profile(ctx context.Context, creds Credentials) (Profi
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		"https://www.googleapis.com/drive/v3/about?fields=user(emailAddress,displayName),storageQuota(limit,usage)", nil)
 	if err != nil {
-		return Profile{}, errtrace.Wrap(err)
+		return Profile{}, (err)
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return Profile{}, errtrace.Wrap(err)
+		return Profile{}, (err)
 	}
 	defer resp.Body.Close()
 
@@ -200,11 +207,11 @@ func (f *GoogleDriveFlow) Profile(ctx context.Context, creds Credentials) (Profi
 
 	var about driveAboutQuota
 	if err := json.NewDecoder(resp.Body).Decode(&about); err != nil {
-		return Profile{}, errtrace.Wrap(err)
+		return Profile{}, (err)
 	}
 
 	if about.User.EmailAddress == "" {
-		return Profile{}, errtrace.New("unable to read Google account email")
+		return Profile{}, errors.New("unable to read Google account email")
 	}
 
 	return Profile{
@@ -226,7 +233,7 @@ type OneDriveFlow struct {
 	nowFunc func() time.Time
 }
 
-func NewOneDriveFlow(cfg config.ConfigOneDrive, serverURL string) *OneDriveFlow {
+func NewOneDriveFlow(cfg Client, serverURL string) *OneDriveFlow {
 	tenant := cfg.Tenant
 	if tenant == "" {
 		tenant = "common"
@@ -278,11 +285,11 @@ func (f *OneDriveFlow) profileFromGraph(ctx context.Context, tok *oauth2.Token) 
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://graph.microsoft.com/v1.0/me?$select=mail,userPrincipalName", nil)
 	if err != nil {
-		return Profile{}, errtrace.Wrap(err)
+		return Profile{}, (err)
 	}
 	meResp, err := client.Do(req)
 	if err != nil {
-		return Profile{}, errtrace.Wrap(err)
+		return Profile{}, (err)
 	}
 	defer meResp.Body.Close()
 
@@ -292,16 +299,16 @@ func (f *OneDriveFlow) profileFromGraph(ctx context.Context, tok *oauth2.Token) 
 
 	var me graphMe
 	if err := json.NewDecoder(meResp.Body).Decode(&me); err != nil {
-		return Profile{}, errtrace.Wrap(err)
+		return Profile{}, (err)
 	}
 
 	req, err = http.NewRequestWithContext(ctx, http.MethodGet, "https://graph.microsoft.com/v1.0/me/drive?$select=id,driveType,quota", nil)
 	if err != nil {
-		return Profile{}, errtrace.Wrap(err)
+		return Profile{}, (err)
 	}
 	driveResp, err := client.Do(req)
 	if err != nil {
-		return Profile{}, errtrace.Wrap(err)
+		return Profile{}, (err)
 	}
 	defer driveResp.Body.Close()
 
@@ -311,7 +318,7 @@ func (f *OneDriveFlow) profileFromGraph(ctx context.Context, tok *oauth2.Token) 
 
 	var drive graphDrive
 	if err := json.NewDecoder(driveResp.Body).Decode(&drive); err != nil {
-		return Profile{}, errtrace.Wrap(err)
+		return Profile{}, (err)
 	}
 
 	email := me.Mail
@@ -319,10 +326,10 @@ func (f *OneDriveFlow) profileFromGraph(ctx context.Context, tok *oauth2.Token) 
 		email = me.UPN
 	}
 	if email == "" {
-		return Profile{}, errtrace.New("unable to read OneDrive account email")
+		return Profile{}, errors.New("unable to read OneDrive account email")
 	}
 	if drive.ID == "" {
-		return Profile{}, errtrace.New("unable to read OneDrive drive id")
+		return Profile{}, errors.New("unable to read OneDrive drive id")
 	}
 
 	return Profile{
@@ -340,12 +347,12 @@ func (f *OneDriveFlow) profileFromGraph(ctx context.Context, tok *oauth2.Token) 
 func (f *OneDriveFlow) Exchange(ctx context.Context, code string) (Credentials, Profile, error) {
 	tok, err := f.conf.Exchange(ctx, code)
 	if err != nil {
-		return Credentials{}, Profile{}, errtrace.Wrap(err)
+		return Credentials{}, Profile{}, (err)
 	}
 
 	creds := credentialsFromOAuth2Token(tok)
 	if creds.RefreshToken == "" {
-		return Credentials{}, Profile{}, errtrace.New("provider did not return a refresh token; reconnect with offline access")
+		return Credentials{}, Profile{}, errors.New("provider did not return a refresh token; reconnect with offline access")
 	}
 
 	profile, err := f.profileFromGraph(ctx, tok)
@@ -368,7 +375,7 @@ type DropboxFlow struct {
 	nowFunc func() time.Time
 }
 
-func NewDropboxFlow(cfg config.ConfigDropbox, serverURL string, client *http.Client) *DropboxFlow {
+func NewDropboxFlow(cfg Client, serverURL string, client *http.Client) *DropboxFlow {
 	return NewDropboxFlowWithEndpoint(cfg, serverURL,
 		"https://www.dropbox.com/oauth2/authorize",
 		"https://api.dropboxapi.com/oauth2/token", client)
@@ -376,7 +383,7 @@ func NewDropboxFlow(cfg config.ConfigDropbox, serverURL string, client *http.Cli
 
 // NewDropboxFlowWithEndpoint lets tests point the token endpoint at a stub
 // server while keeping the production constructor clean.
-func NewDropboxFlowWithEndpoint(cfg config.ConfigDropbox, serverURL, authURL, tokenURL string, client *http.Client) *DropboxFlow {
+func NewDropboxFlowWithEndpoint(cfg Client, serverURL, authURL, tokenURL string, client *http.Client) *DropboxFlow {
 	return &DropboxFlow{
 		conf: &oauth2.Config{
 			ClientID:     cfg.ClientID,
@@ -428,11 +435,11 @@ func (f *DropboxFlow) fetchProfile(ctx context.Context, accessToken string) (Pro
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.dropboxapi.com/2/users/get_current_account", nil)
 	if err != nil {
-		return Profile{}, errtrace.Wrap(err)
+		return Profile{}, (err)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return Profile{}, errtrace.Wrap(err)
+		return Profile{}, (err)
 	}
 	defer resp.Body.Close()
 
@@ -442,23 +449,23 @@ func (f *DropboxFlow) fetchProfile(ctx context.Context, accessToken string) (Pro
 
 	var account dropboxAccountInfo
 	if err := json.NewDecoder(resp.Body).Decode(&account); err != nil {
-		return Profile{}, errtrace.Wrap(err)
+		return Profile{}, (err)
 	}
 
 	if account.Email == "" {
-		return Profile{}, errtrace.New("unable to read Dropbox account email")
+		return Profile{}, errors.New("unable to read Dropbox account email")
 	}
 	if account.AccountID == "" {
-		return Profile{}, errtrace.New("unable to read Dropbox account id")
+		return Profile{}, errors.New("unable to read Dropbox account id")
 	}
 
 	req, err = http.NewRequestWithContext(ctx, http.MethodPost, "https://api.dropboxapi.com/2/users/get_space_usage", nil)
 	if err != nil {
-		return Profile{}, errtrace.Wrap(err)
+		return Profile{}, (err)
 	}
 	usageResp, err := client.Do(req)
 	if err != nil {
-		return Profile{}, errtrace.Wrap(err)
+		return Profile{}, (err)
 	}
 	defer usageResp.Body.Close()
 
@@ -468,7 +475,7 @@ func (f *DropboxFlow) fetchProfile(ctx context.Context, accessToken string) (Pro
 
 	var usage dropboxSpaceUsage
 	if err := json.NewDecoder(usageResp.Body).Decode(&usage); err != nil {
-		return Profile{}, errtrace.Wrap(err)
+		return Profile{}, (err)
 	}
 
 	// Dropbox individual allocation carries the quota in
@@ -491,12 +498,12 @@ func (f *DropboxFlow) fetchProfile(ctx context.Context, accessToken string) (Pro
 func (f *DropboxFlow) Exchange(ctx context.Context, code string) (Credentials, Profile, error) {
 	tok, err := f.conf.Exchange(ctx, code)
 	if err != nil {
-		return Credentials{}, Profile{}, errtrace.Wrap(err)
+		return Credentials{}, Profile{}, (err)
 	}
 
 	creds := credentialsFromOAuth2Token(tok)
 	if creds.RefreshToken == "" {
-		return Credentials{}, Profile{}, errtrace.New("provider did not return a refresh token; reconnect with offline access")
+		return Credentials{}, Profile{}, errors.New("provider did not return a refresh token; reconnect with offline access")
 	}
 
 	profile, err := f.fetchProfile(ctx, tok.AccessToken)
@@ -512,7 +519,7 @@ func (f *DropboxFlow) Profile(ctx context.Context, creds Credentials) (Profile, 
 	// for a fresh one before querying account info.
 	tok, err := f.conf.TokenSource(ctx, creds.ToOAuth2Token()).Token()
 	if err != nil {
-		return Profile{}, errtrace.Wrap(err)
+		return Profile{}, (err)
 	}
 	return f.fetchProfile(ctx, tok.AccessToken)
 }
@@ -531,7 +538,7 @@ func Refresh(ctx context.Context, flow Flow, creds Credentials) (Credentials, er
 		renewed.RefreshToken = creds.RefreshToken
 	}
 	if renewed.RefreshToken == "" {
-		return Credentials{}, errtrace.New("refresh failed: no refresh token available")
+		return Credentials{}, errors.New("refresh failed: no refresh token available")
 	}
 
 	return renewed, nil
@@ -546,10 +553,10 @@ func flowTokenSource(ctx context.Context, flow Flow, creds Credentials) (*oauth2
 	case *DropboxFlow:
 		return f.conf.TokenSource(ctx, creds.ToOAuth2Token()).Token()
 	default:
-		return nil, errtrace.Errorf("unsupported flow %T", flow)
+		return nil, fmt.Errorf("unsupported flow %T", flow)
 	}
 }
 
 func redirectURL(serverURL, slug string) string {
-	return strings.TrimSuffix(serverURL, "/") + "/v1/storage/oauth/" + slug + "/callback"
+	return strings.TrimSuffix(serverURL, "/") + "/api/v1/storage/oauth/" + slug + "/callback"
 }

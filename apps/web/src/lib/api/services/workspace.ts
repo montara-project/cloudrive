@@ -13,19 +13,19 @@ const api = new ClientFetchApi({
 const workspaceResources = (): WorkspaceResources => {
   return {
     list: (orgId, params) => {
-      return api.get(`/v1/organizations/${orgId}/workspaces`, { params })
+      return api.get(`/api/v1/organizations/${orgId}/workspaces`, { params })
     },
     create: (orgId, reqBody) => {
-      return api.post(`/v1/organizations/${orgId}/workspaces`, reqBody)
+      return api.post(`/api/v1/organizations/${orgId}/workspaces`, reqBody)
     },
     get: (wsId) => {
-      return api.get(`/v1/workspaces/${wsId}`)
+      return api.get(`/api/v1/workspaces/${wsId}`)
     },
     update: (wsId, reqBody) => {
-      return api.patch(`/v1/workspaces/${wsId}`, reqBody)
+      return api.patch(`/api/v1/workspaces/${wsId}`, reqBody)
     },
     delete: (wsId) => {
-      return api.delete(`/v1/workspaces/${wsId}`)
+      return api.delete(`/api/v1/workspaces/${wsId}`)
     },
   }
 }
@@ -33,16 +33,16 @@ const workspaceResources = (): WorkspaceResources => {
 const workspaceMemberResources = (): WorkspaceMemberResources => {
   return {
     list: (wsId, params) => {
-      return api.get(`/v1/workspaces/${wsId}/members`, { params })
+      return api.get(`/api/v1/workspaces/${wsId}/members`, { params })
     },
     add: (wsId, reqBody) => {
-      return api.post(`/v1/workspaces/${wsId}/members`, reqBody)
+      return api.post(`/api/v1/workspaces/${wsId}/members`, reqBody)
     },
     update: (wsId, userId, reqBody) => {
-      return api.patch(`/v1/workspaces/${wsId}/members/${userId}`, reqBody)
+      return api.patch(`/api/v1/workspaces/${wsId}/members/${userId}`, reqBody)
     },
     remove: (wsId, userId) => {
-      return api.delete(`/v1/workspaces/${wsId}/members/${userId}`)
+      return api.delete(`/api/v1/workspaces/${wsId}/members/${userId}`)
     },
   }
 }

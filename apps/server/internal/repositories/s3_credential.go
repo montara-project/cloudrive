@@ -2,18 +2,13 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
-	"time"
 
 	"cloudrive/server/internal/lib/secretbox"
 	"cloudrive/server/internal/models"
 
-	"braces.dev/errtrace"
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 )
 
 // S3CredentialRepository owns the s3_credentials rows — the SigV4 access keys
@@ -25,48 +20,55 @@ type S3CredentialRepository struct {
 	Box *secretbox.SecretBox
 }
 
-func (r S3CredentialRepository) box() (*secretbox.SecretBox, error) {
+func (r *S3CredentialRepository) box() (*secretbox.SecretBox, error) {
 	if r.Box == nil {
-		return nil, errtrace.New("secretbox is not configured; refusing to handle secrets in plaintext")
+		return nil, errors.New("secretbox is not configured; refusing to handle secrets in plaintext")
 	}
 	return r.Box, nil
 }
 
-// Create inserts a new access key and its encrypted secret. The generated
-// secret is returned so it can be shown to the user exactly once.
-func (r S3CredentialRepository) Create(credential *models.S3Credential, secretKey []byte) error {
+const s3CredentialColumns = `
+	id, organization_id, workspace_id, user_id, access_key_id,
+	secret_key_encrypted, key_id, label, status, last_used_at,
+	created_at, updated_at`
+
+func scanS3Credential(row rowScanner) (models.S3Credential, error) {
+	var c models.S3Credential
+	err := row.Scan(&c.ID, &c.OrganizationID, &c.WorkspaceID, &c.UserID, &c.AccessKeyID,
+		&c.SecretKeyEncrypted, &c.KeyID, &c.Label, &c.Status, &c.LastUsedAt, &c.CreatedAt, &c.UpdatedAt)
+	return c, translateNotFound("s3_credentials", err)
+}
+
+// s3CredentialSortColumns whitelists the columns a `sorted` value may order by.
+var s3CredentialSortColumns = map[string]string{
+	"id":            "id",
+	"access_key_id": "access_key_id",
+	"status":        "status",
+	"last_used_at":  "last_used_at",
+	"created_at":    "created_at",
+}
+
+// Create inserts a new access key and its encrypted secret. The caller sets
+// ID (uuid.NewV7); the generated secret is returned so it can be shown to the
+// user exactly once.
+func (r *S3CredentialRepository) Create(ctx context.Context, credential models.S3Credential, secretKey []byte) (models.S3Credential, error) {
 	box, err := r.box()
 	if err != nil {
-		return err
-	}
-
-	if credential.ID == uuid.Nil {
-		id, err := uuid.NewV7()
-		if err != nil {
-			return errtrace.Errorf("error generating id: %w", err)
-		}
-		credential.ID = id
+		return models.S3Credential{}, err
 	}
 
 	encoded, err := box.Encrypt(secretKey)
 	if err != nil {
-		return errtrace.Wrap(err)
+		return models.S3Credential{}, err
 	}
 
-	query := `
-		INSERT INTO "s3_credentials"
-			("id", "organization_id", "workspace_id", "user_id", "access_key_id",
-			 "secret_key_encrypted", "key_id", "label", "status")
+	out := credential
+	err = r.queryRowContext(ctx, `
+		INSERT INTO s3_credentials
+			(id, organization_id, workspace_id, user_id, access_key_id,
+			 secret_key_encrypted, key_id, label, status)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		RETURNING "created_at", "updated_at";
-	`
-
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	err = r.DB.QueryRowContext(ctx, query,
+		RETURNING created_at, updated_at`,
 		credential.ID,
 		credential.OrganizationID,
 		credential.WorkspaceID,
@@ -76,263 +78,99 @@ func (r S3CredentialRepository) Create(credential *models.S3Credential, secretKe
 		box.ActiveKeyID(),
 		credential.Label,
 		credential.Status,
-	).Scan(&credential.CreatedAt, &credential.UpdatedAt)
+	).Scan(&out.CreatedAt, &out.UpdatedAt)
 	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok {
-			if pqErr.Code == "23505" {
-				return errtrace.Wrap(ErrInsertDuplicate)
-			}
-		}
-		return errtrace.Errorf("error scanning row: %w", err)
+		return models.S3Credential{}, translateDuplicate(err, "this access key already exists")
 	}
-
-	return nil
+	return out, nil
 }
 
-const s3CredentialSelect = `
-	SELECT "id", "organization_id", "workspace_id", "user_id", "access_key_id",
-	       "secret_key_encrypted", "key_id", "label", "status", "last_used_at",
-	       "created_at", "updated_at"
-	FROM "s3_credentials"
-`
-
-func (r S3CredentialRepository) scanCredential(row *sql.Row) (*models.S3Credential, error) {
-	credential := &models.S3Credential{}
-	err := row.Scan(
-		&credential.ID,
-		&credential.OrganizationID,
-		&credential.WorkspaceID,
-		&credential.UserID,
-		&credential.AccessKeyID,
-		&credential.SecretKeyEncrypted,
-		&credential.KeyID,
-		&credential.Label,
-		&credential.Status,
-		&credential.LastUsedAt,
-		&credential.CreatedAt,
-		&credential.UpdatedAt,
-	)
-	if err != nil {
-		switch {
-		case errors.Is(err, sql.ErrNoRows):
-			return nil, ErrRecordNotFound
-		default:
-			return nil, errtrace.Errorf("error scanning row: %w", err)
-		}
-	}
-
-	return credential, nil
-}
-
-func (r S3CredentialRepository) Get(id uuid.UUID) (*models.S3Credential, error) {
-	query := s3CredentialSelect + ` WHERE "id" = $1;`
-
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	return r.scanCredential(r.DB.QueryRowContext(ctx, query, id))
+// Get returns one credential by id.
+func (r *S3CredentialRepository) Get(ctx context.Context, id uuid.UUID) (models.S3Credential, error) {
+	query := fmt.Sprintf(`SELECT %s FROM s3_credentials WHERE id = $1`, s3CredentialColumns)
+	return scanS3Credential(r.queryRowContext(ctx, query, id))
 }
 
 // GetActiveByAccessKeyID resolves the active credential a gateway request was
 // signed with. Revoked keys must stop authenticating immediately.
-func (r S3CredentialRepository) GetActiveByAccessKeyID(accessKeyID string) (*models.S3Credential, error) {
-	query := s3CredentialSelect + ` WHERE "access_key_id" = $1 AND "status" = 'active';`
-
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	return r.scanCredential(r.DB.QueryRowContext(ctx, query, accessKeyID))
+func (r *S3CredentialRepository) GetActiveByAccessKeyID(ctx context.Context, accessKeyID string) (models.S3Credential, error) {
+	query := fmt.Sprintf(`SELECT %s FROM s3_credentials WHERE access_key_id = $1 AND status = 'active'`, s3CredentialColumns)
+	return scanS3Credential(r.queryRowContext(ctx, query, accessKeyID))
 }
 
-func (r S3CredentialRepository) ListByWorkspace(workspaceID uuid.UUID, opts *QueryOptions) ([]*models.S3Credential, PaginationMetadata, error) {
-	baseQuery := s3CredentialSelect + `
-		WHERE "workspace_id" = $1
-	`
+// ListByWorkspace returns one page of a workspace's access keys, ordered by
+// p.Sorted. Callers clamp the offset/limit first (see dtos.ListQuery.Clamp).
+func (r *S3CredentialRepository) ListByWorkspace(ctx context.Context, workspaceID uuid.UUID, p ListParams) ([]models.S3Credential, error) {
+	query := fmt.Sprintf(`
+		SELECT %s FROM s3_credentials
+		WHERE workspace_id = $1
+		ORDER BY %s
+		LIMIT $2 OFFSET $3`,
+		s3CredentialColumns,
+		resolveOrder(p.Sorted, s3CredentialSortColumns, "created_at DESC"))
 
-	var args []any
-	argIndex := 2
-
-	var queryBuilder strings.Builder
-	queryBuilder.WriteString(baseQuery)
-
-	// Whitelist of allowed columns for ORDER BY to prevent SQL injection
-	allowedOrderByColumns := map[string]bool{
-		"id":            true,
-		"access_key_id": true,
-		"status":        true,
-		"last_used_at":  true,
-		"created_at":    true,
-	}
-
-	orderBy, order, err := buildOrderBy(opts, allowedOrderByColumns, "created_at")
+	rows, err := r.queryContext(ctx, query, workspaceID, p.Limit, p.Offset)
 	if err != nil {
-		return nil, PaginationMetadata{}, err
+		return nil, err
 	}
-
-	queryBuilder.WriteString(fmt.Sprintf(" ORDER BY %q %s", orderBy, order))
-
-	if opts.Limit > 0 {
-		queryBuilder.WriteString(fmt.Sprintf(" LIMIT $%d", argIndex))
-		args = append(args, opts.Limit)
-		argIndex++
-	}
-
-	if opts.Offset > 0 {
-		queryBuilder.WriteString(fmt.Sprintf(" OFFSET $%d", argIndex))
-		args = append(args, opts.Offset)
-		argIndex++
-	}
-
-	query := queryBuilder.String()
-
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	rows, err := r.DB.QueryContext(ctx, query, append([]any{workspaceID}, args...)...)
-	if err != nil {
-		return nil, PaginationMetadata{}, errtrace.Wrap(err)
-	}
-	defer rows.Close()
-
-	var credentials []*models.S3Credential
-	for rows.Next() {
-		credential := &models.S3Credential{}
-		if err := rows.Scan(
-			&credential.ID,
-			&credential.OrganizationID,
-			&credential.WorkspaceID,
-			&credential.UserID,
-			&credential.AccessKeyID,
-			&credential.SecretKeyEncrypted,
-			&credential.KeyID,
-			&credential.Label,
-			&credential.Status,
-			&credential.LastUsedAt,
-			&credential.CreatedAt,
-			&credential.UpdatedAt,
-		); err != nil {
-			return nil, PaginationMetadata{}, errtrace.Errorf("error scanning row: %w", err)
-		}
-		credentials = append(credentials, credential)
-	}
-
-	count, err := r.countByWorkspace(r.DB, workspaceID)
-	if err != nil {
-		return nil, PaginationMetadata{}, errtrace.Wrap(err)
-	}
-
-	return credentials, PaginationMetadata{Total: count}, nil
+	return collectRows(rows, scanS3Credential)
 }
 
-func (r S3CredentialRepository) countByWorkspace(exc Executor, workspaceID uuid.UUID) (int64, error) {
-	query := `
-		SELECT COUNT(*)
-		FROM "s3_credentials"
-		WHERE "workspace_id" = $1;
-	`
-
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
+// CountByWorkspace returns how many access keys the workspace has, for the
+// response meta block.
+func (r *S3CredentialRepository) CountByWorkspace(ctx context.Context, workspaceID uuid.UUID) (int64, error) {
 	var count int64
-	if err := exc.QueryRowContext(ctx, query, workspaceID).Scan(&count); err != nil {
-		return 0, errtrace.Errorf("error scanning row: %w", err)
-	}
-
-	return count, nil
+	query := `SELECT COUNT(*) FROM s3_credentials WHERE workspace_id = $1`
+	err := r.queryRowContext(ctx, query, workspaceID).Scan(&count)
+	return count, err
 }
 
 // TouchLastUsed records gateway activity on the credential. Failures are
 // non-fatal for the request path; callers may ignore the error.
-func (r S3CredentialRepository) TouchLastUsed(id uuid.UUID) error {
-	query := `
-		UPDATE "s3_credentials"
-		SET "last_used_at" = now()
-		WHERE "id" = $1;
-	`
-
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	_, err := r.DB.ExecContext(ctx, query, id)
-	return errtrace.Wrap(err)
+func (r *S3CredentialRepository) TouchLastUsed(ctx context.Context, id uuid.UUID) error {
+	_, err := r.execContext(ctx, `
+		UPDATE s3_credentials
+		SET last_used_at = now()
+		WHERE id = $1`,
+		id,
+	)
+	return err
 }
 
 // UpdateStatus transitions the credential (active/revoked).
-func (r S3CredentialRepository) UpdateStatus(id uuid.UUID, status string) error {
-	query := `
-		UPDATE "s3_credentials"
-		SET "status" = $1, "updated_at" = now()
-		WHERE "id" = $2;
-	`
-
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	result, err := r.DB.ExecContext(ctx, query, status, id)
-	if err != nil {
-		return errtrace.Wrap(err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
+func (r *S3CredentialRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status string) error {
+	res, err := r.execContext(ctx, `
+		UPDATE s3_credentials
+		SET status = $2, updated_at = now()
+		WHERE id = $1`,
+		id, status,
+	)
 	if err != nil {
 		return err
 	}
-
-	if rowsAffected == 0 {
-		return ErrEditConflict
-	}
-
-	return nil
+	return requireAffected(res, "s3 credential")
 }
 
 // SecretKey decrypts and returns the secret part of the access key for
 // signature verification. The plaintext lives only in memory for the duration
 // of the call.
-func (r S3CredentialRepository) SecretKey(id uuid.UUID) ([]byte, error) {
+func (r *S3CredentialRepository) SecretKey(ctx context.Context, id uuid.UUID) ([]byte, error) {
 	box, err := r.box()
 	if err != nil {
 		return nil, err
 	}
 
-	query := `
-		SELECT "secret_key_encrypted"
-		FROM "s3_credentials"
-		WHERE "id" = $1;
-	`
-
-	r.debugQuery(query)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
+	query := `SELECT secret_key_encrypted FROM s3_credentials WHERE id = $1`
 
 	var encoded string
-	err = r.DB.QueryRowContext(ctx, query, id).Scan(&encoded)
+	err = r.queryRowContext(ctx, query, id).Scan(&encoded)
 	if err != nil {
-		switch {
-		case errors.Is(err, sql.ErrNoRows):
-			return nil, ErrRecordNotFound
-		default:
-			return nil, errtrace.Errorf("error scanning row: %w", err)
-		}
+		return nil, translateNotFound("s3_credentials", err)
 	}
 
 	plaintext, err := box.Decrypt(encoded)
 	if err != nil {
-		return nil, errtrace.Wrap(err)
+		return nil, err
 	}
-
 	return plaintext, nil
 }

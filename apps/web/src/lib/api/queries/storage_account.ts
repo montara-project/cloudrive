@@ -110,7 +110,7 @@ const authorizeOAuth = () =>
   mutationOptions({
     mutationFn: async ({ providerSlug, wsId }: { providerSlug: string; wsId: string }) => {
       const res = await services.storageAccount.authorizeOAuth(providerSlug, wsId)
-      return res.data
+      return res.data.data
     },
     onSuccess: (payload) => {
       window.location.href = payload.authorization_url
@@ -133,7 +133,7 @@ const quota = (accountId: string) =>
     queryKey: ['storage/accounts/quota', accountId],
     queryFn: async () => {
       const res = await services.storageAccount.quota(accountId)
-      return res.data
+      return res.data.data
     },
     enabled: !!accountId,
   })

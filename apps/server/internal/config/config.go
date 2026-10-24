@@ -2,6 +2,15 @@ package config
 
 import "time"
 
+// Accepted App.Env values. Only EnvDevelopment enables development-only
+// behaviour (the loopback rate-limit exemption). The default is
+// EnvProduction, so forgetting ENV fails safe.
+const (
+	EnvDevelopment = "development"
+	EnvStaging     = "staging"
+	EnvProduction  = "production"
+)
+
 type Config struct {
 	App      ConfigApp
 	DB       ConfigDB
