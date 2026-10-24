@@ -1,0 +1,15 @@
+{
+  "title": "Cloudrive",
+  "pages": [
+    "index",
+    "getting-started",
+    "architecture",
+    "---Frontend---",
+    "...frontend",
+    "---Backend---",
+    "...backend",
+    "---Reference---",
+    "api-reference",
+    "deployment"
+  ]
+}

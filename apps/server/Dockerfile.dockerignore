@@ -14,3 +14,4 @@ graft
 apps/app
 apps/server/bin
 apps/server/tmp
+apps/docs

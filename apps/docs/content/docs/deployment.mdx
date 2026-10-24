@@ -1,0 +1,66 @@
+---
+title: Deployment
+description: One Docker image runs the API, the S3 gateway, migrations and the web app.
+icon: Ship
+---
+
+## The image
+
+`apps/server/Dockerfile` builds from the **repository root**, because it also builds the SPA
+from the pnpm workspace:
+
+```sh
+docker build -f apps/server/Dockerfile -t cloudrive-api .
+```
+
+| Stage     | Does                                                                                                                                                         |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `web`     | `node:24-alpine`: `pnpm install --frozen-lockfile --filter @cloudrive/web`, then `vite build`.                                                               |
+| `builder` | `golang:1.26-alpine`: builds `api` and `migrate` (`CGO_ENABLED=0`, linux/amd64).                                                                             |
+| runtime   | `alpine:3.21`, non-root user `cloudrive`: binaries, `migrations/`, `templates/`, `public/`, the SPA in `/app/web` (`SPA_DIR=/app/web`), and `entrypoint.sh`. |
+
+The build context is filtered by `apps/server/Dockerfile.dockerignore` (BuildKit reads it
+instead of a root `.dockerignore`): no `node_modules`, `dist`, `.env` files, or `apps/docs`.
+
+<Callout type="warn">
+  The image's `go build` sets `GOARCH=amd64`. It runs on arm64 hosts only through emulation.
+</Callout>
+
+## Running it
+
+```sh
+docker run -p 8080:8080 -p 9000:9000 \
+  -e MACHINE_ID=1 -e APP_SECRET=… -e DB_DSN=… \
+  -e CLIENT_URL=https://cloudrive.example.com -e SERVER_URL=https://cloudrive.example.com \
+  -e RESEND_API_KEY=… -e RESEND_FROM_EMAIL=… -e RESEND_DEBUG_TO_EMAIL=… \
+  -e STORAGE_CREDENTIALS_KEYS=v1:<base64-32-byte-key> \
+  -e MIGRATE_ON_BOOT=true \
+  cloudrive-api
+```
+
+- `entrypoint.sh` maps each **non-empty** environment variable to its flag, appended after
+  the image defaults (`--env=production --port=8080`). No `.env` is baked into the image.
+- Port 8080 serves the web app, the REST API and `/health`; port 9000 is the S3 gateway.
+- The healthcheck polls `GET /health` every 30 seconds.
+- With one origin, set `CLIENT_URL` and `SERVER_URL` to the same public URL, and add it to
+  `CORS_ALLOWED_ORIGINS` so Authula accepts its `redirect_to` / `callback_url`.
+- Behind a reverse proxy, set `TRUSTED_PROXIES` so rate limiting sees real client IPs.
+- Running more than one replica: keep `MIGRATE_ON_BOOT=false` and run migrations as a
+  separate step: `docker run --rm --entrypoint /app/migrate cloudrive-api --db-dsn=… up`.
+
+## Release
+
+`.github/workflows/server-release.yaml` builds the image on every `v*` tag and pushes it to
+GHCR as `ghcr.io/<owner>/<repo>/api:release-<tag>` and `:latest`. Tags come from
+`make release` in `apps/server` (conventional-commit based bump, `scripts/release.sh`).
+
+## Docs site
+
+`apps/docs` is a separate Next.js app and is not part of the image:
+
+```sh
+pnpm build:docs                         # next build
+pnpm --filter @cloudrive/docs start     # serves on :3001
+```
+
+It also serves `llms.txt`, `llms-full.txt`, and per-page Markdown for AI tools.

@@ -1,0 +1,89 @@
+---
+title: S3 gateway
+description: An S3-compatible endpoint in front of every connected storage account.
+icon: Container
+---
+
+Cloudrive exposes an **S3-compatible API**: aws-cli, rclone, MinIO and AWS SDKs,
+Cyberduck and other S3 clients can upload and manage files through it. Objects are proxied
+to the storage account a bucket maps to, so Cloudrive adds one authorization layer,
+encrypted credentials and its own bucket namespace without storing the data.
+
+## How it works
+
+```text
+S3 client ──SigV4──▶ gateway (:9000, path-style, XML)
+                      │ verify the access key   (s3_credentials, encrypted secret)
+                      │ resolve the bucket      (s3_buckets → storage_account + root_prefix)
+                      ▼
+               Connector registry (by provider protocol)
+               ├── s3_compatible → proxy to MinIO / AWS / R2 (multipart passthrough)
+               └── oauth2_cloud  → Google Drive / Dropbox / OneDrive (multipart staged locally)
+```
+
+- **Separate listener** on `S3_API_PORT` (default 9000; `0` disables it). It does not run
+  the REST middleware (CORS, rate limit, compression), and allows request bodies up to
+  5 GB with a 10-minute read/write timeout.
+- **Access keys** are issued per workspace. The secret is shown **once** at creation and
+  stored encrypted with the credential vault.
+- **Buckets are mappings.** A bucket name (global namespace) points at one storage account
+  and a prefix inside it. Creating or deleting a mapping never touches the stored data.
+
+## Using it
+
+1. **Connect a storage account** to the workspace ([Storage providers](/docs/backend/storage-providers)).
+2. **Issue an access key** (org `owner` or `admin`):
+   `POST /v1/workspaces/:wsId/s3/credentials` with an optional `label`. The response
+   contains `access_key_id` and `secret_key`; copy the secret now.
+3. **Map a bucket**:
+
+   ```http
+   POST /v1/workspaces/:wsId/s3/buckets
+   { "name": "my-bucket", "storage_account_id": "…", "root_prefix": "s3/" }
+   ```
+
+   An empty `root_prefix` means the account root; otherwise it must end with `/`.
+
+4. **Point the client** at the gateway, path-style:
+
+   ```sh
+   aws configure set aws_access_key_id <ACCESS_KEY_ID>
+   aws configure set aws_secret_access_key <SECRET>
+   aws --endpoint-url http://localhost:9000 s3 ls
+   aws --endpoint-url http://localhost:9000 s3 cp video.mp4 s3://my-bucket/media/
+
+   # rclone remote: type = s3, endpoint = http://localhost:9000, path_style = true
+   rclone copy ./big.iso cloudrive:my-bucket/iso/
+   ```
+
+The dashboard's **S3 gateway** page (`/s3`) does steps 2 and 3 with forms.
+
+## Supported operations
+
+| Operation                                          | Supported | Notes                                                     |
+| -------------------------------------------------- | --------- | --------------------------------------------------------- |
+| ListBuckets                                        | Yes       | Only the credential's workspace buckets                   |
+| ListObjectsV2                                      | Yes       | `prefix`, `delimiter`, `continuation-token`, `max-keys`   |
+| PutObject, GetObject, HeadObject, DeleteObject     | Yes       | Delete is idempotent                                      |
+| Multipart (initiate, upload part, complete, abort) | Yes       | Passthrough for S3 backends, staged for drives            |
+| Presigned GET/PUT                                  | Yes       | Signed by the client with a Cloudrive key; expiry checked |
+| CreateBucket, DeleteBucket via the S3 API          | No        | Use the REST endpoints above                              |
+
+Bodies sent with streaming signatures (`STREAMING-AWS4-HMAC-SHA256-PAYLOAD`, used by
+aws-cli and minio-go) are decoded by the gateway before they reach the connector.
+
+## Security
+
+- SigV4 verification is implemented in `internal/lib/sigv4` (verify only, stateless) and
+  tested against AWS's official vectors.
+- Access key secrets and provider credentials are encrypted with AES-256-GCM and decrypted
+  in memory per request, without caching.
+- Buckets are served only while their account is `active`; a `revoked` key stops working
+  immediately.
+
+## Tests
+
+```sh
+cd apps/server
+go test ./internal/lib/sigv4/ ./internal/services/s3/   # integration test starts MinIO via testcontainers (needs Docker)
+```

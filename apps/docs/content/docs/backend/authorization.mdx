@@ -1,0 +1,56 @@
+---
+title: Authorization
+description: Who can do what — organization roles, workspace roles, and how handlers check them.
+icon: ShieldCheck
+---
+
+Every application route except the health check, the provider OAuth callback, and the
+auth endpoints requires a bearer token. On top of that, handlers check **organization
+membership** and, for writes, the **role**.
+
+## Roles
+
+| Scope        | Roles                       | Where                                |
+| ------------ | --------------------------- | ------------------------------------ |
+| Organization | `owner`, `admin`, `member`  | `organization_members.role`          |
+| Workspace    | `admin`, `member`, `viewer` | `workspace_members.role`             |
+| Global       | `user`, `admin`             | `users.role` (from Authula metadata) |
+
+Creating an organization makes the caller its `owner` in the same transaction.
+Invitations can grant `admin` or `member`, never `owner`.
+
+## The check
+
+`requireOrgMember(c, app, orgID, userID, roles...)` in `internal/handlers/helpers.go`:
+
+- not a member of the organization → `403 You do not have access to this organization`;
+- `roles` given and the member's role is not in the list → `403 This action requires role: [...]`.
+
+Workspace-scoped resources resolve the workspace first and check membership of its
+organization.
+
+## Permission matrix
+
+| Action                                                      | Who                                       |
+| ----------------------------------------------------------- | ----------------------------------------- |
+| Create an organization                                      | Any signed-in user                        |
+| List organizations                                          | Returns only the caller's organizations   |
+| Read an organization, its members, invitations, workspaces  | Any organization member                   |
+| Update an organization                                      | `owner`, `admin`                          |
+| Delete an organization                                      | `owner`                                   |
+| Add, change, remove organization members                    | `owner`, `admin`                          |
+| Create, update, delete invitations                          | `owner`, `admin`                          |
+| Create, update, delete workspaces                           | `owner`, `admin`                          |
+| Read workspace members                                      | Any organization member                   |
+| Add, change, remove workspace members                       | Org `owner`/`admin`, or workspace `admin` |
+| Connect a storage account (direct or OAuth)                 | `owner`, `admin`                          |
+| List and read storage accounts, read quota                  | Any organization member                   |
+| Update, rotate credentials, refresh, disconnect             | `owner`, `admin`                          |
+| Create or revoke S3 credentials, create or delete buckets   | `owner`, `admin`                          |
+| List S3 credentials and buckets, browse drive, recent files | Any organization member                   |
+| Submit the onboarding survey                                | Any signed-in user (one per user, upsert) |
+
+<Callout type="info">
+  The frontend hides actions a role cannot perform, but that is cosmetic: the server is the only
+  enforcement point.
+</Callout>

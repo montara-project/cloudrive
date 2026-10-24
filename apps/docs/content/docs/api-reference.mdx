@@ -1,0 +1,104 @@
+---
+title: API reference
+description: Every REST endpoint of apps/server, its auth requirement, and the minimum organization role.
+icon: Braces
+---
+
+Base URL: the API origin (the SPA's origin in production). All bodies are JSON; the REST
+listener accepts request bodies up to 2 MB. Auth endpoints under `/v1/auth` are listed in
+[Authentication](/docs/backend/authentication).
+
+## Conventions
+
+- **Auth**: `Authorization: Bearer <access_token>` unless marked public.
+- **Role**: the minimum organization role (`member` < `admin` < `owner`); "member" means
+  any member of the owning organization. See [Authorization](/docs/backend/authorization).
+- **Lists** take `offset` (default 0), `limit` (default 20, max 100), `order_by` and
+  `order` (`asc`/`desc`), and answer `{ data: [...], metadata: { total, offset, limit } }`.
+- **Errors** answer `{ message }`. Validation failures are `422` with per-field messages;
+  malformed JSON is `400`; missing or invalid token `401`; membership or role `403`;
+  unknown records `404`.
+
+## System
+
+| Method | Path      | Auth   | Notes                                                      |
+| ------ | --------- | ------ | ---------------------------------------------------------- |
+| GET    | `/health` | public | Liveness, used by the container healthcheck                |
+| GET    | `/`       | public | `{"message":"Hello, World!"}` only when `SPA_DIR` is empty |
+
+## Account
+
+| Method | Path                    | Role | Notes                                                                     |
+| ------ | ----------------------- | ---- | ------------------------------------------------------------------------- |
+| GET    | `/v1/me`                | —    | The application user (session probe)                                      |
+| POST   | `/v1/onboarding/survey` | —    | `referral_source`, `use_cases[]`, optional details; one per user (upsert) |
+
+## Providers
+
+| Method | Path            | Role | Notes                |
+| ------ | --------------- | ---- | -------------------- |
+| GET    | `/v1/providers` | —    | The provider catalog |
+
+## Organizations
+
+| Method | Path                                                 | Role   | Body                                                 |
+| ------ | ---------------------------------------------------- | ------ | ---------------------------------------------------- |
+| POST   | `/v1/organizations`                                  | —      | `name`, `slug`, `logo?` (caller becomes owner)       |
+| GET    | `/v1/organizations`                                  | —      | The caller's organizations                           |
+| GET    | `/v1/organizations/:orgId`                           | member |                                                      |
+| PATCH  | `/v1/organizations/:orgId`                           | admin  | `name`, `logo?`                                      |
+| DELETE | `/v1/organizations/:orgId`                           | owner  |                                                      |
+| GET    | `/v1/organizations/:orgId/members`                   | member |                                                      |
+| POST   | `/v1/organizations/:orgId/members`                   | admin  | `user_id`, `role`                                    |
+| PATCH  | `/v1/organizations/:orgId/members/:userId`           | admin  | `role`                                               |
+| DELETE | `/v1/organizations/:orgId/members/:userId`           | admin  |                                                      |
+| POST   | `/v1/organizations/:orgId/invitations`               | admin  | `email`, `role?` (`admin`/`member`)                  |
+| GET    | `/v1/organizations/:orgId/invitations`               | member |                                                      |
+| PATCH  | `/v1/organizations/:orgId/invitations/:invitationId` | admin  | `status` (`accepted`/`rejected`/`revoked`/`expired`) |
+| DELETE | `/v1/organizations/:orgId/invitations/:invitationId` | admin  |                                                      |
+
+## Workspaces
+
+| Method | Path                                   | Role    | Body                           |
+| ------ | -------------------------------------- | ------- | ------------------------------ |
+| POST   | `/v1/organizations/:orgId/workspaces`  | admin   | `name`, `slug`, `description?` |
+| GET    | `/v1/organizations/:orgId/workspaces`  | member  |                                |
+| GET    | `/v1/workspaces/:wsId`                 | member  |                                |
+| PATCH  | `/v1/workspaces/:wsId`                 | admin   | `name`, `description?`         |
+| DELETE | `/v1/workspaces/:wsId`                 | admin   |                                |
+| GET    | `/v1/workspaces/:wsId/members`         | member  |                                |
+| POST   | `/v1/workspaces/:wsId/members`         | admin\* | `user_id`, `role`              |
+| PATCH  | `/v1/workspaces/:wsId/members/:userId` | admin\* | `role`                         |
+| DELETE | `/v1/workspaces/:wsId/members/:userId` | admin\* |                                |
+
+\* organization `owner`/`admin`, or a workspace `admin`.
+
+## Storage accounts
+
+| Method | Path                                          | Role   | Notes                                                         |
+| ------ | --------------------------------------------- | ------ | ------------------------------------------------------------- |
+| POST   | `/v1/storage/accounts`                        | admin  | Direct connect with `credentials` (S3-compatible)             |
+| GET    | `/v1/storage/accounts?workspace_id=`          | member |                                                               |
+| GET    | `/v1/storage/accounts/:accountId`             | member |                                                               |
+| PATCH  | `/v1/storage/accounts/:accountId`             | admin  | `display_name`, `status`, `settings`                          |
+| PUT    | `/v1/storage/accounts/:accountId/credentials` | admin  | `credentials`                                                 |
+| DELETE | `/v1/storage/accounts/:accountId`             | admin  | Disconnect                                                    |
+| POST   | `/v1/storage/oauth/:provider_slug/authorize`  | admin  | `workspace_id` → `{ authorization_url, state, redirect_uri }` |
+| GET    | `/v1/storage/oauth/:provider_slug/callback`   | public | Called by the provider; signed `state`                        |
+| POST   | `/v1/storage/accounts/:accountId/refresh`     | admin  | `{ "status": "refreshed" }`                                   |
+| GET    | `/v1/storage/accounts/:accountId/quota`       | member | `{ total_bytes, used_bytes }`                                 |
+
+## S3 gateway management and drive
+
+| Method | Path                                                | Role   | Notes                                               |
+| ------ | --------------------------------------------------- | ------ | --------------------------------------------------- |
+| POST   | `/v1/workspaces/:wsId/s3/credentials`               | admin  | `label?`; the response includes `secret_key` once   |
+| GET    | `/v1/workspaces/:wsId/s3/credentials`               | member |                                                     |
+| DELETE | `/v1/workspaces/:wsId/s3/credentials/:credentialId` | admin  | Revoke                                              |
+| POST   | `/v1/workspaces/:wsId/s3/buckets`                   | admin  | `name`, `storage_account_id`, `root_prefix?`        |
+| GET    | `/v1/workspaces/:wsId/s3/buckets`                   | member |                                                     |
+| DELETE | `/v1/workspaces/:wsId/s3/buckets/:bucketId`         | admin  | Removes the mapping only                            |
+| GET    | `/v1/workspaces/:wsId/s3/recent-files`              | member | `limit` (default 10, max 50)                        |
+| GET    | `/v1/workspaces/:wsId/drive`                        | member | `prefix`, `account`, `limit` (default 200, max 500) |
+
+The S3 protocol itself (port 9000) is described in [S3 gateway](/docs/backend/s3-gateway).

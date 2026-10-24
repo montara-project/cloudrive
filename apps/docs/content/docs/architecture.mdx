@@ -1,0 +1,67 @@
+---
+title: Architecture
+description: One Go binary, two listeners, one Postgres database, and an SPA on the same origin.
+icon: Network
+---
+
+## The big picture
+
+```text
+Browser ───────────────▶ :8080  REST API (Fiber, JSON)
+  │  /, /dashboard, …        ├─ /v1/auth/*   Authula (sign-in, magic link, OAuth2, tokens)
+  │  (SPA files)             ├─ /v1/*        application routes (bearer token)
+  │                          ├─ /health
+  │                          └─ everything else → apps/web build (SPA_DIR)
+  │
+S3 clients ────────────▶ :9000  S3 gateway (SigV4, path-style, XML)
+                              │
+                              ▼
+                  Connector registry ──▶ Google Drive · Dropbox · OneDrive · S3/MinIO/R2
+                              │
+Postgres ◀────────────────────┘  public schema (app) + authula schema (auth)
+```
+
+- **One origin for the browser.** In production the API binary serves the SPA build at
+  `/`, so the frontend calls `/v1/...` relatively: no CORS, and OAuth redirects come
+  back to the same host. Routes under `/v1` and `/health` never fall through to the SPA.
+- **Two listeners.** The REST API (`PORT`, default 8080) and the S3 gateway
+  (`S3_API_PORT`, default 9000, `0` disables it) are separate Fiber apps: the gateway
+  speaks the S3 dialect and skips the REST middleware (CORS, rate limit, compression).
+- **One database, two schemas.** Application tables live in `public`. Authula keeps its
+  own users, sessions and accounts in the `authula` schema, and a service hook mirrors
+  every Authula user into `public.users`.
+
+## Request flow
+
+### Browser to API
+
+1. The SPA stores the access and refresh tokens as cookies on its own origin
+   (`lib/auth/token-storage.ts`).
+2. Every API request goes through one axios instance that attaches
+   `Authorization: Bearer <access token>`, refreshing it first when it is about to expire.
+3. `middlewares.Authorization()` validates the JWT with Authula's JWT service and puts
+   the user id in the request context.
+4. Handlers check organization membership and role (`requireOrgMember`), call
+   repositories, and answer with the JSON envelope (`{ data, metadata }` or `{ message }`).
+
+### S3 client to storage
+
+1. The client signs the request (SigV4) with an access key Cloudrive issued for a workspace.
+2. The gateway verifies the signature against the encrypted secret in `s3_credentials`.
+3. The bucket name resolves through `s3_buckets` to a storage account and a prefix.
+4. The connector registry builds a connector for that account's provider protocol with
+   its decrypted credentials and proxies the operation.
+
+## Code layout
+
+| Area               | Location                                                                  |
+| ------------------ | ------------------------------------------------------------------------- |
+| HTTP entrypoint    | `apps/server/cmd/api` (`main.go`, `server.go`, `routes.go`, `authula.go`) |
+| Migration runner   | `apps/server/cmd/migrate`                                                 |
+| Handlers           | `apps/server/internal/handlers`                                           |
+| Data layer         | `apps/server/internal/{models,repositories,dtos}`                         |
+| Connectors         | `apps/server/internal/connectors`                                         |
+| S3 gateway         | `apps/server/internal/services/s3`                                        |
+| Provider OAuth     | `apps/server/internal/services/provideroauth`                             |
+| Frontend routes    | `apps/web/src/routes`                                                     |
+| Frontend API layer | `apps/web/src/lib/api`                                                    |

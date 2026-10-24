@@ -1,0 +1,65 @@
+---
+title: Authentication and session
+description: Bearer tokens from Authula, stored as cookies, refreshed before they expire, and checked by one session query.
+icon: KeyRound
+---
+
+The API authenticates with **bearer tokens only**: there are no session cookies on the
+server side. The SPA signs in through Authula's endpoints under `/v1/auth`, stores the
+token pair, and attaches the access token to every request.
+
+## Sign-in methods
+
+All three live in `lib/auth/email-auth.ts` and are offered by the sign-in page
+(`components/block/auth/login-section.tsx`):
+
+| Method           | Flow                                                                                                                                                                                          |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Magic link       | `POST /v1/auth/magic-link/sign-in` with `callback_url = <origin>/auth/callback`; the email link lands on `/auth/callback?token=…`, which exchanges it at `POST /v1/auth/magic-link/exchange`. |
+| Email & password | `POST /v1/auth/email-password/sign-in` returns the token pair directly.                                                                                                                       |
+| Google           | Browser redirect to `/v1/auth/oauth2/authorize/google?redirect_to=<origin>/auth/callback`.                                                                                                    |
+
+`lib/auth/client.ts` wraps these endpoints in a `better-auth` client plugin
+(`authulaClient`): the backend is not a better-auth server, the client is only used as a
+typed transport.
+
+## Token storage and refresh
+
+- `lib/auth/token-storage.ts` writes the access token, refresh token, their expiry
+  timestamps and a user snapshot as `SameSite=Lax` cookies (`Secure` on HTTPS). The server
+  issues 15-minute access tokens and 7-day refresh tokens. The access cookie expires with
+  its token; the refresh cookie is kept for 30 days, and its stored expiry decides whether
+  a refresh is still worth trying.
+- Writing or clearing tokens clears the whole React Query cache: every cached query
+  belongs to the previous identity.
+- `lib/auth/refresh.ts` → `getValidAccessToken()` returns the stored token while it is
+  fresh, and refreshes it 30 seconds before expiry (`REFRESH_SKEW_MS`). Concurrent callers
+  share one in-flight refresh.
+- The axios response interceptor (`lib/api/client-fetch.ts`) retries a request once after
+  a 401 with a rotated token; if that fails it clears the tokens and sends the browser to
+  `/sign-in`.
+
+## The session query
+
+`hooks/use-session.ts` exposes the one session source every gate and component reads:
+
+- `queryFn: getSession` probes `GET /v1/me` with a valid token.
+- `placeholderData: getOptimisticSession` answers from the stored user snapshot, so a
+  returning user sees the dashboard immediately while the real probe runs.
+- `staleTime: 0`, `retry: false`, and a re-probe every 60 seconds while signed in
+  (`SESSION_POLL_INTERVAL_MS`), which also rotates the access token in time.
+- `useSignOut()` calls `POST /v1/auth/sign-out`, clears the tokens and cache, and goes to
+  `/sign-in`.
+
+## Gates
+
+| Gate             | Location                                          | Behaviour                                                                                               |
+| ---------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `DashboardGate`  | `components/block/auth/dashboard-gate.tsx`        | No session → `/sign-in`; no organization → `/onboarding`.                                               |
+| `LoginGate`      | `components/block/auth/login-gate.tsx`            | A session → `/dashboard`.                                                                               |
+| `OnboardingGate` | `components/block/onboarding/onboarding-gate.tsx` | No session → `/sign-in`; an organization already → `/dashboard` (except during the wizard's last step). |
+
+<Callout type="info" title="Hiding is not access control">
+  Gates and menus only shape the UI. The API enforces membership and roles on every request; see
+  [Authorization](/docs/backend/authorization).
+</Callout>

@@ -1,0 +1,96 @@
+---
+title: Getting started
+description: Run Postgres, the Go API and the web app on your machine.
+icon: Rocket
+---
+
+## Prerequisites
+
+- Node.js 24 and pnpm 11 (the repo pins `packageManager: pnpm@11.10.0`).
+- Go 1.26.
+- PostgreSQL 18 (the schema uses `uuidv7()`).
+- The `migrate` CLI ([golang-migrate](https://github.com/golang-migrate/migrate)) only if
+  you create new migrations; applying them goes through `cmd/migrate`.
+
+## Install
+
+```sh
+pnpm install
+```
+
+The root install also runs `go mod tidy` for `apps/server` (its `install` script) and
+generates the docs collections for `apps/docs`.
+
+## Configure the API
+
+```sh
+cp apps/server/.env.example apps/server/.env
+```
+
+Fill in at least:
+
+| Variable                   | Why                                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------------------ |
+| `MACHINE_ID`               | Required, non-zero.                                                                        |
+| `APP_SECRET`               | Signs Authula tokens and the provider OAuth `state`.                                       |
+| `DB_DSN`                   | Postgres connection string.                                                                |
+| `CLIENT_URL`, `SERVER_URL` | Where the SPA and the API are reachable (OAuth redirects are built from these).            |
+| `RESEND_*`                 | Required at boot; sign-up, password reset and magic-link mails go through Resend.          |
+| `STORAGE_CREDENTIALS_KEYS` | The credential vault key, `v1:<base64 32 bytes>`. Generate with `openssl rand -base64 32`. |
+| `SUPER_USER`               | Optional `email:password`; seeds a verified admin account on boot.                         |
+
+<Callout type="warn" title="Fail closed">
+  The server refuses to start without `STORAGE_CREDENTIALS_KEYS`, so provider credentials can never
+  be written in plaintext.
+</Callout>
+
+All variables are described in [Configuration](/docs/backend/configuration).
+
+## Create the schema
+
+```sh
+cd apps/server
+make db/migrations/up        # or db/migrations/up/seed to also seed the provider catalog
+```
+
+The provider catalog (`google_drive`, `onedrive`, `dropbox`, `s3_compatible`) comes from
+the `provider` seeder; without it `GET /v1/providers` is empty.
+
+## Run
+
+```sh
+pnpm dev:server   # API on :8080, S3 gateway on :9000
+pnpm dev:web      # SPA on :3000, proxies /v1 to the API
+pnpm dev:docs     # this site on :3001
+```
+
+`pnpm dev` runs all of them in parallel. Open `http://localhost:3000`: the marketing
+site is at `/`, sign-in at `/sign-in`, the app at `/dashboard`.
+
+<Callout title="Dashboard without a backend">
+  In development, `/preview` renders the dashboard shell with mock data and no API calls. Add
+  `?content=settings&view=providers` to preview a settings panel. Production builds answer 404
+  there.
+</Callout>
+
+## Serve the SPA from the API
+
+Production serves the SPA from the Go binary on one origin. To reproduce that locally:
+
+```sh
+pnpm build:web
+# apps/server/.env
+SPA_DIR=../web/dist
+pnpm dev:server   # now http://localhost:8080 serves the app and the API
+```
+
+The API reads `index.html` once at startup: restart it after every `pnpm build:web`, or
+it keeps pointing at the previous bundle hashes and renders a blank page.
+
+## Checks
+
+```sh
+pnpm build                       # every package; also the pre-push hook
+pnpm lint && pnpm format:check
+cd apps/server && go test ./...  # the S3 gateway integration test needs Docker
+```

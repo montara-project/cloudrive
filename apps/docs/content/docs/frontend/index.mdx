@@ -1,0 +1,60 @@
+---
+title: Frontend overview
+description: apps/web is the whole Cloudrive frontend as one Vite SPA, structured with the vine layers.
+icon: AppWindow
+---
+
+`apps/web` holds the public site, sign-in, onboarding and the signed-in app in one
+single-page application. It was scaffolded from
+[masb0ymas/vine](https://github.com/masb0ymas/vine) (`vite` variant) and keeps its layer
+structure.
+
+## Stack
+
+- React 19 on Vite, TypeScript (same major as the repo root).
+- TanStack Router with file-based routes (`src/routes`, generated `src/routeTree.gen.ts`).
+- TanStack Query for server state, TanStack Form + zod for forms.
+- axios for the REST API, `better-auth`'s client as the auth transport.
+- Tailwind CSS v4 and shadcn/ui (Radix) components, `next-themes` for light and dark.
+- `nuqs` for state kept in the URL (`?org=`, `?ws=`, `?tab=`, pagination).
+
+## Layout
+
+```text
+src/
+  routes/                 pages: guard + render one block component
+  components/
+    ui/                   shadcn/ui primitives, no app knowledge
+    block/common/         shared composites (tables, dialogs, inputs)
+    block/form/           TanStack Form field components
+    block/<feature>/      feature UI (drive, storage, s3, settings, onboarding, …)
+    block/landing|legal|contact/  public site sections
+    layout/               sidebar shell, top bar, marketing navbar
+  config/env.ts           the only place env is read
+  data/sidebar-menu.ts    sidebar menus
+  hooks/                  session, workspace context, form hook, storage usage, …
+  lib/
+    api/                  models → dtos → services → queries (see API layer)
+    auth/                 token storage, refresh, session, sign-in flows
+    providers/            React Query client, theme + nuqs + tooltip providers
+  types/                  API envelope, menu, form and column types
+  styles.css              theme tokens (dashboard) + the .marketing scope
+```
+
+## Scripts
+
+| Command                                        | What it does                                                   |
+| ---------------------------------------------- | -------------------------------------------------------------- |
+| `pnpm dev:web`                                 | Dev server on :3000, proxies `/v1` to :8080.                   |
+| `pnpm build:web`                               | Format check, lint, typecheck, then `vite build` into `dist/`. |
+| `pnpm --filter @cloudrive/web generate-routes` | Regenerates `src/routeTree.gen.ts` (commit it).                |
+| `pnpm --filter @cloudrive/web preview`         | Serves the built `dist/` locally.                              |
+
+## Environment
+
+| Variable                | Default                 | Notes                                          |
+| ----------------------- | ----------------------- | ---------------------------------------------- |
+| `VITE_API_URL`          | the page origin         | Set only when the API lives on another origin. |
+| `VITE_API_PROXY_TARGET` | `http://localhost:8080` | Dev server only: where `/v1` is proxied.       |
+
+`VITE_*` values are inlined into the browser bundle at build time: never put secrets there.
