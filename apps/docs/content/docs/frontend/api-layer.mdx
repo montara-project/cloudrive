@@ -32,7 +32,7 @@ const api = new ClientFetchApi({
 ```
 
 With a `storageKey`, requests carry the bearer token and 401s go through the refresh
-flow described in [Authentication](/docs/frontend/auth). The waitlist and contact
+flow described in [Authentication](/frontend/auth). The waitlist and contact
 services omit it because those endpoints are public.
 
 Services in this app write their calls explicitly (`api.get`, `api.post`, …).

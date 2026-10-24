@@ -31,7 +31,7 @@ S3 client ──SigV4──▶ gateway (:9000, path-style, XML)
 
 ## Using it
 
-1. **Connect a storage account** to the workspace ([Storage providers](/docs/backend/storage-providers)).
+1. **Connect a storage account** to the workspace ([Storage providers](/backend/storage-providers)).
 2. **Issue an access key** (org `owner` or `admin`):
    `POST /v1/workspaces/:wsId/s3/credentials` with an optional `label`. The response
    contains `access_key_id` and `secret_key`; copy the secret now.

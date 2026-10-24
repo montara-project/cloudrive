@@ -6,13 +6,13 @@ icon: Braces
 
 Base URL: the API origin (the SPA's origin in production). All bodies are JSON; the REST
 listener accepts request bodies up to 2 MB. Auth endpoints under `/v1/auth` are listed in
-[Authentication](/docs/backend/authentication).
+[Authentication](/backend/authentication).
 
 ## Conventions
 
 - **Auth**: `Authorization: Bearer <access_token>` unless marked public.
 - **Role**: the minimum organization role (`member` < `admin` < `owner`); "member" means
-  any member of the owning organization. See [Authorization](/docs/backend/authorization).
+  any member of the owning organization. See [Authorization](/backend/authorization).
 - **Lists** take `offset` (default 0), `limit` (default 20, max 100), `order_by` and
   `order` (`asc`/`desc`), and answer `{ data: [...], metadata: { total, offset, limit } }`.
 - **Errors** answer `{ message }`. Validation failures are `422` with per-field messages;
@@ -101,4 +101,4 @@ listener accepts request bodies up to 2 MB. Auth endpoints under `/v1/auth` are 
 | GET    | `/v1/workspaces/:wsId/s3/recent-files`              | member | `limit` (default 10, max 50)                        |
 | GET    | `/v1/workspaces/:wsId/drive`                        | member | `prefix`, `account`, `limit` (default 200, max 500) |
 
-The S3 protocol itself (port 9000) is described in [S3 gateway](/docs/backend/s3-gateway).
+The S3 protocol itself (port 9000) is described in [S3 gateway](/backend/s3-gateway).

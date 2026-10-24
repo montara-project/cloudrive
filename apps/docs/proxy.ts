@@ -1,14 +1,12 @@
 import { isMarkdownPreferred, rewritePath } from 'fumadocs-core/negotiation'
 import { NextRequest, NextResponse } from 'next/server'
 
-import { docsContentRoute, docsRoute } from '@/lib/shared'
+import { docsContentRoute } from '@/lib/shared'
 
-const { rewrite: rewriteDocs } = rewritePath(
-  `${docsRoute}{/*path}`,
-  `${docsContentRoute}{/*path}/content.md`
-)
+// Docs live at the site root, so every page path maps to its Markdown twin.
+const { rewrite: rewriteDocs } = rewritePath('{/*path}', `${docsContentRoute}{/*path}/content.md`)
 const { rewrite: rewriteSuffix } = rewritePath(
-  `${docsRoute}{/*path}.md`,
+  '{/*path}.md',
   `${docsContentRoute}{/*path}/content.md`
 )
 
@@ -30,4 +28,12 @@ export default function proxy(request: NextRequest) {
   }
 
   return NextResponse.next()
+}
+
+export const config = {
+  // Docs pages only: with docs at the root, a Markdown-preferring request for
+  // /llms.txt, the search API or an OG image must not be rewritten.
+  matcher: [
+    '/((?!api|og|llms\\.mdx|llms\\.txt|llms-full\\.txt|_next/static|_next/image|favicon.ico).*)',
+  ],
 }
