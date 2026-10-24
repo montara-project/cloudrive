@@ -40,3 +40,8 @@ pnpm-debug.log*
 .omc/
 VERSION
 *.pyc
+.trail/
+.claude/
+.agents/
+.zcode/
+.impeccable/
