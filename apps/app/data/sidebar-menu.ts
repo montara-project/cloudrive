@@ -4,7 +4,6 @@ import {
   IconCloud,
   IconFolder,
   IconHome,
-  IconPackages,
   IconSettings,
   IconStar,
   IconUsers,
@@ -78,18 +77,12 @@ const NAV_DRIVE: NavMainItem[] = [
 ]
 
 /**
- * Secondary destinations. Providers and the S3 gateway are configuration
- * rather than places to browse, so they sit outside the Drive group — but they
- * keep their entries so no routed page disappears from the sidebar.
+ * Secondary destinations. The S3 gateway is configuration rather than a place
+ * to browse, so it sits outside the Drive group — Providers now live under
+ * Settings → Storage → Providers, so they are not listed here. Entries keep
+ * their places so no routed page disappears from the sidebar.
  */
 const NAV_SETTINGS: NavMainItem[] = [
-  {
-    title: 'Providers',
-    url: '/providers',
-    icon: IconPackages,
-    isActive: false,
-    items: [],
-  },
   {
     title: 'S3 Gateway',
     url: '/s3',

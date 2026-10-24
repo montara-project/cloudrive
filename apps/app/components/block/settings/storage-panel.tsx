@@ -3,6 +3,7 @@
 import {
   IconAdjustmentsHorizontal,
   IconChartPie,
+  IconCloud,
   IconPlugConnected,
   IconRefresh,
 } from '@tabler/icons-react'
@@ -17,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useWorkspaceContext } from '@/hooks/use-workspace-context'
 
+import ProviderContent from '../providers/content'
 import StorageAllocation from './storage-allocation'
 
 /**
@@ -90,6 +92,12 @@ export default function StorageSettingsPanel() {
           >
             <IconAdjustmentsHorizontal className="size-4" /> Allocation
           </TabsTrigger>
+          <TabsTrigger
+            value="providers"
+            className="rounded-full px-4 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+          >
+            <IconCloud className="size-4" /> Providers
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-0">
@@ -99,6 +107,9 @@ export default function StorageSettingsPanel() {
           {/* key remounts on wsId change so the saved allocation is read once
               the workspace id resolves (it is '' on the very first render). */}
           <StorageAllocation key={wsId} />
+        </TabsContent>
+        <TabsContent value="providers" className="mt-0">
+          <ProviderContent />
         </TabsContent>
       </Tabs>
 

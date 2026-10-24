@@ -6,7 +6,6 @@ import {
   IconCloud,
   IconFolder,
   IconHome,
-  IconPackages,
   IconSearch,
   IconSettings,
   IconStar,
@@ -36,7 +35,6 @@ const NAV_ITEMS = [
   { title: 'Recent', url: '/recent', icon: IconClock },
   { title: 'Starred', url: '/starred', icon: IconStar },
   { title: 'Storage', url: '/storage', icon: IconCloud },
-  { title: 'Providers', url: '/providers', icon: IconPackages },
   { title: 'S3 Gateway', url: '/s3', icon: IconBucket },
   { title: 'Settings', url: '/settings', icon: IconSettings },
 ]

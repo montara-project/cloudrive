@@ -1,6 +1,7 @@
 'use client'
 
 import { notFound } from 'next/navigation'
+import { useQueryState } from 'nuqs'
 import { useEffect, useState } from 'react'
 
 import type { Models } from '@/lib/api/models'
@@ -8,6 +9,7 @@ import type { ApiListResponse, Metadata } from '@/types/api'
 
 import SessionLoading from '@/components/block/auth/session-loading'
 import DashboardContent from '@/components/block/dashboard/content'
+import SettingContent from '@/components/block/settings/content'
 import SidebarLayout from '@/components/layout/sidebar/layout'
 import { MOCK_ORG, MOCK_USER, MOCK_WORKSPACES } from '@/data/mock/dashboard'
 import { SESSION_QUERY_KEY } from '@/hooks/use-session'
@@ -184,9 +186,22 @@ export default function PreviewPage() {
     return <SessionLoading />
   }
 
+  // `?content=` picks the page under review — defaults to the dashboard.
+  // The settings content reads `?tab=` / `?view=` (nuqs) as usual, so
+  // /preview?content=settings&view=providers deep-links a settings panel.
   return (
     <SidebarLayout>
-      <DashboardContent />
+      <PreviewSurface />
     </SidebarLayout>
   )
+}
+
+function PreviewSurface() {
+  const [content] = useQueryState('content')
+
+  if (content === 'settings') {
+    return <SettingContent />
+  }
+
+  return <DashboardContent />
 }

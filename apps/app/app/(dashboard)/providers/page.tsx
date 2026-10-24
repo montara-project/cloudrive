@@ -1,6 +1,6 @@
 import { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 
-import ProviderContent from '@/components/block/providers/content'
 import { META } from '@/lib/constants/meta'
 
 export const metadata: Metadata = {
@@ -8,6 +8,11 @@ export const metadata: Metadata = {
   title: 'Providers | Cloudrive',
 }
 
+/**
+ * Providers moved under Settings → Storage → Providers; keep this route as a
+ * redirect so existing links and bookmarks land on the new tab instead of
+ * dead-ending.
+ */
 export default function ProvidersPage() {
-  return <ProviderContent />
+  redirect('/settings?view=providers')
 }
