@@ -32,8 +32,9 @@ export default function proxy(request: NextRequest) {
 
 export const config = {
   // Docs pages only: with docs at the root, a Markdown-preferring request for
-  // /llms.txt, the search API or an OG image must not be rewritten.
+  // /llms.txt, the search API, an OG image or a public/ asset must not be
+  // rewritten.
   matcher: [
-    '/((?!api|og|llms\\.mdx|llms\\.txt|llms-full\\.txt|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|og|llms\\.mdx|llms\\.txt|llms-full\\.txt|_next/static|_next/image|favicon|static/).*)',
   ],
 }
