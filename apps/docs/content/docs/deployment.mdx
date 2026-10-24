@@ -19,8 +19,8 @@ docker build -f apps/server/Dockerfile -t cloudrive-api .
 | `builder` | `golang:1.26-alpine`: builds `api` and `migrate` (`CGO_ENABLED=0`, linux/amd64).                                                                             |
 | runtime   | `alpine:3.21`, non-root user `cloudrive`: binaries, `migrations/`, `templates/`, `public/`, the SPA in `/app/web` (`SPA_DIR=/app/web`), and `entrypoint.sh`. |
 
-The build context is filtered by `apps/server/Dockerfile.dockerignore` (BuildKit reads it
-instead of a root `.dockerignore`): no `node_modules`, `dist`, `.env` files, or `apps/docs`.
+The build context is filtered by the root `.dockerignore`, shared with the docs image: no
+`node_modules`, build output, or `.env` files.
 
 <Callout type="warn">
   The image's `go build` sets `GOARCH=amd64`. It runs on arm64 hosts only through emulation.
@@ -50,17 +50,40 @@ docker run -p 8080:8080 -p 9000:9000 \
 
 ## Release
 
-`.github/workflows/server-release.yaml` builds the image on every `v*` tag and pushes it to
-GHCR as `ghcr.io/<owner>/<repo>/api:release-<tag>` and `:latest`. Tags come from
-`make release` in `apps/server` (conventional-commit based bump, `scripts/release.sh`).
+Releases follow [release-it](https://github.com/release-it/release-it) with conventional
+commits, in three workflows:
+
+1. **Release Prepare** (`release-prepare.yml`, run manually on `main`): bumps the version
+   (`auto` from the commits since the last `v*` tag, or `patch`/`minor`/`major`), updates
+   `CHANGELOG.md`, syncs every `apps/*/package.json` version (`scripts/sync-versions.mjs`),
+   and opens a `chore: release vX.Y.Z` pull request.
+2. **Release Publish** (`release-publish.yml`): when that `release/*` PR merges into `main`,
+   tags the merge commit and creates the GitHub release, then dispatches the release workflow.
+3. **Release** (`release.yml`): builds and pushes both images to GHCR. It also runs on a
+   pushed `vX.Y.Z` tag, or manually with an extra tag.
+
+| Image                            | Dockerfile               |
+| -------------------------------- | ------------------------ |
+| `ghcr.io/<owner>/cloudrive/api`  | `apps/server/Dockerfile` |
+| `ghcr.io/<owner>/cloudrive/docs` | `apps/docs/Dockerfile`   |
+
+Tags per release: `1.2.3`, `v1.2`, `latest`, and `sha-<short>`.
+
+Preview the next version locally with `pnpm release:prepare --dry-run`.
+
+<Callout type="warn" title="Repository setting">
+  Release Prepare opens its PR with `GITHUB_TOKEN`: enable **Settings → Actions → General → Allow
+  GitHub Actions to create and approve pull requests**.
+</Callout>
 
 ## Docs site
 
-`apps/docs` is a separate Next.js app and is not part of the image:
+`apps/docs` builds its own image (Next.js standalone output, port 3000):
 
 ```sh
-pnpm build:docs                         # next build
-pnpm --filter @cloudrive/docs start     # serves on :3001
+docker build -f apps/docs/Dockerfile -t cloudrive-docs .
+docker run -p 3000:3000 cloudrive-docs
 ```
 
-It also serves `llms.txt`, `llms-full.txt`, and per-page Markdown for AI tools.
+For local work: `pnpm dev:docs` (port 3001) or `pnpm build:docs`. The site also serves
+`llms.txt`, `llms-full.txt`, and per-page Markdown for AI tools.

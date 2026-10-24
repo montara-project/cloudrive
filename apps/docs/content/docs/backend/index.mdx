@@ -38,7 +38,7 @@ internal/
 migrations/       SQL, 000001 … 000006
 templates/        email templates
 public/           static files served from / (favicon.ico, static/…)
-scripts/          entrypoint.sh (env → flags), release.sh
+scripts/          entrypoint.sh (env → flags)
 ```
 
 ## Boot sequence (`cmd/api/main.go`)
@@ -62,12 +62,11 @@ production) → static `./public` → routes → SPA fallback (when `SPA_DIR` is
 
 ## Make targets
 
-| Target                            | Does                                                     |
-| --------------------------------- | -------------------------------------------------------- |
-| `make run`                        | `go run ./cmd/api` with flags from `.env`                |
-| `make db/migrations/up`           | Apply migrations (`/seed` variant also seeds providers)  |
-| `make db/migrations/down`         | Roll back                                                |
-| `make db/migrations/refresh`      | Down + up (`/seed` variant available)                    |
-| `make db/migrations/new name=…`   | New migration pair (needs the `migrate` CLI)             |
-| `make build/api`, `build/migrate` | Binaries in `./bin` (+ `linux_amd64`)                    |
-| `make release`                    | Bump version and tag from commits (`scripts/release.sh`) |
+| Target                            | Does                                                    |
+| --------------------------------- | ------------------------------------------------------- |
+| `make run`                        | `go run ./cmd/api` with flags from `.env`               |
+| `make db/migrations/up`           | Apply migrations (`/seed` variant also seeds providers) |
+| `make db/migrations/down`         | Roll back                                               |
+| `make db/migrations/refresh`      | Down + up (`/seed` variant available)                   |
+| `make db/migrations/new name=…`   | New migration pair (needs the `migrate` CLI)            |
+| `make build/api`, `build/migrate` | Binaries in `./bin` (+ `linux_amd64`)                   |

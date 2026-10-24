@@ -112,17 +112,3 @@ build/migrate:
 	@echo 'Building cmd/migrate...'
 	go build -ldflags="-s" -o=./bin/migrate ./cmd/migrate
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s" -o=./bin/linux_amd64/migrate ./cmd/migrate
-
-# ==================================================================================== #
-# RELEASE
-# ==================================================================================== #
-
-## release: bump version and create a release tag (auto-detect from commits); extras: make release ARGS="--type=minor --no-push"
-.PHONY: release
-release:
-	@bash scripts/release.sh $(ARGS)
-
-## release/dry-run: preview the next version bump without creating a tag
-.PHONY: release/dry-run
-release/dry-run:
-	@bash scripts/release.sh --dry-run $(ARGS)
