@@ -1,9 +1,11 @@
 'use client'
 
+import { PanelLeft } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import React from 'react'
 
+import GlobalSearch from '@/components/layout/global-search'
 import {
   Sidebar,
   SidebarContent,
@@ -11,24 +13,30 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
-  SidebarInput,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
   SidebarSeparator,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import { SIDEBAR_MENU } from '@/data/sidebar-menu'
 import { useSession } from '@/hooks/use-session'
 
+import NavFolders from './nav-folders'
 import NavMain from './nav-main'
 import NavStorageCard from './nav-storage-card'
 import NavUser from './nav-user'
 import OrganizationRail from './organization-rail'
-import WorkspaceSwitch from './workspace-switch'
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar>
 
+/**
+ * The redesigned shell: a slim organization rail (logo, org switcher, collapse
+ * toggle) beside the main sidebar (user card, search, main menu, workspace
+ * folders, utilities, upgrade card) — mirroring the reference layout while
+ * keeping every routed destination reachable.
+ */
 export default function AppSidebar(props: AppSidebarProps) {
   const menu = SIDEBAR_MENU
   const { data: session } = useSession()
@@ -47,9 +55,7 @@ export default function AppSidebar(props: AppSidebarProps) {
       className="overflow-hidden *:data-[sidebar=sidebar]:flex-row"
       {...props}
     >
-      {/* This is the first sidebar */}
-      {/* We disable collapsible and adjust width to icon. */}
-      {/* This will make the sidebar appear as icons. */}
+      {/* Organization rail — always icon width, holds the org switcher */}
       <Sidebar collapsible="none" className="w-[calc(var(--sidebar-width-icon)+1px)]! border-r">
         <SidebarHeader>
           <SidebarLogo />
@@ -63,21 +69,21 @@ export default function AppSidebar(props: AppSidebarProps) {
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
-          <NavUser user={user} />
+          <RailCollapseButton />
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>
 
-      {/* This is the second sidebar */}
-      {/* We disable collapsible and let it fill remaining space */}
+      {/* Main sidebar */}
       <Sidebar collapsible="none" className="hidden flex-1 md:flex">
-        <SidebarHeader className="gap-3.5 p-4">
-          <WorkspaceSwitch />
-          <SidebarInput placeholder="Type to search..." />
+        <SidebarHeader className="gap-3 p-4">
+          <NavUser user={user} />
+          <GlobalSearch />
         </SidebarHeader>
         <SidebarContent>
-          <NavMain title="Drive" items={menu.navDrive} />
-          {menu.navSetting.length > 0 && <NavMain title="More" items={menu.navSetting} />}
+          <NavMain title="Main Menu" items={menu.navDrive} />
+          <NavFolders />
+          {menu.navSetting.length > 0 && <NavMain title="Other" items={menu.navSetting} />}
         </SidebarContent>
         <SidebarFooter className="p-3 pb-4">
           <NavStorageCard />
@@ -92,13 +98,36 @@ function SidebarLogo() {
     <SidebarMenu>
       <SidebarMenuItem>
         <SidebarMenuButton size="lg" asChild className="md:h-8 md:p-0">
-          <Link href="https://cloudrive.us.ci">
+          <Link href="/">
             <Image src="/static/images/cloudrive.png" width={40} height={40} alt="brand logo" />
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">Cloudrive</span>
               <span className="truncate text-xs">Enterprise</span>
             </div>
           </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  )
+}
+
+/**
+ * Rail footer toggle — collapses the main sidebar panel, leaving the
+ * organization rail. The rail edge (SidebarRail) does the same.
+ */
+function RailCollapseButton() {
+  const { toggleSidebar } = useSidebar()
+
+  return (
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          size="lg"
+          onClick={toggleSidebar}
+          tooltip="Collapse sidebar"
+          className="justify-center md:h-8 md:p-0 text-muted-foreground"
+        >
+          <PanelLeft className="size-4.5" />
         </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>

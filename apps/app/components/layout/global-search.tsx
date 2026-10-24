@@ -88,11 +88,11 @@ export default function GlobalSearch() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-9 w-full max-w-xs cursor-pointer items-center gap-2.5 rounded-full border bg-muted/60 px-3.5 text-sm text-muted-foreground transition-colors hover:bg-muted md:max-w-sm"
+        className="flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-lg border border-sidebar-border bg-background px-3 text-sm text-muted-foreground shadow-xs transition-colors hover:bg-accent/60"
       >
         <IconSearch className="size-4 shrink-0" />
         <span className="flex-1 truncate text-left">Search in Cloudrive…</span>
-        <kbd className="hidden rounded-md border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline-block">
+        <kbd className="hidden rounded-md border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline-block">
           ⌘K
         </kbd>
       </button>

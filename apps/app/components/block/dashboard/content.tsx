@@ -1,102 +1,168 @@
 'use client'
 
-import { IconArrowRight, IconBuilding, IconCloud, IconPackages } from '@tabler/icons-react'
-import { useQuery } from '@tanstack/react-query'
-import Link from 'next/link'
+import { IconChevronDown, IconLayoutGrid, IconList } from '@tabler/icons-react'
+import { useMemo, useState } from 'react'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { queries } from '@/lib/api/queries'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { MOCK_ORG, MOCK_OVERVIEW_FILES, MOCK_WORKSPACES } from '@/data/mock/dashboard'
+import { useWorkspaceContext } from '@/hooks/use-workspace-context'
+import { cn } from '@/lib/utils'
 
-import RecentFilesSection from './recent-files'
-import StatCard from './stat-card'
+import DashboardToolbar, { type OverviewFilter } from './dashboard-toolbar'
+import DataStorageCard from './data-storage-card'
+import FrequentFolders from './frequent-folders'
+import InsightBanner from './insight-banner'
+import OverviewTable from './overview-table'
+import RecentFilesStrip from './recent-files-strip'
+import WelcomeHeader from './welcome-header'
 
+type SortKey = 'recent' | 'name' | 'size'
+
+const SIZE_UNITS: Record<string, number> = { KB: 1, MB: 2, GB: 3, TB: 4 }
+
+/** Parse "8.25 MB" into comparable bytes — fixture sizes are display strings. */
+const sizeToBytes = (label: string) => {
+  const [value, unit] = label.split(' ')
+  return Number.parseFloat(value) * 1024 ** (SIZE_UNITS[unit ?? ''] ?? 0)
+}
+
+/**
+ * DashboardContent — the redesigned overview: welcome header, toolbar,
+ * insight strip, storage breakdown, then the browse area (breadcrumb, recent
+ * files, frequently accessed folders, inventory table). Content renders from
+ * the design-preview fixtures in `data/mock/dashboard.ts`; each section notes
+ * the query that replaces it.
+ */
 export default function DashboardContent() {
-  const orgs = useQuery(
-    queries.organizations.list({ limit: 5, order_by: 'created_at', order: 'desc' })
-  )
-  const providers = useQuery(queries.providers.list())
+  const { organization, workspace } = useWorkspaceContext()
+  const [filter, setFilter] = useState<OverviewFilter>('all')
+  const [sortKey, setSortKey] = useState<SortKey>('recent')
+  const [folderView, setFolderView] = useState<'grid' | 'list'>('grid')
+
+  const orgName = organization?.name ?? MOCK_ORG.name
+  const wsName = workspace?.name ?? MOCK_WORKSPACES[0].name
+
+  const files = useMemo(() => {
+    const filtered =
+      filter === 'all'
+        ? [...MOCK_OVERVIEW_FILES]
+        : MOCK_OVERVIEW_FILES.filter((file) => file.typeLabel === filter)
+
+    if (sortKey === 'name') filtered.sort((a, b) => a.name.localeCompare(b.name))
+    if (sortKey === 'size')
+      filtered.sort((a, b) => sizeToBytes(b.sizeLabel) - sizeToBytes(a.sizeLabel))
+
+    return filtered
+  }, [filter, sortKey])
+
+  const sortLabels: Record<SortKey, string> = {
+    recent: 'Last updated',
+    name: 'Name',
+    size: 'Size',
+  }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          All your clouds. One drive. Manage organizations, workspaces and connected storage.
-        </p>
+    <div className="mx-auto flex w-full min-w-0 max-w-360 flex-col gap-5 p-4 md:gap-6 md:p-6">
+      <WelcomeHeader />
+      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <DashboardToolbar filter={filter} onFilterChange={setFilter} />
+      </div>
+      <div className="animate-in fade-in slide-in-from-bottom-2 delay-75 duration-500">
+        <InsightBanner />
+      </div>
+      <div className="animate-in fade-in slide-in-from-bottom-2 delay-100 duration-500">
+        <DataStorageCard />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          title="Organizations"
-          value={orgs.data?.metadata?.total}
-          href="/settings?tab=organizations"
-          icon={IconBuilding}
-          loading={orgs.isLoading}
-        />
-        <StatCard
-          title="Providers"
-          value={providers.data?.metadata?.total}
-          href="/providers"
-          icon={IconPackages}
-          loading={providers.isLoading}
-        />
-        <Link href="/storage">
-          <Card className="h-full transition-colors hover:border-primary/40">
-            <CardContent className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Storage Accounts</p>
-                <p className="text-2xl font-semibold">Connect</p>
-              </div>
-              <div className="flex size-10 items-center justify-center rounded-lg bg-accent/15 text-accent">
-                <IconCloud className="size-5" />
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-      </div>
+      {/* Browse area: breadcrumb + view controls, then the three content cards */}
+      <div className="animate-in fade-in slide-in-from-bottom-2 delay-150 duration-500">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-[15px]">
+            <span className="text-muted-foreground">{orgName}</span>
+            <span className="text-muted-foreground/60" aria-hidden="true">
+              /
+            </span>
+            <span className="text-muted-foreground">{wsName}</span>
+            <span className="text-muted-foreground/60" aria-hidden="true">
+              /
+            </span>
+            <span className="font-semibold">Home</span>
+          </nav>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent organizations</CardTitle>
-          <Link
-            href="/settings?tab=organizations"
-            className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-          >
-            View all <IconArrowRight className="size-3.5" />
-          </Link>
-        </CardHeader>
-        <CardContent>
-          {orgs.isLoading ? (
-            <div className="py-6 text-center">
-              <span className="inline-block size-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            </div>
-          ) : (orgs.data?.data ?? []).length === 0 ? (
-            <p className="py-4 text-sm text-muted-foreground">
-              No organizations yet —{' '}
-              <Link href="/settings?tab=organizations" className="text-primary hover:underline">
-                create your first one
-              </Link>
-              .
-            </p>
-          ) : (
-            <ul className="divide-y divide-border">
-              {(orgs.data?.data ?? []).map((org) => (
-                <li key={org.id}>
-                  <Link
-                    href={`/organizations/${org.id}`}
-                    className="flex items-center justify-between py-3 hover:text-primary"
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  Sort by
+                  <IconChevronDown className="size-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-40">
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  Sort files by
+                </DropdownMenuLabel>
+                {(Object.keys(sortLabels) as SortKey[]).map((key) => (
+                  <DropdownMenuItem
+                    key={key}
+                    onClick={() => setSortKey(key)}
+                    className={cn(sortKey === key && 'bg-accent')}
                   >
-                    <span className="font-medium">{org.name}</span>
-                    <span className="text-sm text-muted-foreground">@{org.slug}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+                    {sortLabels[key]}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-      <RecentFilesSection />
+            <span className="h-6 w-px bg-border" aria-hidden="true" />
+
+            <div className="flex items-center rounded-lg border p-0.5">
+              <button
+                type="button"
+                aria-label="Folders as list"
+                aria-pressed={folderView === 'list'}
+                onClick={() => setFolderView('list')}
+                className={cn(
+                  'flex size-7 cursor-pointer items-center justify-center rounded-md transition-colors',
+                  folderView === 'list'
+                    ? 'bg-background text-foreground shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <IconList className="size-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Folders as grid"
+                aria-pressed={folderView === 'grid'}
+                onClick={() => setFolderView('grid')}
+                className={cn(
+                  'flex size-7 cursor-pointer items-center justify-center rounded-md transition-colors',
+                  folderView === 'grid'
+                    ? 'bg-background text-foreground shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <IconLayoutGrid className="size-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-5 md:gap-6">
+          <RecentFilesStrip />
+          <FrequentFolders view={folderView} />
+          <OverviewTable files={files} filter={filter} onFilterChange={setFilter} />
+        </div>
+      </div>
     </div>
   )
 }

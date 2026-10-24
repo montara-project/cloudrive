@@ -57,7 +57,7 @@ export default function NavMain({ title, items }: NavMainProps) {
             tooltip={item.title}
             asChild
             isActive={item.isActive || isActive(item.url)}
-            className="h-9! gap-3 rounded-lg! text-[13.5px] data-active:bg-primary/10! data-active:text-primary! data-active:hover:bg-primary/15!"
+            className="h-9! gap-3 rounded-lg! border border-transparent text-[13.5px] font-medium! text-muted-foreground! hover:bg-sidebar-accent! hover:text-foreground! data-active:border-sidebar-border! data-active:bg-background! data-active:text-foreground! data-active:shadow-xs!"
           >
             <Link href={scopedHref(item.url, item.scope)}>
               {item.icon && <item.icon />}
@@ -82,7 +82,7 @@ export default function NavMain({ title, items }: NavMainProps) {
             <SidebarMenuButton
               tooltip={item.title}
               isActive={groupActive}
-              className="h-9! gap-3 rounded-lg! text-[13.5px] data-active:bg-primary/10! data-active:text-primary! data-active:hover:bg-primary/15!"
+              className="h-9! gap-3 rounded-lg! border border-transparent text-[13.5px] font-medium! text-muted-foreground! hover:bg-sidebar-accent! hover:text-foreground! data-active:border-sidebar-border! data-active:bg-background! data-active:text-foreground! data-active:shadow-xs!"
             >
               {item.icon && <item.icon />}
               <span>{item.title}</span>
