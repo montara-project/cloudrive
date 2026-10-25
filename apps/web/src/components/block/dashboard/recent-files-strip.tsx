@@ -13,13 +13,6 @@ export default function RecentFilesStrip() {
     <section className="min-w-0 rounded-xl border bg-card shadow-xs">
       <div className="flex items-center justify-between px-5 pt-4">
         <h2 className="text-base font-semibold tracking-tight">Recent Files</h2>
-        <button
-          type="button"
-          aria-label="Recent files options"
-          className="flex size-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-        >
-          <IconDotsVertical className="size-4" />
-        </button>
       </div>
 
       <div className="no-scrollbar flex gap-3 overflow-x-auto px-5 pt-3.5 pb-5">

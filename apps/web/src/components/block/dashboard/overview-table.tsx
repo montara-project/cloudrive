@@ -129,13 +129,6 @@ export default function OverviewTable({ files, filter, onFilterChange }: Overvie
               <IconLayoutGrid className="size-4" />
             </button>
           </div>
-          <button
-            type="button"
-            aria-label="Overview options"
-            className="flex size-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          >
-            <IconDotsVertical className="size-4" />
-          </button>
         </div>
       </div>
 

@@ -32,7 +32,7 @@ export default function NavStorageCard() {
   return (
     <Link
       {...hrefToLocation(href)}
-      className="block overflow-hidden rounded-2xl border border-sidebar-border bg-background shadow-xs transition-colors hover:bg-accent/40"
+      className="group block overflow-hidden rounded-2xl border border-sidebar-border bg-background shadow-xs transition-colors hover:bg-accent/40"
     >
       <div className="relative h-16 bg-gradient-to-br from-primary/20 via-primary/5 to-sky-400/25">
         <span className="absolute top-3 left-3 flex size-9 items-center justify-center rounded-lg border border-sidebar-border bg-background text-primary shadow-xs">
@@ -74,7 +74,9 @@ export default function NavStorageCard() {
           )}
         </p>
 
-        <span className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-zinc-950 text-sm font-medium text-white transition-colors hover:bg-zinc-950/90 dark:bg-zinc-300 dark:text-black dark:hover:bg-zinc-300/90">
+        {/* Part of the card link, not its own button: the emphasis tracks the
+            card hover so the card stays one honest target. */}
+        <span className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-zinc-950 text-sm font-medium text-white transition-colors group-hover:bg-zinc-950/90 dark:bg-zinc-300 dark:text-black dark:group-hover:bg-zinc-300/90">
           Expand Storage
         </span>
       </div>
