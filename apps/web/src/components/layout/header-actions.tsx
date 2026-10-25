@@ -9,11 +9,11 @@ import { cn } from '@/lib/utils'
 import UserMenu from './user-menu'
 
 const AVATAR_TINTS = [
-  'bg-blue-50 text-blue-600',
-  'bg-amber-50 text-amber-600',
-  'bg-violet-50 text-violet-600',
-  'bg-emerald-50 text-emerald-600',
-  'bg-rose-50 text-rose-600',
+  'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300',
+  'bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-300',
+  'bg-violet-50 text-violet-600 dark:bg-violet-950/50 dark:text-violet-300',
+  'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-300',
+  'bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-300',
 ]
 
 // The invite link the Invite button and the link icon both hand out.
