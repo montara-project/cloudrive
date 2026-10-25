@@ -49,15 +49,19 @@ export default function NavMain({ title, items }: NavMainProps) {
 
   const renderSidebarMenu = (item: NavMainItem) => {
     if (item.items.length === 0) {
+      const active = item.isActive || isActive(item.url)
       return (
         <SidebarMenuItem key={item.title}>
           <SidebarMenuButton
             tooltip={item.title}
             asChild
-            isActive={item.isActive || isActive(item.url)}
+            isActive={active}
             className="h-9! gap-3 rounded-lg! border border-transparent text-[13.5px] font-medium! text-muted-foreground! hover:bg-sidebar-accent! hover:text-foreground! data-active:border-sidebar-border! data-active:bg-background! data-active:text-foreground! data-active:shadow-xs!"
           >
-            <Link {...hrefToLocation(scopedHref(item.url, item.scope))}>
+            <Link
+              {...hrefToLocation(scopedHref(item.url, item.scope))}
+              aria-current={active ? 'page' : undefined}
+            >
               {item.icon && <item.icon />}
               <span>{item.title}</span>
             </Link>
@@ -89,20 +93,28 @@ export default function NavMain({ title, items }: NavMainProps) {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <SidebarMenuSub>
-              {item.items.map((subItem) => (
-                <SidebarMenuSubItem key={subItem.title}>
-                  <SidebarMenuSubButton
-                    asChild
-                    isActive={isActive(subItem.url)}
-                    className="data-active:text-primary! data-active:[&>svg]:text-primary!"
-                  >
-                    <Link {...hrefToLocation(scopedHref(subItem.url, subItem.scope ?? item.scope))}>
-                      {subItem.icon && <subItem.icon />}
-                      <span>{subItem.title}</span>
-                    </Link>
-                  </SidebarMenuSubButton>
-                </SidebarMenuSubItem>
-              ))}
+              {item.items.map((subItem) => {
+                const subActive = isActive(subItem.url)
+                return (
+                  <SidebarMenuSubItem key={subItem.title}>
+                    <SidebarMenuSubButton
+                      asChild
+                      isActive={subActive}
+                      className="data-active:text-primary! data-active:[&>svg]:text-primary!"
+                    >
+                      <Link
+                        {...hrefToLocation(
+                          scopedHref(subItem.url, subItem.scope ?? item.scope)
+                        )}
+                        aria-current={subActive ? 'page' : undefined}
+                      >
+                        {subItem.icon && <subItem.icon />}
+                        <span>{subItem.title}</span>
+                      </Link>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                )
+              })}
             </SidebarMenuSub>
           </CollapsibleContent>
         </SidebarMenuItem>
