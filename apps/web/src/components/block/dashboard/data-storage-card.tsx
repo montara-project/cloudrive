@@ -1,4 +1,4 @@
-import { IconDotsVertical, IconInfoCircle } from '@tabler/icons-react'
+import { IconInfoCircle } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 
 import { MOCK_STORAGE_SEGMENTS, MOCK_STORAGE_TOTAL } from '@/data/mock/dashboard'
@@ -17,13 +17,6 @@ export default function DataStorageCard() {
     <section className="rounded-xl border bg-card shadow-xs">
       <div className="flex items-center justify-between px-5 pt-4">
         <h2 className="text-base font-semibold tracking-tight">Data Storage</h2>
-        <button
-          type="button"
-          aria-label="Data storage options"
-          className="flex size-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-        >
-          <IconDotsVertical className="size-4" />
-        </button>
       </div>
 
       <div className="px-5 pt-4">

@@ -129,13 +129,6 @@ export default function OverviewTable({ files, filter, onFilterChange }: Overvie
               <IconLayoutGrid className="size-4" />
             </button>
           </div>
-          <button
-            type="button"
-            aria-label="Overview options"
-            className="flex size-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          >
-            <IconDotsVertical className="size-4" />
-          </button>
         </div>
       </div>
 
@@ -196,11 +189,12 @@ export default function OverviewTable({ files, filter, onFilterChange }: Overvie
                     {file.typeLabel}
                   </td>
                   <td className="py-3 pr-4">
-                    <span
-                      className="flex items-center gap-2 whitespace-nowrap"
-                      aria-label={`Owner ${file.owner.name}`}
-                    >
-                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[10px] font-semibold text-violet-700">
+                    <span className="flex items-center gap-2 whitespace-nowrap">
+                      <span
+                        role="img"
+                        aria-label={`Owner ${file.owner.name}`}
+                        className="flex size-6 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[10px] font-semibold text-violet-700 dark:bg-violet-950/50 dark:text-violet-300"
+                      >
                         {file.owner.initials}
                       </span>
                       <span className="hidden text-muted-foreground md:inline">
@@ -236,7 +230,11 @@ export default function OverviewTable({ files, filter, onFilterChange }: Overvie
                   {file.sizeLabel} · {file.typeLabel}
                 </p>
               </div>
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[10px] font-semibold text-violet-700">
+              <span
+                role="img"
+                aria-label={`Owner ${file.owner.name}`}
+                className="flex size-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[10px] font-semibold text-violet-700 dark:bg-violet-950/50 dark:text-violet-300"
+              >
                 {file.owner.initials}
               </span>
             </div>

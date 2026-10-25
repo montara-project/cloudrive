@@ -53,7 +53,7 @@ func main() {
 		Config:       cfg,
 		Logger:       logger,
 		DB:           db,
-		Repositories: repositories.New(db, box),
+		Repositories: repositories.New(cfg.App, db, box),
 	}
 	// MIGRATE_ON_BOOT applies application migrations before anything reads or
 	// writes the schema — including the super-user seed below, which would

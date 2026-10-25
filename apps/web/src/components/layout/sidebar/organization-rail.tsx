@@ -34,6 +34,7 @@ export default function OrganizationRail() {
             <SidebarMenuButton
               size="lg"
               isActive={active}
+              aria-current={active || undefined}
               onClick={() => selectOrganization(org.id)}
               className="justify-center md:h-9 md:p-0"
             >

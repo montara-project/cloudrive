@@ -1,6 +1,6 @@
 import { IconPlus, IconStack2 } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
-import { Check, ChevronsUpDown, LayoutGrid } from 'lucide-react'
+import { Check, ChevronDown, LayoutGrid } from 'lucide-react'
 import { useState } from 'react'
 
 import { AddWorkspaceForm } from '@/components/block/workspaces/form'
@@ -12,14 +12,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Skeleton } from '@/components/ui/skeleton'
 import { useWorkspaceContext } from '@/hooks/use-workspace-context'
 
 /**
- * Workspace selector card at the top of the main sidebar. Selecting a
- * workspace writes the `ws` (and `org`) query params — the same context the
- * storage/S3 pages and the Folders group read — so one click scopes the whole
- * app instead of re-picking the workspace inside every page.
+ * Workspace switcher in the main sidebar header: a single-line select showing
+ * the active workspace, with pick / create / manage in the dropdown. The
+ * account menu lives in the top bar (UserMenu). Selecting a workspace
+ * writes the `ws` (and `org`) query params — the same context the storage/S3
+ * pages and the Folders group read — so one click scopes the whole app.
  */
 export default function WorkspaceSelect() {
   const { organization, orgId, workspace, workspaces, isLoading, selectWorkspace } =
@@ -31,24 +31,15 @@ export default function WorkspaceSelect() {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-sidebar-border bg-background p-2 text-left shadow-xs transition-colors hover:bg-accent/60 data-[state=open]:bg-accent/60"
+          aria-label="Workspace menu"
+          className="flex h-10 w-full cursor-pointer items-center gap-2 rounded-lg bg-sidebar-accent px-3 text-left text-sm font-medium text-sidebar-accent-foreground transition-colors hover:bg-sidebar-accent/80"
         >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <IconStack2 className="size-4.5" />
+          <span className="flex-1 truncate">
+            {isLoading
+              ? 'Loading…'
+              : (workspace?.name ?? (orgId ? 'No workspace' : 'No organization'))}
           </span>
-          <span className="grid min-w-0 flex-1 leading-tight">
-            {isLoading ? (
-              <Skeleton className="h-4 w-28" />
-            ) : (
-              <span className="truncate text-sm font-semibold">
-                {workspace?.name ?? (orgId ? 'No workspace' : 'No organization')}
-              </span>
-            )}
-            <span className="truncate text-xs text-muted-foreground">
-              {organization ? organization.name : 'Select an organization'}
-            </span>
-          </span>
-          <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
+          <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -92,7 +83,7 @@ export default function WorkspaceSelect() {
         <DropdownMenuSeparator />
 
         <DropdownMenuItem className="gap-2 p-2" disabled={!orgId} onClick={() => setOpenAdd(true)}>
-          <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
+          <div className="flex size-6 shrink-0 items-center justify-center rounded-md border bg-transparent">
             <IconPlus className="size-4" />
           </div>
           <span className="font-medium text-muted-foreground">New workspace</span>
@@ -100,8 +91,8 @@ export default function WorkspaceSelect() {
 
         <DropdownMenuItem className="gap-2 p-2" asChild>
           <Link to="/settings" search={{ tab: 'workspaces' }}>
-            <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
-              <LayoutGrid className="size-4" />
+            <div className="flex size-6 shrink-0 items-center justify-center rounded-md border bg-transparent">
+              <LayoutGrid className="size-3.5" />
             </div>
             <span className="font-medium text-muted-foreground">Manage workspaces</span>
           </Link>

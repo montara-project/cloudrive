@@ -1,5 +1,7 @@
+import { IconMoon, IconSun } from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
 import { BadgeCheck, LogOut } from 'lucide-react'
+import { useTheme } from 'next-themes'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -27,15 +29,16 @@ function initials(name: string) {
 }
 
 /**
- * The top-bar account menu — an avatar button at the end of the utility
- * cluster (next to settings) opening the account dropdown: identity, account
- * settings, sign out. Reads the session directly so any header can drop it
+ * The top-bar account menu — an avatar button at the end of HeaderActions
+ * (next to notifications) opening the account dropdown: identity, appearance,
+ * account settings, sign out. Reads the session directly so any header can drop it
  * in without prop plumbing.
  */
 export default function UserMenu() {
   const navigate = useNavigate()
   const { data: session } = useSession()
   const { signOut, isSigningOut } = useSignOut()
+  const { resolvedTheme, setTheme } = useTheme()
 
   const user = session
     ? {
@@ -76,11 +79,15 @@ export default function UserMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
+          <DropdownMenuItem onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}>
+            {resolvedTheme === 'dark' ? <IconSun /> : <IconMoon />}
+            {resolvedTheme === 'dark' ? 'Light mode' : 'Dark mode'}
+          </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => navigate({ to: '/settings', search: { tab: 'account' } })}
           >
             <BadgeCheck />
-            Account
+            Account settings
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />

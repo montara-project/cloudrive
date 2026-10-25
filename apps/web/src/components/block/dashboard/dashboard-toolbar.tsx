@@ -1,10 +1,8 @@
-import { IconCalendar, IconChevronDown, IconFilter, IconUpload } from '@tabler/icons-react'
+import { IconCalendar, IconFilter, IconUpload } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import { format } from 'date-fns'
-import { useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { Calendar } from '@/components/ui/calendar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +11,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useWorkspaceContext } from '@/hooks/use-workspace-context'
 import { cn } from '@/lib/utils'
 
@@ -40,32 +37,24 @@ type DashboardToolbarProps = {
 }
 
 /**
- * The toolbar between the welcome header and the content cards: date scope on
- * the left, the type filter in the middle, and the primary upload action on
- * the right. The filter state lives in the dashboard content and drives the
- * Overview Storage table.
+ * The toolbar between the welcome header and the content cards: the month
+ * scope label on the left, the type filter next to it, and the primary upload
+ * action on the right. The filter state lives in the dashboard content and
+ * drives the Overview Storage table. The month is a static label until a real
+ * date-range query exists — a calendar popover that filters nothing would be
+ * a control that lies.
  */
 export default function DashboardToolbar({ filter, onFilterChange }: DashboardToolbarProps) {
   const { orgId, wsId } = useWorkspaceContext()
-  const [month, setMonth] = useState<Date>(new Date())
-  const monthLabel = useMemo(() => format(month, 'MMMM yyyy'), [month])
 
   const activeFilter = FILTER_OPTIONS.find((option) => option.value === filter)
 
   return (
     <div className="flex flex-wrap items-center gap-2.5">
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="outline" className="font-medium">
-            <IconCalendar className="size-4 text-muted-foreground" />
-            {monthLabel}
-            <IconChevronDown className="size-3.5 text-muted-foreground" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent align="start" className="w-auto p-0">
-          <Calendar mode="single" month={month} onMonthChange={setMonth} selected={month} />
-        </PopoverContent>
-      </Popover>
+      <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+        <IconCalendar className="size-4" aria-hidden="true" />
+        {format(new Date(), 'MMMM yyyy')}
+      </p>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

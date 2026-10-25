@@ -64,6 +64,7 @@ export default function NavFolders() {
                     <SidebarMenuButton
                       isActive={active}
                       tooltip={item.name}
+                      aria-current={active || undefined}
                       onClick={() => selectWorkspace(item.id)}
                       className="h-9! gap-3 rounded-lg! border border-transparent text-[13.5px] font-medium! text-muted-foreground! hover:bg-sidebar-accent! hover:text-foreground! data-active:border-sidebar-border! data-active:bg-background! data-active:text-foreground! data-active:shadow-xs!"
                     >

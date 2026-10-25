@@ -68,18 +68,18 @@ export default function DashboardContent() {
   return (
     <div className="flex min-w-0 flex-col gap-5 md:gap-6">
       <WelcomeHeader />
-      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 motion-reduce:animate-none">
         <DashboardToolbar filter={filter} onFilterChange={setFilter} />
       </div>
-      <div className="animate-in fade-in slide-in-from-bottom-2 delay-75 duration-500">
+      <div className="animate-in fade-in slide-in-from-bottom-2 delay-75 duration-500 motion-reduce:animate-none">
         <InsightBanner />
       </div>
-      <div className="animate-in fade-in slide-in-from-bottom-2 delay-100 duration-500">
+      <div className="animate-in fade-in slide-in-from-bottom-2 delay-100 duration-500 motion-reduce:animate-none">
         <DataStorageCard />
       </div>
 
       {/* Browse area: breadcrumb + view controls, then the three content cards */}
-      <div className="animate-in fade-in slide-in-from-bottom-2 delay-150 duration-500">
+      <div className="animate-in fade-in slide-in-from-bottom-2 delay-150 duration-500 motion-reduce:animate-none">
         <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
           <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-[15px]">
             <span className="text-muted-foreground">{orgName}</span>
@@ -90,7 +90,9 @@ export default function DashboardContent() {
             <span className="text-muted-foreground/60" aria-hidden="true">
               /
             </span>
-            <span className="font-semibold">Home</span>
+            <span className="font-semibold" aria-current="page">
+              Home
+            </span>
           </nav>
 
           <div className="flex items-center gap-2">
