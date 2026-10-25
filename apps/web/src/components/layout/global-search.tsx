@@ -39,7 +39,7 @@ const NAV_ITEMS = [
 ]
 
 /**
- * GlobalSearch is the sidebar search pill ("Search in Cloudrive…"). It opens a
+ * GlobalSearch is the sidebar search pill. It opens a
  * command palette with the app's destinations plus the active workspace's
  * connected storage accounts. ⌘K / Ctrl+K toggles it from anywhere.
  */
@@ -86,12 +86,12 @@ export default function GlobalSearch() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-lg border border-sidebar-border bg-background px-3 text-sm text-muted-foreground shadow-xs transition-colors hover:bg-accent/60"
+        className="flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-lg border border-sidebar-border bg-background px-3 text-sm text-muted-foreground transition-colors hover:bg-accent/60"
       >
         <IconSearch className="size-4 shrink-0" />
-        <span className="flex-1 truncate text-left">Search in Cloudrive…</span>
-        <kbd className="hidden rounded-md border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline-block">
-          ⌘K
+        <span className="flex-1 truncate text-left">Search</span>
+        <kbd className="hidden rounded-md bg-muted px-1.5 py-0.5 font-sans text-[10px] font-semibold text-foreground sm:inline-block">
+          ⌘ K
         </kbd>
       </button>
 

@@ -14,7 +14,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-  SidebarSeparator,
   useSidebar,
 } from '@/components/ui/sidebar'
 import { SIDEBAR_MENU } from '@/data/sidebar-menu'
@@ -29,9 +28,9 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar>
 
 /**
  * The redesigned shell: a slim organization rail (logo, org switcher, collapse
- * toggle) beside the main sidebar (workspace selector, search, main menu,
- * workspace folders, utilities, upgrade card). The account menu lives in the
- * page header (UserMenu in PageHeader), not the sidebar.
+ * toggle) beside the main sidebar (workspace switcher, search, main menu,
+ * workspace folders, utilities, upgrade card). Both headers are h-16 with a
+ * bottom border so they line up with the content top bar (SidebarLayout).
  */
 export default function AppSidebar(props: AppSidebarProps) {
   const menu = SIDEBAR_MENU
@@ -44,10 +43,9 @@ export default function AppSidebar(props: AppSidebarProps) {
     >
       {/* Organization rail — always icon width, holds the org switcher */}
       <Sidebar collapsible="none" className="w-[calc(var(--sidebar-width-icon)+1px)]! border-r">
-        <SidebarHeader>
+        <SidebarHeader className="h-16 justify-center border-b">
           <SidebarLogo />
         </SidebarHeader>
-        <SidebarSeparator />
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupContent className="px-1.5 md:px-0">
@@ -63,11 +61,13 @@ export default function AppSidebar(props: AppSidebarProps) {
 
       {/* Main sidebar */}
       <Sidebar collapsible="none" className="hidden flex-1 md:flex">
-        <SidebarHeader className="gap-3 p-4">
+        <SidebarHeader className="h-16 justify-center border-b px-4">
           <WorkspaceSelect />
-          <GlobalSearch />
         </SidebarHeader>
         <SidebarContent>
+          <div className="px-4 pt-4">
+            <GlobalSearch />
+          </div>
           <NavMain title="Main Menu" items={menu.navDrive} />
           <NavFolders />
           {menu.navSetting.length > 0 && <NavMain title="Other" items={menu.navSetting} />}
