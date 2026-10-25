@@ -44,7 +44,10 @@ docker run -p 8080:8080 -p 9000:9000 \
 - The healthcheck polls `GET /health` every 30 seconds.
 - With one origin, set `CLIENT_URL` and `SERVER_URL` to the same public URL, and add it to
   `CORS_ALLOWED_ORIGINS` so Authula accepts its `redirect_to` / `callback_url`.
-- Behind a reverse proxy, set `TRUSTED_PROXIES` so rate limiting sees real client IPs.
+- Behind a reverse proxy, set `TRUSTED_PROXIES` so logs and rate limiting see real client IPs.
+  The client IP is the rightmost `X-Forwarded-For` entry that is not a trusted proxy, so list
+  every hop: behind Cloudflare, add [its IP ranges](https://www.cloudflare.com/ips/) too, or
+  every request appears to come from a Cloudflare edge address.
 - Running more than one replica: keep `MIGRATE_ON_BOOT=false` and run migrations as a
   separate step: `docker run --rm --entrypoint /app/migrate cloudrive-api --db-dsn=… up`.
 

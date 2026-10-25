@@ -36,8 +36,15 @@ func serve(app *app.Application) error {
 		// TrustProxy requires an explicit proxy allow-list to be meaningful;
 		// without one it treats every connection as a direct client, so the
 		// real remote IP is used. Configure proxy addresses via TRUSTED_PROXIES.
-		ProxyHeader: "X-Forwarded-For",
-		TrustProxy:  len(trustedProxies) > 0,
+		//
+		// EnableIPValidation makes c.IP() walk X-Forwarded-For from the right
+		// and return the first hop that is not a trusted proxy, instead of the
+		// raw "client, proxy" header. That single IP is what the logger and
+		// the rate limiter see, and a client-forged leftmost entry is ignored.
+		// Behind Cloudflare, its ranges must be in TRUSTED_PROXIES too.
+		ProxyHeader:        "X-Forwarded-For",
+		EnableIPValidation: true,
+		TrustProxy:         len(trustedProxies) > 0,
 		TrustProxyConfig: fiber.TrustProxyConfig{
 			Proxies: trustedProxies,
 		},
@@ -46,8 +53,33 @@ func serve(app *app.Application) error {
 		ErrorHandler: middlewares.ErrorHandler(app.Logger),
 	})
 
+	// IP blocking sits before the logger so it reads the final status (see
+	// middlewares.IPBlock). Only password sign-in counts on the API: magic
+	// link and bearer tokens are long random values nobody guesses.
+	ipBlockConfig := middlewares.IPBlockConfig{
+		Blocked:     app.Config.App.BlockedIPs,
+		Exempt:      trustedProxies,
+		MaxFailures: app.Config.App.IPBlockMaxFailures,
+		Duration:    app.Config.App.IPBlockDuration,
+		Logger:      app.Logger,
+	}
+	apiIPBlockConfig := ipBlockConfig
+	apiIPBlockConfig.IsFailure = func(c fiber.Ctx) bool {
+		return c.Method() == fiber.MethodPost &&
+			c.Path() == authBasePath+"/email-password/sign-in" &&
+			c.Response().StatusCode() == fiber.StatusUnauthorized
+	}
+	apiIPBlockConfig.Denied = func(c fiber.Ctx) error {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"message": "Forbidden"})
+	}
+	apiIPBlock, err := middlewares.IPBlock(apiIPBlockConfig)
+	if err != nil {
+		return err
+	}
+
 	// Middleware
 	server.Use(recover.New())
+	server.Use(apiIPBlock)
 	server.Use(logger.New())
 	server.Use(helmet.New(helmet.Config{
 		// The default require-corp blocks the cross-origin fonts and scripts
@@ -90,23 +122,20 @@ func serve(app *app.Application) error {
 	// only in development so local tooling is not throttled. In production the
 	// exemption would let any request forwarded from a reverse proxy bypass the
 	// limiter entirely, so it is disabled there.
-	rateLimitConfig := limiter.Config{
+	//
+	// The SPA's hashed bundles are exempt: one page load fetches dozens of
+	// them, which would eat the API's budget, and they are immutable files
+	// browsers cache for a year.
+	server.Use(limiter.New(limiter.Config{
 		Max:        100,
 		Expiration: 1 * time.Minute,
+		Next:       skipRateLimit(app.Config.App.Env == config.EnvDevelopment),
 		LimitReached: func(c fiber.Ctx) error {
 			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
 				"error": "Too many requests",
 			})
 		},
-	}
-
-	if app.Config.App.Env == config.EnvDevelopment {
-		rateLimitConfig.Next = func(c fiber.Ctx) bool {
-			return c.IP() == "127.0.0.1" || c.IP() == "::1"
-		}
-	}
-
-	server.Use(limiter.New(rateLimitConfig))
+	}))
 
 	// Auth endpoints get their own, tighter budget: sign-in, magic-link and
 	// password-reset are the credential-guessing surface, and Authula has no
@@ -155,12 +184,35 @@ func serve(app *app.Application) error {
 			ReadTimeout:  10 * time.Minute,
 			WriteTimeout: 10 * time.Minute,
 			IdleTimeout:  time.Minute,
+			// Same proxy trust as the API, so the limiter and IP blocking key
+			// on the client rather than the proxy in front of the gateway.
+			ProxyHeader:        "X-Forwarded-For",
+			EnableIPValidation: true,
+			TrustProxy:         len(trustedProxies) > 0,
+			TrustProxyConfig: fiber.TrustProxyConfig{
+				Proxies: trustedProxies,
+			},
 			ErrorHandler: func(c fiber.Ctx, err error) error {
 				return c.Status(fiber.StatusInternalServerError).SendString("InternalError")
 			},
 		})
 
+		// The gateway answers every auth failure (unknown access key, bad
+		// signature, foreign bucket) with 403.
+		gatewayIPBlockConfig := ipBlockConfig
+		gatewayIPBlockConfig.IsFailure = func(c fiber.Ctx) bool {
+			return c.Response().StatusCode() == fiber.StatusForbidden
+		}
+		gatewayIPBlockConfig.Denied = func(c fiber.Ctx) error {
+			return c.Status(fiber.StatusForbidden).SendString("AccessDenied")
+		}
+		gatewayIPBlock, err := middlewares.IPBlock(gatewayIPBlockConfig)
+		if err != nil {
+			return err
+		}
+
 		gateway.Use(recover.New())
+		gateway.Use(gatewayIPBlock)
 		gateway.Use(logger.New())
 		// The gateway is internet-facing and SigV4 verification is cheap to
 		// spam; bound it independently of the JSON API's limiter.
@@ -221,4 +273,15 @@ func serve(app *app.Application) error {
 	}
 
 	return nil
+}
+
+// skipRateLimit reports which requests bypass the global limiter: the SPA's
+// hashed bundles always, and loopback only in development.
+func skipRateLimit(isDev bool) func(fiber.Ctx) bool {
+	return func(c fiber.Ctx) bool {
+		if strings.HasPrefix(c.Path(), middlewares.SPAAssetsPrefix) {
+			return true
+		}
+		return isDev && (c.IP() == "127.0.0.1" || c.IP() == "::1")
+	}
 }

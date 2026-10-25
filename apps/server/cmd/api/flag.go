@@ -73,6 +73,7 @@ func envDuration(key string, fallback time.Duration) time.Duration {
 func parseFlag(cfg *config.Config) {
 	var machineID uint
 	var trustedProxies string
+	var blockedIPs string
 	var superUser string
 
 	// App
@@ -88,6 +89,12 @@ func parseFlag(cfg *config.Config) {
 	// comma-separated CIDRs/IPs of reverse proxies whose X-Forwarded-For may be
 	// trusted. Leave empty when the app is exposed directly.
 	flag.StringVar(&trustedProxies, "trusted-proxies", envString("TRUSTED_PROXIES", ""), "Trusted proxy IPs/CIDRs (comma-separated)")
+
+	// IP blocking: a static deny list, plus auto-blocking of IPs that keep
+	// failing authentication (brute force).
+	flag.StringVar(&blockedIPs, "blocked-ips", envString("BLOCKED_IPS", ""), "Blocked client IPs/CIDRs (comma-separated)")
+	flag.IntVar(&cfg.App.IPBlockMaxFailures, "ip-block-max-failures", envInt("IP_BLOCK_MAX_FAILURES", 10), "Failed auth attempts within ip-block-duration that block an IP; 0 disables auto-blocking")
+	flag.DurationVar(&cfg.App.IPBlockDuration, "ip-block-duration", envDuration("IP_BLOCK_DURATION", 15*time.Minute), "Failure counting window and auto-block length")
 
 	// Built single-page app (apps/web) served at /; empty disables it.
 	flag.StringVar(&cfg.App.SPADir, "spa-dir", envString("SPA_DIR", ""), "Directory of a built single-page app served at / (empty disables)")
@@ -150,13 +157,8 @@ func parseFlag(cfg *config.Config) {
 
 	cfg.App.MachineID = uint16(machineID)
 
-	if trustedProxies != "" {
-		for _, proxy := range strings.Split(trustedProxies, ",") {
-			if trimmed := strings.TrimSpace(proxy); trimmed != "" {
-				cfg.App.TrustedProxies = append(cfg.App.TrustedProxies, trimmed)
-			}
-		}
-	}
+	cfg.App.TrustedProxies = splitList(trustedProxies)
+	cfg.App.BlockedIPs = splitList(blockedIPs)
 
 	// strings.Cut splits on the first colon only, so the password itself may
 	// contain colons; the email may not.
@@ -214,4 +216,15 @@ func validateFlag(cfg *config.Config) {
 	if cfg.Storage.CredentialsKeys == "" {
 		log.Fatal("flag storage-credentials-keys must be provided (see STORAGE_CREDENTIALS_KEYS in .env.example)")
 	}
+}
+
+// splitList splits a comma-separated flag value, dropping empty entries.
+func splitList(value string) []string {
+	var items []string
+	for _, item := range strings.Split(value, ",") {
+		if trimmed := strings.TrimSpace(item); trimmed != "" {
+			items = append(items, trimmed)
+		}
+	}
+	return items
 }
