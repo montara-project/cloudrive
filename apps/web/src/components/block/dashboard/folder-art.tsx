@@ -1,12 +1,23 @@
+import { useId } from 'react'
+
 import { cn } from '@/lib/utils'
 
 /**
  * FolderArt is the authored folder illustration used by the Frequently
  * Access grid — a closed folder with a sheet of paper peeking out, drawn as
  * crisp vector geometry with soft gradients so it reads dimensional without
- * being a bitmap asset.
+ * being a bitmap asset. Gradient/filter ids are namespaced per instance:
+ * the grid mounts several copies, and duplicate DOM ids would make every
+ * url(#…) resolve to the first one.
  */
 export default function FolderArt({ className }: { className?: string }) {
+  const uid = useId()
+  const ids = {
+    front: `${uid}-folder-front`,
+    back: `${uid}-folder-back`,
+    shadow: `${uid}-folder-shadow`,
+  }
+
   return (
     <svg
       viewBox="0 0 120 104"
@@ -16,7 +27,7 @@ export default function FolderArt({ className }: { className?: string }) {
     >
       <defs>
         <linearGradient
-          id="folder-front"
+          id={ids.front}
           x1="60"
           y1="44"
           x2="60"
@@ -27,7 +38,7 @@ export default function FolderArt({ className }: { className?: string }) {
           <stop offset="1" stopColor="#F59E0B" />
         </linearGradient>
         <linearGradient
-          id="folder-back"
+          id={ids.back}
           x1="60"
           y1="24"
           x2="60"
@@ -38,7 +49,7 @@ export default function FolderArt({ className }: { className?: string }) {
           <stop offset="1" stopColor="#D97706" />
         </linearGradient>
         <filter
-          id="folder-shadow"
+          id={ids.shadow}
           x="12"
           y="88"
           width="96"
@@ -57,7 +68,7 @@ export default function FolderArt({ className }: { className?: string }) {
         ry="5"
         fill="#0F172A"
         opacity="0.14"
-        filter="url(#folder-shadow)"
+        filter={`url(#${ids.shadow})`}
       />
 
       {/* paper sheet peeking out of the folder */}
@@ -77,13 +88,13 @@ export default function FolderArt({ className }: { className?: string }) {
       {/* back panel with tab */}
       <path
         d="M20 24h20c2.6 0 5 1.2 6.6 3.2l3.2 4.2c1.5 2 3.9 3.2 6.4 3.2h44c4.4 0 8 3.6 8 8v41c0 4.4-3.6 8-8 8H20c-4.4 0-8-3.6-8-8V32c0-4.4 3.6-8 8-8Z"
-        fill="url(#folder-back)"
+        fill={`url(#${ids.back})`}
       />
 
       {/* front panel */}
       <path
         d="M14 44h92c4.4 0 8 3.6 8 8v36c0 4.4-3.6 8-8 8H14c-4.4 0-8-3.6-8-8V52c0-4.4 3.6-8 8-8Z"
-        fill="url(#folder-front)"
+        fill={`url(#${ids.front})`}
       />
       {/* top-edge highlight on the front panel */}
       <rect x="14" y="44" width="92" height="3" rx="1.5" fill="#FFFFFF" opacity="0.35" />
