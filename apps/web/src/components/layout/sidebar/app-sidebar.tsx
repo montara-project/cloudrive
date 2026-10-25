@@ -59,8 +59,9 @@ export default function AppSidebar(props: AppSidebarProps) {
         <SidebarRail />
       </Sidebar>
 
-      {/* Main sidebar */}
-      <Sidebar collapsible="none" className="hidden flex-1 md:flex">
+      {/* Main sidebar — visible in the mobile sheet too; hiding it here would
+          leave phone users a rail with no navigation. */}
+      <Sidebar collapsible="none" className="flex-1">
         <SidebarHeader className="h-16 justify-center border-b px-4">
           <WorkspaceSelect />
         </SidebarHeader>

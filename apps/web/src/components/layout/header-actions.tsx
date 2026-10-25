@@ -50,7 +50,9 @@ export default function HeaderActions() {
         </span>
       </div>
 
-      <Button variant="outline" onClick={copyInviteLink}>
+      {/* Hidden below md: the icon trio + avatar already fill the small top
+          bar, and the title needs the room. */}
+      <Button variant="outline" onClick={copyInviteLink} className="hidden md:inline-flex">
         <IconUserPlus className="size-4" />
         Invite
       </Button>
