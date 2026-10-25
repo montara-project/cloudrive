@@ -16,10 +16,12 @@ import (
 //
 //   - missing user  -> created with a verified email, role=admin metadata,
 //     and a hashed password credential (no verification email, no session);
-//   - existing user -> only promoted to verified admin when needed, and a
-//     password credential is added if the user has none (e.g. it was created
-//     through Google OAuth before SUPER_USER was configured). The password is
-//     never reset, so a changed password survives restarts.
+//   - existing user -> promoted to verified admin and its password credential
+//     is reset to the configured password. The reset is deliberate: with open
+//     sign-up anyone can register the email before the operator configures
+//     SUPER_USER, and keeping the squatter's password would hand the promoted
+//     admin identity to that attacker. Changing SUPER_USER_PASSWORD in .env
+//     therefore also rotates the credential on the next boot.
 //
 // The application mirror row is upserted directly so the admin is usable by
 // app handlers immediately, independent of Authula's service hooks.
@@ -82,22 +84,31 @@ func ensureSuperUser(application *app.Application) error {
 			application.Logger.Info("super user promoted to admin", "email", super.Email)
 		}
 
+		hash, err := core.PasswordService.Hash(super.Password)
+		if err != nil {
+			return err
+		}
+
 		account, err := core.AccountService.GetByUserIDAndProvider(ctx, user.ID, providerID)
 		if err != nil {
 			return err
 		}
 
 		if account == nil {
-			hash, err := core.PasswordService.Hash(super.Password)
-			if err != nil {
-				return err
-			}
-
 			if _, err := core.AccountService.Create(ctx, user.ID, user.Email, providerID, &hash); err != nil {
 				return err
 			}
 
 			application.Logger.Info("super user password credential created", "email", super.Email)
+		} else {
+			// Reset, never keep: see the docblock — the existing credential
+			// may belong to whoever squatted the email through open sign-up.
+			account.Password = &hash
+			if _, err := core.AccountService.Update(ctx, account); err != nil {
+				return err
+			}
+
+			application.Logger.Info("super user password credential reset to configured value", "email", super.Email)
 		}
 	}
 
@@ -108,8 +119,14 @@ func ensureSuperUser(application *app.Application) error {
 		FirstName: first,
 		LastName:  last,
 		Image:     user.Image,
-		Role:      roleFromMetadata(user.Metadata),
+		Role:      "admin",
 	}); err != nil {
+		return err
+	}
+
+	// Upsert only sets role on insert; the promote path must overwrite an
+	// existing row's role explicitly.
+	if err := application.Repositories.User.SetRole(ctx, uuid.MustParse(user.ID), "admin"); err != nil {
 		return err
 	}
 

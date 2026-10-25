@@ -27,7 +27,8 @@ func scanUser(row rowScanner) (models.User, error) {
 // Upsert inserts the user or, when a row with the same id already exists,
 // refreshes it from the given Authula state. Called from Authula's user
 // service hooks, so it is idempotent and self-heals rows that predate the
-// hook being registered.
+// hook being registered. The role column is deliberately insert-only: it is
+// set by the super-user seeder (SetRole), never derived from client input.
 func (r *UserRepository) Upsert(ctx context.Context, u models.User) error {
 	_, err := r.execContext(ctx, `
 		INSERT INTO users (id, email, first_name, last_name, image, role)
@@ -37,9 +38,19 @@ func (r *UserRepository) Upsert(ctx context.Context, u models.User) error {
 			first_name = EXCLUDED.first_name,
 			last_name = EXCLUDED.last_name,
 			image = EXCLUDED.image,
-			role = EXCLUDED.role,
 			updated_at = now()`,
 		u.ID, u.Email, u.FirstName, u.LastName, u.Image, u.Role,
+	)
+	return err
+}
+
+// SetRole overwrites a user's application role. Only the super-user seeder
+// should call it — sign-in syncs never touch the role, so a client-supplied
+// sign-up metadata value can never mint itself a privileged role.
+func (r *UserRepository) SetRole(ctx context.Context, id uuid.UUID, role string) error {
+	_, err := r.execContext(ctx,
+		`UPDATE users SET role = $2, updated_at = now() WHERE id = $1`,
+		id, role,
 	)
 	return err
 }

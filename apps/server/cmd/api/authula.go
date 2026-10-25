@@ -112,11 +112,15 @@ func newAuthula(application *app.Application, authulaDB *bun.DB) *authula.Auth {
 			ContextTimeout:        5 * time.Second,
 		}),
 		authulaconfig.WithSecurity(authulamodels.SecurityConfig{
-			TrustedOrigins: []string{cfg.App.CORSAllowedOrigins},
+			// CORS_ALLOWED_ORIGINS is a comma-separated list; Authula does not
+			// split it (unlike Fiber's CORS middleware), and a single joined
+			// string never exact-matches a real Origin — which would silently
+			// break magic-link/verify redirects on multi-origin deployments.
+			TrustedOrigins: splitOrigins(cfg.App.CORSAllowedOrigins),
 			TrustedProxies: cfg.App.TrustedProxies,
 			CORS: authulamodels.CORSConfig{
 				AllowCredentials: true,
-				AllowedOrigins:   []string{cfg.App.CORSAllowedOrigins},
+				AllowedOrigins:   splitOrigins(cfg.App.CORSAllowedOrigins),
 				AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 				AllowedHeaders:   []string{"Origin", "Content-Type", "Accept", "Authorization"},
 				MaxAge:           time.Hour,
@@ -301,7 +305,11 @@ func syncUserToApp(application *app.Application) authulamodels.ServiceHook[authu
 			FirstName: first,
 			LastName:  last,
 			Image:     user.Image,
-			Role:      roleFromMetadata(user.Metadata),
+			// The mirror role is insert-only ("user"); privileged roles are
+			// set exclusively by the super-user seeder. Authula metadata is
+			// client-writable at sign-up, so deriving a role from it would
+			// let a new account mint itself an "admin" marker on every login.
+			Role: "user",
 		}); err != nil {
 			application.Logger.Error("failed to sync authula user into application users table", "error", err, "user_id", user.ID)
 		}
@@ -310,14 +318,16 @@ func syncUserToApp(application *app.Application) authulamodels.ServiceHook[authu
 	}
 }
 
-// roleFromMetadata reads the role marker stored on Authula user metadata,
-// defaulting to "user" for accounts without one.
-func roleFromMetadata(metadata map[string]any) string {
-	if role, ok := metadata["role"].(string); ok && role != "" {
-		return role
+// splitOrigins splits a comma-separated origin list into exact origins.
+func splitOrigins(raw string) []string {
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part = strings.TrimSpace(part); part != "" {
+			out = append(out, part)
+		}
 	}
-
-	return "user"
+	return out
 }
 
 // splitName splits Authula's single display name into the application's
