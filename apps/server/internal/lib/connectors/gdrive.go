@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -21,12 +22,15 @@ import (
 	"golang.org/x/oauth2/google"
 )
 
-func randRead(b []byte) (int, error) {
-	return rand.Read(b)
-}
-
 func errNotFound(key string) error {
 	return errors.New("not found: " + key)
+}
+
+// driveQuote renders a Drive query string literal: the Drive grammar quotes
+// values with single quotes and escapes embedded quotes with a backslash —
+// not with Go's %q double-quote syntax.
+func driveQuote(v string) string {
+	return "'" + strings.ReplaceAll(v, `'`, `\'`) + "'"
 }
 
 // Google Drive REST endpoint.
@@ -100,6 +104,45 @@ func (c *gdriveConnector) client(ctx context.Context) (*http.Client, error) {
 func (c *gdriveConnector) driveError(resp *http.Response, op string) error {
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 	return fmt.Errorf("drive %s failed: status %d: %s", op, resp.StatusCode, strings.TrimSpace(string(body)))
+}
+
+// resolve resolves a key by walking its full directory path under the root
+// folder — never creating anything — and returns the file entry for the key
+// itself. Object reads, stats, and deletes must go through this instead of a
+// basename-only lookup under the root: otherwise "a/report.txt" would match
+// a root-level "report.txt" and reads/deletes would hit the wrong file.
+func (c *gdriveConnector) resolve(ctx context.Context, client *http.Client, key string) (driveFile, bool, error) {
+	if file, ok := c.cached(key); ok {
+		return file, true, nil
+	}
+
+	segments := strings.Split(strings.Trim(key, "/"), "/")
+	if len(segments) == 0 || segments[len(segments)-1] == "" {
+		return driveFile{}, false, nil
+	}
+
+	parent := c.rootFolder
+	current := ""
+	for _, seg := range segments[:len(segments)-1] {
+		if seg == "" {
+			continue
+		}
+		if current != "" {
+			current += "/"
+		}
+		current += seg
+
+		folder, ok, err := c.lookup(ctx, client, current, parent)
+		if err != nil {
+			return driveFile{}, false, err
+		}
+		if !ok {
+			return driveFile{}, false, nil
+		}
+		parent = folder.ID
+	}
+
+	return c.lookup(ctx, client, key, parent)
 }
 
 // PutObject uploads the payload as one Drive file via the simple media
@@ -197,7 +240,7 @@ func (c *gdriveConnector) lookup(ctx context.Context, client *http.Client, key, 
 		return file, true, nil
 	}
 
-	q := fmt.Sprintf("name = %q and %q in parents and trashed = false", baseName(key), parentID)
+	q := fmt.Sprintf("name = %s and %s in parents and trashed = false", driveQuote(baseName(key)), driveQuote(parentID))
 	endpoint := driveAPI + "/files?q=" + url.QueryEscape(q) + "&fields=files(id,name,mimeType,size,modifiedTime)&pageSize=2"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
@@ -267,7 +310,7 @@ func (c *gdriveConnector) GetObject(ctx context.Context, key string) (io.ReadClo
 		return nil, Object{}, err
 	}
 
-	file, ok, err := c.lookup(ctx, client, key, c.rootFolder)
+	file, ok, err := c.resolve(ctx, client, key)
 	if err != nil {
 		return nil, Object{}, err
 	}
@@ -299,7 +342,7 @@ func (c *gdriveConnector) StatObject(ctx context.Context, key string) (Object, e
 		return Object{}, err
 	}
 
-	file, ok, err := c.lookup(ctx, client, key, c.rootFolder)
+	file, ok, err := c.resolve(ctx, client, key)
 	if err != nil {
 		return Object{}, err
 	}
@@ -316,7 +359,7 @@ func (c *gdriveConnector) DeleteObject(ctx context.Context, key string) error {
 		return err
 	}
 
-	file, ok, err := c.lookup(ctx, client, key, c.rootFolder)
+	file, ok, err := c.resolve(ctx, client, key)
 	if err != nil {
 		return err
 	}
@@ -366,7 +409,7 @@ func (c *gdriveConnector) ListObjects(ctx context.Context, prefix, delimiter, co
 		}
 	}
 
-	q := fmt.Sprintf("%q in parents and trashed = false", folderID)
+	q := fmt.Sprintf("%s in parents and trashed = false", driveQuote(folderID))
 	if maxKeys <= 0 {
 		maxKeys = 1000
 	}
@@ -427,12 +470,21 @@ type gdriveStagingKey struct {
 	UploadID string
 }
 
-func (c *gdriveConnector) stagingDir(uploadID string) string {
+// uploadIDPattern matches exactly what newUploadID mints: 16 random bytes as
+// lowercase hex. stagingDir joins the client-supplied uploadId into a
+// filesystem path, so anything outside this shape is rejected before it can
+// traverse out of the staging root.
+var uploadIDPattern = regexp.MustCompile(`^[0-9a-f]{32}$`)
+
+func (c *gdriveConnector) stagingDir(uploadID string) (string, error) {
+	if !uploadIDPattern.MatchString(uploadID) {
+		return "", fmt.Errorf("invalid upload id")
+	}
 	base := c.reg.StagingDir
 	if base == "" {
 		base = os.TempDir()
 	}
-	return filepath.Join(base, "cloudrive-gdrive-multipart", uploadID)
+	return filepath.Join(base, "cloudrive-gdrive-multipart", uploadID), nil
 }
 
 func (c *gdriveConnector) CreateMultipartUpload(ctx context.Context, key, contentType string) (MultipartInfo, error) {
@@ -441,7 +493,10 @@ func (c *gdriveConnector) CreateMultipartUpload(ctx context.Context, key, conten
 		return MultipartInfo{}, err
 	}
 
-	dir := c.stagingDir(uploadID)
+	dir, err := c.stagingDir(uploadID)
+	if err != nil {
+		return MultipartInfo{}, err
+	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return MultipartInfo{}, (err)
 	}
@@ -457,7 +512,10 @@ func (c *gdriveConnector) CreateMultipartUpload(ctx context.Context, key, conten
 }
 
 func (c *gdriveConnector) UploadPart(ctx context.Context, key, uploadID string, partNumber int, r io.Reader, size int64) (string, error) {
-	dir := c.stagingDir(uploadID)
+	dir, err := c.stagingDir(uploadID)
+	if err != nil {
+		return "", err
+	}
 	path := filepath.Join(dir, fmt.Sprintf("part-%05d", partNumber))
 
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
@@ -477,7 +535,10 @@ func (c *gdriveConnector) UploadPart(ctx context.Context, key, uploadID string, 
 }
 
 func (c *gdriveConnector) CompleteMultipartUpload(ctx context.Context, key, uploadID string, parts []CompletedPart) (Object, error) {
-	dir := c.stagingDir(uploadID)
+	dir, err := c.stagingDir(uploadID)
+	if err != nil {
+		return Object{}, err
+	}
 
 	storedKey, err := os.ReadFile(filepath.Join(dir, "key"))
 	if err != nil {
@@ -530,7 +591,11 @@ func (c *gdriveConnector) CompleteMultipartUpload(ctx context.Context, key, uplo
 }
 
 func (c *gdriveConnector) AbortMultipartUpload(ctx context.Context, key, uploadID string) error {
-	return (os.RemoveAll(c.stagingDir(uploadID)))
+	dir, err := c.stagingDir(uploadID)
+	if err != nil {
+		return err
+	}
+	return os.RemoveAll(dir)
 }
 
 // --- path helpers and the path → file cache ---
@@ -577,7 +642,7 @@ func validatePartSize(written, expected int64) error {
 
 func newUploadID() (string, error) {
 	b := make([]byte, 16)
-	if _, err := randRead(b); err != nil {
+	if _, err := rand.Read(b); err != nil {
 		return "", (err)
 	}
 	return fmt.Sprintf("%x", b), nil
