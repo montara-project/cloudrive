@@ -11,20 +11,23 @@ in kebab case (`DB_DSN` → `--db-dsn`).
 
 ## App
 
-| Variable               | Default       | Required | Notes                                                              |
-| ---------------------- | ------------- | -------- | ------------------------------------------------------------------ |
-| `MACHINE_ID`           | `0`           | yes      | Non-zero, fits in uint16.                                          |
-| `ENV`                  | `development` |          | `production` disables the localhost rate-limit exemption.          |
-| `DEBUG`                | `false`       |          | Debug log level for the app and Authula.                           |
-| `PORT`                 | `8080`        |          | REST API listener.                                                 |
-| `APP_NAME`             | `gofi`        |          | Shown in emails and Authula.                                       |
-| `APP_SECRET`           |               | yes      | Authula signing secret; HMAC key for provider OAuth `state`.       |
-| `CLIENT_URL`           |               | yes      | Where provider OAuth callbacks redirect back to (`/storage`).      |
-| `SERVER_URL`           |               | yes      | Public API URL; OAuth redirect URIs are built from it.             |
-| `CORS_ALLOWED_ORIGINS` | `*`           |          | Comma-separated. Also Authula's trusted origins.                   |
-| `TRUSTED_PROXIES`      |               |          | Comma-separated IPs/CIDRs whose `X-Forwarded-For` is trusted.      |
-| `SPA_DIR`              |               |          | Built SPA served at `/`. The image sets `/app/web`.                |
-| `SUPER_USER`           |               |          | `email:password` (password ≥ 8 chars), seeded as a verified admin. |
+| Variable                | Default       | Required | Notes                                                                                                               |
+| ----------------------- | ------------- | -------- | ------------------------------------------------------------------------------------------------------------------- |
+| `MACHINE_ID`            | `0`           | yes      | Non-zero, fits in uint16.                                                                                           |
+| `ENV`                   | `development` |          | `production` disables the localhost rate-limit exemption.                                                           |
+| `DEBUG`                 | `false`       |          | Debug log level for the app and Authula.                                                                            |
+| `PORT`                  | `8080`        |          | REST API listener.                                                                                                  |
+| `APP_NAME`              | `gofi`        |          | Shown in emails and Authula.                                                                                        |
+| `APP_SECRET`            |               | yes      | Authula signing secret; HMAC key for provider OAuth `state`.                                                        |
+| `CLIENT_URL`            |               | yes      | Where provider OAuth callbacks redirect back to (`/storage`).                                                       |
+| `SERVER_URL`            |               | yes      | Public API URL; OAuth redirect URIs are built from it.                                                              |
+| `CORS_ALLOWED_ORIGINS`  | `*`           |          | Comma-separated. Also Authula's trusted origins.                                                                    |
+| `TRUSTED_PROXIES`       |               |          | Comma-separated IPs/CIDRs whose `X-Forwarded-For` is trusted.                                                       |
+| `BLOCKED_IPS`           |               |          | Comma-separated IPs/CIDRs refused with 403 on the API and S3 gateway.                                               |
+| `IP_BLOCK_MAX_FAILURES` | `10`          |          | Failed password sign-ins (API) or 403s (S3 gateway) within `IP_BLOCK_DURATION` that auto-block an IP. `0` disables. |
+| `IP_BLOCK_DURATION`     | `15m`         |          | Failure counting window and auto-block length. Blocks live in memory, per replica.                                  |
+| `SPA_DIR`               |               |          | Built SPA served at `/`. The image sets `/app/web`.                                                                 |
+| `SUPER_USER`            |               |          | `email:password` (password ≥ 8 chars), seeded as a verified admin.                                                  |
 
 ## Database
 

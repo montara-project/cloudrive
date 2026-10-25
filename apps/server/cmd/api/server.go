@@ -53,8 +53,33 @@ func serve(app *app.Application) error {
 		ErrorHandler: middlewares.ErrorHandler(app.Logger),
 	})
 
+	// IP blocking sits before the logger so it reads the final status (see
+	// middlewares.IPBlock). Only password sign-in counts on the API: magic
+	// link and bearer tokens are long random values nobody guesses.
+	ipBlockConfig := middlewares.IPBlockConfig{
+		Blocked:     app.Config.App.BlockedIPs,
+		Exempt:      trustedProxies,
+		MaxFailures: app.Config.App.IPBlockMaxFailures,
+		Duration:    app.Config.App.IPBlockDuration,
+		Logger:      app.Logger,
+	}
+	apiIPBlockConfig := ipBlockConfig
+	apiIPBlockConfig.IsFailure = func(c fiber.Ctx) bool {
+		return c.Method() == fiber.MethodPost &&
+			c.Path() == authBasePath+"/email-password/sign-in" &&
+			c.Response().StatusCode() == fiber.StatusUnauthorized
+	}
+	apiIPBlockConfig.Denied = func(c fiber.Ctx) error {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"message": "Forbidden"})
+	}
+	apiIPBlock, err := middlewares.IPBlock(apiIPBlockConfig)
+	if err != nil {
+		return err
+	}
+
 	// Middleware
 	server.Use(recover.New())
+	server.Use(apiIPBlock)
 	server.Use(logger.New())
 	server.Use(helmet.New(helmet.Config{
 		// The default require-corp blocks the cross-origin fonts and scripts
@@ -159,12 +184,35 @@ func serve(app *app.Application) error {
 			ReadTimeout:  10 * time.Minute,
 			WriteTimeout: 10 * time.Minute,
 			IdleTimeout:  time.Minute,
+			// Same proxy trust as the API, so the limiter and IP blocking key
+			// on the client rather than the proxy in front of the gateway.
+			ProxyHeader:        "X-Forwarded-For",
+			EnableIPValidation: true,
+			TrustProxy:         len(trustedProxies) > 0,
+			TrustProxyConfig: fiber.TrustProxyConfig{
+				Proxies: trustedProxies,
+			},
 			ErrorHandler: func(c fiber.Ctx, err error) error {
 				return c.Status(fiber.StatusInternalServerError).SendString("InternalError")
 			},
 		})
 
+		// The gateway answers every auth failure (unknown access key, bad
+		// signature, foreign bucket) with 403.
+		gatewayIPBlockConfig := ipBlockConfig
+		gatewayIPBlockConfig.IsFailure = func(c fiber.Ctx) bool {
+			return c.Response().StatusCode() == fiber.StatusForbidden
+		}
+		gatewayIPBlockConfig.Denied = func(c fiber.Ctx) error {
+			return c.Status(fiber.StatusForbidden).SendString("AccessDenied")
+		}
+		gatewayIPBlock, err := middlewares.IPBlock(gatewayIPBlockConfig)
+		if err != nil {
+			return err
+		}
+
 		gateway.Use(recover.New())
+		gateway.Use(gatewayIPBlock)
 		gateway.Use(logger.New())
 		// The gateway is internet-facing and SigV4 verification is cheap to
 		// spam; bound it independently of the JSON API's limiter.

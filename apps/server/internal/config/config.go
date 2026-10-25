@@ -34,6 +34,12 @@ type ConfigApp struct {
 	ServerURL          string
 	CORSAllowedOrigins string
 	TrustedProxies     []string
+	// BlockedIPs are refused outright. An IP failing authentication
+	// IPBlockMaxFailures times within IPBlockDuration is blocked for
+	// IPBlockDuration; 0 failures disables auto-blocking.
+	BlockedIPs         []string
+	IPBlockMaxFailures int
+	IPBlockDuration    time.Duration
 	SuperUser          ConfigSuperUser
 	// SPADir is the build output of a single-page app served at /; empty
 	// disables it.
