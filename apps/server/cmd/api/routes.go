@@ -15,14 +15,6 @@ func routes(r *fiber.App, app *app.Application) {
 
 	// Every API endpoint lives under /api; the SPA owns everything else
 	// (see server.go).
-	if app.Config.App.SPADir == "" {
-		r.Get("/api", func(c fiber.Ctx) error {
-			return c.JSON(fiber.Map{
-				"message": "Hello, World!",
-			})
-		})
-	}
-
 	r.Get("/api/health", h.Health.Check)
 
 	// Authula serves every auth endpoint under /api/v1/auth (email &

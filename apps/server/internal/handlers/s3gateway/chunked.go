@@ -22,9 +22,12 @@ var errMalformedChunk = errors.New("malformed aws-chunked payload")
 //	[trailer headers\r\n]*
 //	\r\n
 //
-// The chunk signatures are already covered by the seed-signature check in
-// the sigv4 verifier; this reader only extracts the payload bytes so the
-// connectors receive the raw object content.
+// The chunk signatures are NOT verified: the sigv4 verifier only sees the
+// literal STREAMING-AWS4-HMAC-SHA256-PAYLOAD placeholder, so per-chunk
+// integrity is enforced by the seed signature and TLS only. This reader
+// merely extracts the payload bytes so the connectors receive the raw object
+// content; implementing chunk-signature verification is a documented, open
+// hardening item (ISSUES.md SEC-015).
 type awsChunkedReader struct {
 	src     *bufio.Reader
 	payload io.Reader // current chunk's payload (limited)

@@ -209,10 +209,6 @@ func validateFlag(cfg *config.Config) {
 		log.Fatal("flag resend-from-email must be provided")
 	}
 
-	if cfg.Resend.DebugToEmail == "" {
-		log.Fatal("flag resend-debug-to-email must be provided")
-	}
-
 	// Fail closed: without encryption keys the server must not start, or
 	// provider credentials could end up stored in plaintext.
 	if cfg.Storage.CredentialsKeys == "" {
