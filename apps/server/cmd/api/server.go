@@ -53,6 +53,20 @@ func serve(app *app.Application) error {
 		// The default require-corp blocks the cross-origin fonts and scripts
 		// the SPA loads from CDNs; the API's JSON is unaffected.
 		CrossOriginEmbedderPolicy: "unsafe-none",
+		// CSP for the SPA this server ships (dev uses the Vite server, which
+		// is unaffected). Allows the two third-party origins index.html loads
+		// (analytics script + Google Fonts); `unsafe-inline` styles are the
+		// React style-attribute baseline. Verify the analytics endpoints in
+		// production if the script ever calls home to another host.
+		ContentSecurityPolicy: "default-src 'self'; " +
+			"script-src 'self' https://analytics.masb0ymas.com; " +
+			"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+			"font-src 'self' https://fonts.gstatic.com data:; " +
+			"img-src 'self' data: https:; " +
+			"connect-src 'self' https://analytics.masb0ymas.com; " +
+			"object-src 'none'; base-uri 'self'; frame-ancestors 'self'",
+		// No-op over plain http; enforced by browsers once TLS terminates.
+		HSTSMaxAge: 31536000,
 	}))
 	server.Use(requestid.New())
 	server.Use(compress.New())
@@ -94,6 +108,20 @@ func serve(app *app.Application) error {
 
 	server.Use(limiter.New(rateLimitConfig))
 
+	// Auth endpoints get their own, tighter budget: sign-in, magic-link and
+	// password-reset are the credential-guessing surface, and Authula has no
+	// built-in lockout. Still generous enough for /me probes and normal
+	// sign-in retries.
+	server.Use("/api/v1/auth", limiter.New(limiter.Config{
+		Max:        60,
+		Expiration: 1 * time.Minute,
+		LimitReached: func(c fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error": "Too many requests",
+			})
+		},
+	}))
+
 	server.Use(static.New("./public"))
 
 	// Initial Routes
@@ -134,6 +162,15 @@ func serve(app *app.Application) error {
 
 		gateway.Use(recover.New())
 		gateway.Use(logger.New())
+		// The gateway is internet-facing and SigV4 verification is cheap to
+		// spam; bound it independently of the JSON API's limiter.
+		gateway.Use(limiter.New(limiter.Config{
+			Max:        600,
+			Expiration: 1 * time.Minute,
+			LimitReached: func(c fiber.Ctx) error {
+				return c.Status(fiber.StatusTooManyRequests).SendString("SlowDown")
+			},
+		}))
 
 		s3gateway.Register(gateway, &s3gateway.Service{
 			Repos: s3gateway.RepoAdapter{
