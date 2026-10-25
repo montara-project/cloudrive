@@ -3,6 +3,17 @@
 All notable changes to this project are documented in this file. Versions follow the git tags (`v*`); Docker images (api, docs) are published to ghcr.io with the same version.
 
 
+## [0.5.0](https://github.com/montara-project/cloudrive/compare/v0.4.0...v0.5.0) (2026-10-25)
+
+### Features
+
+* **server:** block IPs manually and auto-block brute force attempts ([a841bfd](https://github.com/montara-project/cloudrive/commit/a841bfd4239474b08b811793cd72db70f4dce8c5))
+
+### Bug Fixes
+
+* **server:** exempt SPA /assets from the global rate limit ([4f06e68](https://github.com/montara-project/cloudrive/commit/4f06e68b2f4fb67aaa07d0061898cb6084a4c391))
+* **server:** resolve a single client IP from X-Forwarded-For ([4270be1](https://github.com/montara-project/cloudrive/commit/4270be1a933e4af4a58e4fadb454a5a56e1efdd9))
+
 ## [0.4.0](https://github.com/montara-project/cloudrive/compare/v0.3.0...v0.4.0) (2026-10-25)
 
 ### ⚠ BREAKING CHANGES
