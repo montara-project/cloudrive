@@ -27,12 +27,11 @@ const (
 // connector keeps an in-memory path → metadata cache built from
 // list_folder/get_metadata, mirroring the gdrive connector's approach.
 type dropboxConnector struct {
-	tokenSrc    oauth2.TokenSource
-	accountID   string
-	rootPath    string
-	mu          sync.Mutex
-	paths       map[string]dropboxEntry
-	partOffsets map[string]int64
+	tokenSrc  oauth2.TokenSource
+	accountID string
+	rootPath  string
+	mu        sync.Mutex
+	paths     map[string]dropboxEntry
 }
 
 type dropboxEntry struct {
@@ -68,11 +67,10 @@ func newDropboxConnector(reg Registry, account AccountInput, creds Credentials) 
 	}
 
 	return &dropboxConnector{
-		tokenSrc:    dropboxOAuthConfig(reg).TokenSource(context.Background(), oauthCreds.ToOAuth2Token()),
-		accountID:   account.ID.String(),
-		rootPath:    rootPath,
-		paths:       map[string]dropboxEntry{},
-		partOffsets: map[string]int64{},
+		tokenSrc:  dropboxOAuthConfig(reg).TokenSource(context.Background(), oauthCreds.ToOAuth2Token()),
+		accountID: account.ID.String(),
+		rootPath:  rootPath,
+		paths:     map[string]dropboxEntry{},
 	}, nil
 }
 
@@ -497,14 +495,17 @@ func (c *dropboxConnector) ListObjects(ctx context.Context, prefix, delimiter, c
 	return page, nil
 }
 
-func (c *dropboxConnector) listContinue(ctx context.Context, client *http.Client, prefix, cursor string, maxKeys int) (ListPage, error) {
-	// The cursor is opaque to us; Dropbox's continue endpoint resumes it.
-	// To key cursors to a dir we encode "<dir>\x00<cursor>".
-	dir, cursor, ok := strings.Cut(cursor, "\x00")
-	if !ok {
+func (c *dropboxConnector) listContinue(ctx context.Context, client *http.Client, prefix, token string, maxKeys int) (ListPage, error) {
+	// encodeDropboxCursor wraps "<prefix>\x00<provider cursor>"; decode it and
+	// resume the provider cursor through list_folder/continue. The prefix
+	// round-trip binds the token to the listing it belongs to.
+	tokenPrefix, cursor, err := decodeDropboxCursor(token)
+	if err != nil {
+		return ListPage{}, err
+	}
+	if tokenPrefix != prefix {
 		return ListPage{}, errors.New("invalid continuation token")
 	}
-	_ = dir
 
 	cont := struct {
 		Entries []dropboxEntry `json:"entries"`
@@ -515,12 +516,10 @@ func (c *dropboxConnector) listContinue(ctx context.Context, client *http.Client
 		return ListPage{}, err
 	}
 
-	prefixPath := prefix
 	page := ListPage{}
 	for _, entry := range cont.Entries {
 		key := strings.TrimPrefix(entry.PathLower, strings.TrimPrefix(c.rootPath, "/"))
 		key = strings.TrimPrefix(key, "/")
-		_ = prefixPath
 
 		c.remember(key, entry)
 		if !entry.isFolder() {
@@ -596,15 +595,12 @@ func (c *dropboxConnector) CreateMultipartUpload(ctx context.Context, key, conte
 func (c *dropboxConnector) UploadPart(ctx context.Context, key, uploadID string, partNumber int, r io.Reader, size int64) (string, error) {
 	client := c.client(ctx)
 
-	// Offsets depend on the order parts arrive; append with cursor offset 0
-	// per part is wrong. Dropbox appends sequentially — parts must be
-	// buffered and appended in order. The gateway supplies parts in order
-	// (S3 clients send sequentially); enforce monotonic offsets by tracking
-	// the session's next offset in memory.
-	c.mu.Lock()
-	offset := c.partOffsets[uploadID]
-	c.partOffsets[uploadID] = offset
-	c.mu.Unlock()
+	// Dropbox appends sequentially — parts must arrive in order, and the
+	// session's next offset lives in the package-level store (connectors are
+	// per request, so a struct field could never survive across parts).
+	multipartOffsets.Lock()
+	offset := multipartOffsets.next[uploadID]
+	multipartOffsets.Unlock()
 
 	args, _ := json.Marshal(map[string]any{
 		"close": false,
@@ -631,9 +627,9 @@ func (c *dropboxConnector) UploadPart(ctx context.Context, key, uploadID string,
 		return "", c.rpcError(resp, "upload_session/append")
 	}
 
-	c.mu.Lock()
-	c.partOffsets[uploadID] = offset + size
-	c.mu.Unlock()
+	multipartOffsets.Lock()
+	multipartOffsets.next[uploadID] = offset + size
+	multipartOffsets.Unlock()
 
 	return fmt.Sprintf("part-%05d", partNumber), nil
 }
@@ -641,10 +637,10 @@ func (c *dropboxConnector) UploadPart(ctx context.Context, key, uploadID string,
 func (c *dropboxConnector) CompleteMultipartUpload(ctx context.Context, key, uploadID string, parts []CompletedPart) (Object, error) {
 	client := c.client(ctx)
 
-	c.mu.Lock()
-	offset := c.partOffsets[uploadID]
-	delete(c.partOffsets, uploadID)
-	c.mu.Unlock()
+	multipartOffsets.Lock()
+	offset := multipartOffsets.next[uploadID]
+	delete(multipartOffsets.next, uploadID)
+	multipartOffsets.Unlock()
 
 	sort.Slice(parts, func(i, j int) bool { return parts[i].PartNumber < parts[j].PartNumber })
 
@@ -691,9 +687,9 @@ func (c *dropboxConnector) CompleteMultipartUpload(ctx context.Context, key, upl
 func (c *dropboxConnector) AbortMultipartUpload(ctx context.Context, key, uploadID string) error {
 	client := c.client(ctx)
 
-	c.mu.Lock()
-	delete(c.partOffsets, uploadID)
-	c.mu.Unlock()
+	multipartOffsets.Lock()
+	delete(multipartOffsets.next, uploadID)
+	multipartOffsets.Unlock()
 
 	payload, _ := json.Marshal(map[string]string{"session_id": uploadID})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, dropboxContent+"/files/upload_session/abort", strings.NewReader(string(payload)))

@@ -89,7 +89,10 @@ func (h *organizationInvitationHandler) Create(c fiber.Ctx) error {
 	return dtos.Created(c, invitation, "Invitation created")
 }
 
-// List returns the organization's invitations. Any member may read them.
+// List returns the organization's invitations. Owner/admin only, and the
+// secret tokens are redacted: the token is the only credential that redeems
+// an invite, so a plain member reading it would be able to self-redeem an
+// admin-role invite once a redemption endpoint exists.
 func (h *organizationInvitationHandler) List(c fiber.Ctx) error {
 	userID, err := currentUser(c)
 	if err != nil {
@@ -101,7 +104,7 @@ func (h *organizationInvitationHandler) List(c fiber.Ctx) error {
 		return err
 	}
 
-	if _, err := requireOrgMember(c.Context(), h.app, orgID, userID); err != nil {
+	if _, err := requireOrgMember(c.Context(), h.app, orgID, userID, "owner", "admin"); err != nil {
 		return err
 	}
 
@@ -120,6 +123,10 @@ func (h *organizationInvitationHandler) List(c fiber.Ctx) error {
 	total, err := h.repo().CountByOrganization(c.Context(), orgID)
 	if err != nil {
 		return err
+	}
+
+	for _, invitation := range invitations {
+		invitation.Token = ""
 	}
 
 	return dtos.List(c, invitations, dtos.ListMeta(int(total), q.Offset, q.Limit))

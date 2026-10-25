@@ -60,6 +60,30 @@ func Register(app *fiber.App, service *Service) {
 	app.All("/*", h.dispatch)
 }
 
+// rootScope normalizes the bucket's root_prefix into a directory-style key
+// prefix ("docs" → "docs/"). Empty stays empty.
+func rootScope(bucket *models.S3Bucket) string {
+	scope := strings.TrimPrefix(bucket.RootPrefix, "/")
+	if scope != "" && !strings.HasSuffix(scope, "/") {
+		scope += "/"
+	}
+	return scope
+}
+
+// scopeKey applies the bucket's root prefix to a client key. The prefix is
+// the documented isolation boundary between bucket mappings that share one
+// storage account: every object operation must go through it.
+func scopeKey(scope, key string) string {
+	return scope + key
+}
+
+// unscopeKey strips the bucket's root prefix from a key returned by a
+// connector; keys outside the scope cannot happen (all reads go through
+// scopeKey), so TrimPrefix without a check is safe.
+func unscopeKey(scope, key string) string {
+	return strings.TrimPrefix(key, scope)
+}
+
 // dispatch routes a path-style request. The bucket is the first path
 // segment; the key is everything after it with the original encoding.
 func (h *handler) dispatch(c fiber.Ctx) error {
@@ -76,6 +100,15 @@ func (h *handler) dispatch(c fiber.Ctx) error {
 	if i := strings.Index(trimmed, "/"); i >= 0 {
 		bucket = trimmed[:i]
 		key = trimmed[i+1:]
+	}
+
+	// Path-based providers treat ".." as a directory hop, so a key carrying
+	// dot-dot segments could escape the bucket's root prefix. S3 clients do
+	// not send them for real objects.
+	for _, seg := range strings.Split(key, "/") {
+		if seg == ".." {
+			return h.sendError(c, errInvalidArgument)
+		}
 	}
 
 	if key == "" {
@@ -239,7 +272,8 @@ func (h *handler) listObjects(c fiber.Ctx, credential *models.S3Credential, buck
 	ctx, cancel := context.WithTimeout(c.Context(), 30*time.Second)
 	defer cancel()
 
-	page, err := conn.ListObjects(ctx, prefix, delimiter, continuation, maxKeys)
+	scope := rootScope(bucket)
+	page, err := conn.ListObjects(ctx, scopeKey(scope, prefix), delimiter, continuation, maxKeys)
 	if err != nil {
 		return h.sendError(c, (err))
 	}
@@ -255,7 +289,7 @@ func (h *handler) listObjects(c fiber.Ctx, credential *models.S3Credential, buck
 	}
 	for _, o := range page.Objects {
 		result.Contents = append(result.Contents, objectX{
-			Key: o.Key, Size: o.Size, ETag: `"` + o.ETag + `"`,
+			Key: unscopeKey(scope, o.Key), Size: o.Size, ETag: `"` + o.ETag + `"`,
 			StorageClass: "STANDARD", LastModified: o.LastModified,
 		})
 		result.KeyCount++
@@ -313,17 +347,18 @@ func (h *handler) objectOps(c fiber.Ctx, credential *models.S3Credential, bucket
 }
 
 func (h *handler) getObject(c fiber.Ctx, credential *models.S3Credential, bucketName, key string) error {
-	conn, _, err := h.connectorFor(c.Context(), credential, bucketName)
+	conn, bucket, err := h.connectorFor(c.Context(), credential, bucketName)
 	if err != nil {
 		return h.sendError(c, err)
 	}
+	scopedKey := scopeKey(rootScope(bucket), key)
 
 	// The response body streams after this handler returns, so the context
 	// must not be cancelled when the handler finishes.
 	ctx := context.WithoutCancel(c.Context())
 
 	if string(c.Method()) == http.MethodHead {
-		obj, err := conn.StatObject(ctx, key)
+		obj, err := conn.StatObject(ctx, scopedKey)
 		if err != nil {
 			return h.sendError(c, errNoSuchKey)
 		}
@@ -343,7 +378,7 @@ func (h *handler) getObject(c fiber.Ctx, credential *models.S3Credential, bucket
 		return nil
 	}
 
-	reader, obj, err := conn.GetObject(ctx, key)
+	reader, obj, err := conn.GetObject(ctx, scopedKey)
 	if err != nil {
 		return h.sendError(c, errNoSuchKey)
 	}
@@ -359,10 +394,11 @@ func (h *handler) getObject(c fiber.Ctx, credential *models.S3Credential, bucket
 }
 
 func (h *handler) putObject(c fiber.Ctx, credential *models.S3Credential, bucketName, key string) error {
-	conn, _, err := h.connectorFor(c.Context(), credential, bucketName)
+	conn, bucket, err := h.connectorFor(c.Context(), credential, bucketName)
 	if err != nil {
 		return h.sendError(c, err)
 	}
+	scopedKey := scopeKey(rootScope(bucket), key)
 
 	contentType := c.Get("Content-Type")
 	if contentType == "" {
@@ -390,7 +426,7 @@ func (h *handler) putObject(c fiber.Ctx, credential *models.S3Credential, bucket
 	ctx, cancel := context.WithTimeout(c.Context(), 30*time.Minute)
 	defer cancel()
 
-	obj, err := conn.PutObject(ctx, key, body, size, contentType)
+	obj, err := conn.PutObject(ctx, scopedKey, body, size, contentType)
 	if err != nil {
 		return h.sendError(c, (err))
 	}
@@ -413,15 +449,16 @@ func requestBody(c fiber.Ctx) io.Reader {
 }
 
 func (h *handler) deleteObject(c fiber.Ctx, credential *models.S3Credential, bucketName, key string) error {
-	conn, _, err := h.connectorFor(c.Context(), credential, bucketName)
+	conn, bucket, err := h.connectorFor(c.Context(), credential, bucketName)
 	if err != nil {
 		return h.sendError(c, err)
 	}
+	scopedKey := scopeKey(rootScope(bucket), key)
 
 	ctx, cancel := context.WithTimeout(c.Context(), 30*time.Second)
 	defer cancel()
 
-	if err := conn.DeleteObject(ctx, key); err != nil {
+	if err := conn.DeleteObject(ctx, scopedKey); err != nil {
 		// S3 DeleteObject succeeds idempotently even when the key is absent.
 		return h.sendError(c, (err))
 	}
@@ -444,7 +481,7 @@ func (h *handler) multipartOps(c fiber.Ctx, credential *models.S3Credential, buc
 
 	// POST /{bucket}/{key}?uploads — initiate.
 	if hasQuery("uploads") && string(c.Method()) == http.MethodPost {
-		info, err := conn.CreateMultipartUpload(ctx, key, c.Get("Content-Type"))
+		info, err := conn.CreateMultipartUpload(ctx, scopeKey(rootScope(bucket), key), c.Get("Content-Type"))
 		if err != nil {
 			return h.sendError(c, (err))
 		}
@@ -474,7 +511,7 @@ func (h *handler) multipartOps(c fiber.Ctx, credential *models.S3Credential, buc
 			}
 		}
 
-		etag, err := conn.UploadPart(ctx, key, uploadID, partNumber, body, size)
+		etag, err := conn.UploadPart(ctx, scopeKey(rootScope(bucket), key), uploadID, partNumber, body, size)
 		if err != nil {
 			return h.sendError(c, (err))
 		}
@@ -495,7 +532,7 @@ func (h *handler) multipartOps(c fiber.Ctx, credential *models.S3Credential, buc
 			parts = append(parts, connectors.CompletedPart{PartNumber: p.PartNumber, ETag: p.ETag})
 		}
 
-		obj, err := conn.CompleteMultipartUpload(ctx, key, uploadID, parts)
+		obj, err := conn.CompleteMultipartUpload(ctx, scopeKey(rootScope(bucket), key), uploadID, parts)
 		if err != nil {
 			return h.sendError(c, (err))
 		}
@@ -510,7 +547,7 @@ func (h *handler) multipartOps(c fiber.Ctx, credential *models.S3Credential, buc
 
 	// DELETE /{bucket}/{key}?uploadId=… — abort.
 	if string(c.Method()) == http.MethodDelete && hasQuery("uploadId") {
-		if err := conn.AbortMultipartUpload(ctx, key, uploadID); err != nil {
+		if err := conn.AbortMultipartUpload(ctx, scopeKey(rootScope(bucket), key), uploadID); err != nil {
 			return h.sendError(c, (err))
 		}
 		return c.Status(204).Send(nil)

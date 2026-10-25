@@ -9,3 +9,11 @@ minimumReleaseAgeExclude:
   - '@fumadocs/base-ui@16.17.8'
   - fumadocs-core@16.17.8
   - fumadocs-mdx@15.4.10
+
+# Patched transitive deps flagged by `pnpm audit --prod`
+overrides:
+  seroval@<1.6.3: ^1.6.3
+  zod@<4.6.6: ^4.6.6
+  follow-redirects@<1.16.1: ^1.16.1
+  source-map-js@<1.2.2: ^1.2.2
+  vite@>=8.3.0 <8.3.3: ^8.3.3

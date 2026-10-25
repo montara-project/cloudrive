@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"net/url"
+	"sync"
+	"time"
 
 	"cloudrive/server/internal/app"
 	"cloudrive/server/internal/dtos"
@@ -17,10 +19,35 @@ import (
 	"github.com/google/uuid"
 )
 
+// consumedStates records the nonces of processed OAuth connect states so a
+// leaked state cannot be replayed within its TTL. Process-local: a restart
+// forgets them, but Verify expires states after ten minutes regardless.
+var consumedStates = struct {
+	sync.Mutex
+	seen map[string]time.Time
+}{seen: map[string]time.Time{}}
+
+// consumeStateOnce marks a state nonce as used and reports whether this call
+// was the first. Expired entries are dropped opportunistically.
+func consumeStateOnce(nonce string, now time.Time) bool {
+	const ttl = 15 * time.Minute
+
+	consumedStates.Lock()
+	defer consumedStates.Unlock()
+	for n, exp := range consumedStates.seen {
+		if now.After(exp) {
+			delete(consumedStates.seen, n)
+		}
+	}
+	if _, taken := consumedStates.seen[nonce]; taken {
+		return false
+	}
+	consumedStates.seen[nonce] = now.Add(ttl)
+	return true
+}
+
 type storageAccountOAuthHandler struct {
 	app *app.Application
-	// providerSlug is set by authorizeOAuthAccount for flowForAccount.
-	providerSlug string
 }
 
 // Authorize starts the OAuth connect flow: it verifies the caller may manage
@@ -99,6 +126,12 @@ func (h *storageAccountOAuthHandler) Callback(c fiber.Ctx) error {
 		return redirectErr("invalid_state")
 	}
 
+	// Single-use: a signed state that leaks (logs, Referer) must not be
+	// replayable within its TTL.
+	if !consumeStateOnce(payload.Nonce, time.Now()) {
+		return redirectErr("invalid_state")
+	}
+
 	flow := ConnectorRegistry(h.app).Flow(slug)
 	if flow == nil || !flow.Configured() {
 		return redirectErr("provider_not_configured")
@@ -127,6 +160,12 @@ func (h *storageAccountOAuthHandler) Callback(c fiber.Ctx) error {
 	workspace, err := h.app.Repositories.Workspace.Get(c.Context(), workspaceID)
 	if err != nil {
 		return redirectErr("workspace_not_found")
+	}
+
+	// The state was issued by an owner/admin up to ten minutes ago; re-verify
+	// the user still belongs to the organization before writing anything.
+	if _, err := requireOrgMember(c.Context(), h.app, workspace.OrganizationID, userID); err != nil {
+		return redirectErr("forbidden")
 	}
 
 	provider, err := h.app.Repositories.Provider.GetBySlug(c.Context(), slug)
@@ -267,12 +306,12 @@ func (h *storageAccountOAuthHandler) Refresh(c fiber.Ctx) error {
 		return err
 	}
 
-	account, err := h.authorizeOAuthAccount(c, accountID, userID, true)
+	account, slug, err := h.authorizeOAuthAccount(c, accountID, userID, true)
 	if err != nil {
 		return err
 	}
 
-	flow, creds, err := h.flowForAccount(c.Context(), account)
+	flow, creds, err := h.flowForAccount(c.Context(), account, slug)
 	if err != nil {
 		return err
 	}
@@ -308,12 +347,12 @@ func (h *storageAccountOAuthHandler) Quota(c fiber.Ctx) error {
 		return err
 	}
 
-	account, err := h.authorizeOAuthAccount(c, accountID, userID, false)
+	account, slug, err := h.authorizeOAuthAccount(c, accountID, userID, false)
 	if err != nil {
 		return err
 	}
 
-	flow, creds, err := h.flowForAccount(c.Context(), account)
+	flow, creds, err := h.flowForAccount(c.Context(), account, slug)
 	if err != nil {
 		return err
 	}
@@ -332,10 +371,12 @@ func (h *storageAccountOAuthHandler) Quota(c fiber.Ctx) error {
 
 // authorizeOAuthAccount loads the account and enforces membership; manage
 // restricts to owner/admin. Only OAuth provider accounts are eligible.
-func (h *storageAccountOAuthHandler) authorizeOAuthAccount(c fiber.Ctx, accountID, userID uuid.UUID, manage bool) (models.StorageAccount, error) {
+// Returns the provider slug so no shared handler field carries per-request
+// state (the handler is a singleton).
+func (h *storageAccountOAuthHandler) authorizeOAuthAccount(c fiber.Ctx, accountID, userID uuid.UUID, manage bool) (models.StorageAccount, string, error) {
 	account, err := h.app.Repositories.StorageAccount.Get(c.Context(), accountID)
 	if err != nil {
-		return models.StorageAccount{}, err
+		return models.StorageAccount{}, "", err
 	}
 
 	roles := []string{}
@@ -343,24 +384,22 @@ func (h *storageAccountOAuthHandler) authorizeOAuthAccount(c fiber.Ctx, accountI
 		roles = []string{"owner", "admin"}
 	}
 	if _, err := requireOrgMember(c.Context(), h.app, account.OrganizationID, userID, roles...); err != nil {
-		return models.StorageAccount{}, err
+		return models.StorageAccount{}, "", err
 	}
 
 	_, provider, err := h.app.Repositories.StorageAccount.GetWithProvider(c.Context(), accountID)
 	if err != nil {
-		return models.StorageAccount{}, err
+		return models.StorageAccount{}, "", err
 	}
 	if provider.Protocol != "oauth2_cloud" {
-		return models.StorageAccount{}, apperr.New(apperr.KindBadRequest, "account is not an OAuth provider account")
+		return models.StorageAccount{}, "", apperr.New(apperr.KindBadRequest, "account is not an OAuth provider account")
 	}
-	h.providerSlug = provider.Slug
 
-	return account, nil
+	return account, provider.Slug, nil
 }
 
 // flowForAccount resolves the provider flow and decrypts credentials.
-func (h *storageAccountOAuthHandler) flowForAccount(ctx context.Context, account models.StorageAccount) (provideroauth.Flow, connectors.Credentials, error) {
-	slug := h.providerSlug
+func (h *storageAccountOAuthHandler) flowForAccount(ctx context.Context, account models.StorageAccount, slug string) (provideroauth.Flow, connectors.Credentials, error) {
 	flow := ConnectorRegistry(h.app).Flow(slug)
 	if flow == nil || !flow.Configured() {
 		return nil, nil, apperr.New(apperr.KindBadRequest, "Provider OAuth is not configured on the server")
