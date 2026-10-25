@@ -59,7 +59,12 @@ export default function HeaderActions() {
 
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon" aria-label="Copy invite link" onClick={copyInviteLink}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Copy invite link"
+            onClick={copyInviteLink}
+          >
             <IconLink className="size-4.5" />
           </Button>
         </TooltipTrigger>

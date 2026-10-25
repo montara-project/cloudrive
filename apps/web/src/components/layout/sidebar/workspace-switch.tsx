@@ -97,7 +97,6 @@ export default function WorkspaceSelect() {
             <span className="font-medium text-muted-foreground">Manage workspaces</span>
           </Link>
         </DropdownMenuItem>
-
       </DropdownMenuContent>
 
       {orgId && (
