@@ -36,8 +36,15 @@ func serve(app *app.Application) error {
 		// TrustProxy requires an explicit proxy allow-list to be meaningful;
 		// without one it treats every connection as a direct client, so the
 		// real remote IP is used. Configure proxy addresses via TRUSTED_PROXIES.
-		ProxyHeader: "X-Forwarded-For",
-		TrustProxy:  len(trustedProxies) > 0,
+		//
+		// EnableIPValidation makes c.IP() walk X-Forwarded-For from the right
+		// and return the first hop that is not a trusted proxy, instead of the
+		// raw "client, proxy" header. That single IP is what the logger and
+		// the rate limiter see, and a client-forged leftmost entry is ignored.
+		// Behind Cloudflare, its ranges must be in TRUSTED_PROXIES too.
+		ProxyHeader:        "X-Forwarded-For",
+		EnableIPValidation: true,
+		TrustProxy:         len(trustedProxies) > 0,
 		TrustProxyConfig: fiber.TrustProxyConfig{
 			Proxies: trustedProxies,
 		},
