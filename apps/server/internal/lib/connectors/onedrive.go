@@ -30,9 +30,8 @@ type onedriveConnector struct {
 	// rootItem is the item id acting as the bucket root ("root" by default).
 	rootItem string
 
-	mu          sync.Mutex
-	paths       map[string]graphItem
-	partOffsets map[string]int64
+	mu    sync.Mutex
+	paths map[string]graphItem
 }
 
 type graphItem struct {
@@ -87,12 +86,11 @@ func newOneDriveConnector(reg Registry, account AccountInput, creds Credentials)
 	}
 
 	return &onedriveConnector{
-		tokenSrc:    onedriveOAuthConfig(reg).TokenSource(context.Background(), oauthCreds.ToOAuth2Token()),
-		accountID:   account.ID.String(),
-		driveID:     driveID,
-		rootItem:    rootItem,
-		paths:       map[string]graphItem{},
-		partOffsets: map[string]int64{},
+		tokenSrc:  onedriveOAuthConfig(reg).TokenSource(context.Background(), oauthCreds.ToOAuth2Token()),
+		accountID: account.ID.String(),
+		driveID:   driveID,
+		rootItem:  rootItem,
+		paths:     map[string]graphItem{},
 	}, nil
 }
 
@@ -485,13 +483,47 @@ func encodeGraphContinuation(nextLink string) string {
 	return base64.RawURLEncoding.EncodeToString([]byte(nextLink))
 }
 
+// graphURLAllowed constrains decoded continuation/upload URLs to Microsoft
+// Graph: the token is client-supplied (uploadId / continuation-token query
+// params) and every request through the oauth2 client carries the connected
+// account's bearer token, so any other host would exfiltrate the credential.
+func graphURLAllowed(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("invalid continuation url: %w", err)
+	}
+	if u.Scheme != "https" || u.Host == "" {
+		return fmt.Errorf("invalid continuation url: %q", raw)
+	}
+	host := strings.ToLower(u.Hostname())
+	if host == "graph.microsoft.com" ||
+		strings.HasSuffix(host, ".microsoft.com") ||
+		strings.HasSuffix(host, ".sharepoint.com") {
+		return nil
+	}
+	return fmt.Errorf("continuation url host %q is not a Graph endpoint", host)
+}
+
 func decodeGraphContinuation(token string) (string, error) {
 	raw, err := base64.RawURLEncoding.DecodeString(token)
 	if err != nil {
-		return "", (err)
+		return "", err
 	}
-	return string(raw), nil
+	nextLink := string(raw)
+	if err := graphURLAllowed(nextLink); err != nil {
+		return "", err
+	}
+	return nextLink, nil
 }
+
+// multipartOffsets tracks the next sequential append offset per multipart
+// upload. Package-level because connectors are constructed per request, so a
+// struct field could never survive across UploadPart calls; entries are
+// process-local and cleaned up on complete/abort.
+var multipartOffsets = struct {
+	sync.Mutex
+	next map[string]int64
+}{next: map[string]int64{}}
 
 // Multipart on OneDrive maps onto the Graph upload session API: create a
 // session, PUT each byte range with the documented headers, then the final
@@ -552,10 +584,9 @@ func (c *onedriveConnector) CreateMultipartUpload(ctx context.Context, key, cont
 func (c *onedriveConnector) UploadPart(ctx context.Context, key, uploadID string, partNumber int, r io.Reader, size int64) (string, error) {
 	client := c.client(ctx)
 
-	c.mu.Lock()
-	offset := c.partOffsets[uploadID]
-	c.partOffsets[uploadID] = offset
-	c.mu.Unlock()
+	multipartOffsets.Lock()
+	offset := multipartOffsets.next[uploadID]
+	multipartOffsets.Unlock()
 
 	uploadURL, err := decodeGraphContinuation(uploadID)
 	if err != nil {
@@ -580,9 +611,9 @@ func (c *onedriveConnector) UploadPart(ctx context.Context, key, uploadID string
 		return "", c.graphError(resp, "upload fragment")
 	}
 
-	c.mu.Lock()
-	c.partOffsets[uploadID] = offset + size
-	c.mu.Unlock()
+	multipartOffsets.Lock()
+	multipartOffsets.next[uploadID] = offset + size
+	multipartOffsets.Unlock()
 
 	return fmt.Sprintf("part-%05d", partNumber), nil
 }
@@ -592,9 +623,9 @@ func (c *onedriveConnector) CompleteMultipartUpload(ctx context.Context, key, up
 	// fragment response carries the finished item. Re-read the item by path.
 	client := c.client(ctx)
 
-	c.mu.Lock()
-	delete(c.partOffsets, uploadID)
-	c.mu.Unlock()
+	multipartOffsets.Lock()
+	delete(multipartOffsets.next, uploadID)
+	multipartOffsets.Unlock()
 
 	item, ok, err := c.lookup(ctx, client, key)
 	if err != nil {
@@ -610,9 +641,9 @@ func (c *onedriveConnector) CompleteMultipartUpload(ctx context.Context, key, up
 func (c *onedriveConnector) AbortMultipartUpload(ctx context.Context, key, uploadID string) error {
 	client := c.client(ctx)
 
-	c.mu.Lock()
-	delete(c.partOffsets, uploadID)
-	c.mu.Unlock()
+	multipartOffsets.Lock()
+	delete(multipartOffsets.next, uploadID)
+	multipartOffsets.Unlock()
 
 	uploadURL, err := decodeGraphContinuation(uploadID)
 	if err != nil {
