@@ -3,6 +3,39 @@
 All notable changes to this project are documented in this file. Versions follow the git tags (`v*`); Docker images (api, docs) are published to ghcr.io with the same version.
 
 
+## [0.4.0](https://github.com/montara-project/cloudrive/compare/v0.3.0...v0.4.0) (2026-10-25)
+
+### ⚠ BREAKING CHANGES
+
+* **api:** every API path previously served under /v1 now
+  requires the /api prefix (/v1/me -> /api/v1/me, /health -> /api/health).
+
+### Features
+
+* **api:** mount every API endpoint under the /api prefix ([710fef4](https://github.com/montara-project/cloudrive/commit/710fef49db43edc5592354818d805aa09e054f39))
+* **web:** add a sticky top bar and a single-line workspace switcher ([ee3bc63](https://github.com/montara-project/cloudrive/commit/ee3bc63646abbf7954bfd647f5898b91a9c68bf5))
+
+### Bug Fixes
+
+* **ci:** route the dispatch input through env and pin the react-doctor action ([bcf531c](https://github.com/montara-project/cloudrive/commit/bcf531c06e7df1a18ba88767d501fc55472dd661))
+* **deps:** override vulnerable transitive packages flagged by pnpm audit ([e73c888](https://github.com/montara-project/cloudrive/commit/e73c8889a5267432d1a0c39a6ab2dcec6687eca5))
+* **server:** add a CSP, HSTS, and dedicated rate limits ([36bb52b](https://github.com/montara-project/cloudrive/commit/36bb52bdfa2b23b06eeccb445ffe148c157aa5fe))
+* **server:** bump dependencies flagged by govulncheck ([cf25bff](https://github.com/montara-project/cloudrive/commit/cf25bff88595e7afa41d85664ebf44a3b0fef887))
+* **server:** enforce bucket root_prefix on the gateway data plane ([25e19bc](https://github.com/montara-project/cloudrive/commit/25e19bc8352f358724eacee9385f7b25487043f1))
+* **server:** fix dropbox list continuation and multipart offsets ([3cc9fda](https://github.com/montara-project/cloudrive/commit/3cc9fda45704820a8876503e45b999dd7f3e49f1))
+* **server:** harden the gdrive connector against traversal and lookup bugs ([045ef1d](https://github.com/montara-project/cloudrive/commit/045ef1d4cb926dcad1ccc1ffce11987377b7f3aa))
+* **server:** harden the onedrive connector ([c36be66](https://github.com/montara-project/cloudrive/commit/c36be6686dc665201c97b110547d5ba2e7f003ed))
+* **server:** keep secrets out of process argv in the ops Makefile ([0e3163f](https://github.com/montara-project/cloudrive/commit/0e3163fff115385e57acc2e0e2e5eb08f48b067f))
+* **server:** make OAuth connect states single-use and request-scoped ([cfeb351](https://github.com/montara-project/cloudrive/commit/cfeb35116cabf04ef7c956480d6882e0c04e7804))
+* **server:** make roles and super-user credentials operator-controlled ([7220644](https://github.com/montara-project/cloudrive/commit/7220644e0667592dd54a55ecd0b8116e7dc9da98))
+* **server:** require admin to list invitations and redact their tokens ([cd08eab](https://github.com/montara-project/cloudrive/commit/cd08eabaa67a4b3ca1a5e23ab131f4da6d32fa3d))
+* update debug config ([560c121](https://github.com/montara-project/cloudrive/commit/560c12171c00ac7aced48192843a461abf108254))
+* update linter ([fa7b836](https://github.com/montara-project/cloudrive/commit/fa7b8364200888db51226eec6db86dcb95a22452))
+* **web:** announce the active item and respect reduced motion ([882bb64](https://github.com/montara-project/cloudrive/commit/882bb64005556cfe1d60e93ef5367c70c9d9827f))
+* **web:** keep the sidebar and page title usable on small screens ([a6bdbb1](https://github.com/montara-project/cloudrive/commit/a6bdbb1a2dade240638638b5d063b5b187b04c7f))
+* **web:** namespace FolderArt SVG gradient and filter ids ([e2725a8](https://github.com/montara-project/cloudrive/commit/e2725a8895473e4dd99a4823f1430302534a5153))
+* **web:** render member and owner tints in dark mode ([59a6588](https://github.com/montara-project/cloudrive/commit/59a658854ebe60b444c228980ac9dc481aff3b4a))
+
 ## [0.3.0](https://github.com/montara-project/cloudrive/compare/v0.2.0...v0.3.0) (2026-10-24)
 
 ### Features
