@@ -90,23 +90,20 @@ func serve(app *app.Application) error {
 	// only in development so local tooling is not throttled. In production the
 	// exemption would let any request forwarded from a reverse proxy bypass the
 	// limiter entirely, so it is disabled there.
-	rateLimitConfig := limiter.Config{
+	//
+	// The SPA's hashed bundles are exempt: one page load fetches dozens of
+	// them, which would eat the API's budget, and they are immutable files
+	// browsers cache for a year.
+	server.Use(limiter.New(limiter.Config{
 		Max:        100,
 		Expiration: 1 * time.Minute,
+		Next:       skipRateLimit(app.Config.App.Env == config.EnvDevelopment),
 		LimitReached: func(c fiber.Ctx) error {
 			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
 				"error": "Too many requests",
 			})
 		},
-	}
-
-	if app.Config.App.Env == config.EnvDevelopment {
-		rateLimitConfig.Next = func(c fiber.Ctx) bool {
-			return c.IP() == "127.0.0.1" || c.IP() == "::1"
-		}
-	}
-
-	server.Use(limiter.New(rateLimitConfig))
+	}))
 
 	// Auth endpoints get their own, tighter budget: sign-in, magic-link and
 	// password-reset are the credential-guessing surface, and Authula has no
@@ -221,4 +218,15 @@ func serve(app *app.Application) error {
 	}
 
 	return nil
+}
+
+// skipRateLimit reports which requests bypass the global limiter: the SPA's
+// hashed bundles always, and loopback only in development.
+func skipRateLimit(isDev bool) func(fiber.Ctx) bool {
+	return func(c fiber.Ctx) bool {
+		if strings.HasPrefix(c.Path(), middlewares.SPAAssetsPrefix) {
+			return true
+		}
+		return isDev && (c.IP() == "127.0.0.1" || c.IP() == "::1")
+	}
 }

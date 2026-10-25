@@ -21,10 +21,10 @@ type SPAConfig struct {
 	Exclude []string
 }
 
-// assetsPrefix holds the content-hashed files a bundler emits (Vite's
+// SPAAssetsPrefix holds the content-hashed files a bundler emits (Vite's
 // default). They never change under the same name, so browsers may cache
 // them for a year.
-const assetsPrefix = "/assets/"
+const SPAAssetsPrefix = "/assets/"
 
 // SPA serves a built single-page app: existing files as they are, and
 // index.html for every other GET path so the client-side router can take
@@ -51,7 +51,7 @@ func SPA(cfg SPAConfig) (fiber.Handler, error) {
 	files := static.New("", static.Config{
 		FS: cfg.FS,
 		ModifyResponse: func(c fiber.Ctx) error {
-			if strings.HasPrefix(c.Path(), assetsPrefix) {
+			if strings.HasPrefix(c.Path(), SPAAssetsPrefix) {
 				c.Set(fiber.HeaderCacheControl, "public, max-age=31536000, immutable")
 			} else {
 				c.Set(fiber.HeaderCacheControl, "no-cache")
