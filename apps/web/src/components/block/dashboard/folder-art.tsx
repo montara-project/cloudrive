@@ -48,14 +48,7 @@ export default function FolderArt({ className }: { className?: string }) {
           <stop stopColor="#F59E0B" />
           <stop offset="1" stopColor="#D97706" />
         </linearGradient>
-        <filter
-          id={ids.shadow}
-          x="12"
-          y="88"
-          width="96"
-          height="16"
-          filterUnits="userSpaceOnUse"
-        >
+        <filter id={ids.shadow} x="12" y="88" width="96" height="16" filterUnits="userSpaceOnUse">
           <feGaussianBlur stdDeviation="3" />
         </filter>
       </defs>

@@ -103,9 +103,7 @@ export default function NavMain({ title, items }: NavMainProps) {
                       className="data-active:text-primary! data-active:[&>svg]:text-primary!"
                     >
                       <Link
-                        {...hrefToLocation(
-                          scopedHref(subItem.url, subItem.scope ?? item.scope)
-                        )}
+                        {...hrefToLocation(scopedHref(subItem.url, subItem.scope ?? item.scope))}
                         aria-current={subActive ? 'page' : undefined}
                       >
                         {subItem.icon && <subItem.icon />}
