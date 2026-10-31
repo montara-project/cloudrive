@@ -133,6 +133,8 @@ func (reg Registry) New(account AccountInput, protocol, slug string, credentials
 	switch protocol {
 	case "s3_compatible":
 		return newS3Connector(account, creds)
+	case "smb":
+		return newSMBConnector(account, creds, reg.StagingDir)
 	case "oauth2_cloud":
 		switch slug {
 		case "google_drive":

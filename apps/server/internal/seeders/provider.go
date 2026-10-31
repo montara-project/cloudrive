@@ -21,6 +21,7 @@ func (s ProviderSeeder) Seed() error {
 		{"onedrive", "OneDrive", "oauth2_cloud", "oauth2", `{"versioning": true, "trash": true}`},
 		{"dropbox", "Dropbox", "oauth2_cloud", "oauth2", `{"versioning": true, "trash": true}`},
 		{"s3_compatible", "S3 Compatible", "s3_compatible", "access_key", `{"versioning": false, "trash": false, "multipart": true}`},
+		{"smb", "SMB / Network Share", "smb", "password", `{"versioning": false, "trash": false}`},
 	}
 
 	return runSeed(s.DB, func(ctx context.Context, tx *sql.Tx) error {
