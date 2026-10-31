@@ -102,6 +102,16 @@ export function ConnectStorageAccountForm({
   const selectedProvider = providerById[selectedProviderId]
   const isOAuthProvider = selectedProvider?.auth_type === 'oauth2'
 
+  // Credential shapes differ per provider, so the placeholders show the
+  // selected provider's real shape instead of the S3 one.
+  const isSMBProvider = selectedProvider?.slug === 'smb'
+  const credentialsPlaceholder = isSMBProvider
+    ? '{"host": "192.168.1.10", "share": "media", "username": "user", "password": "…"}'
+    : '{"access_key_id": "…", "secret_access_key": "…"}'
+  const settingsPlaceholder = isSMBProvider
+    ? '{"root_prefix": "media/music"}'
+    : '{"region": "us-east-1"}'
+
   return (
     <SimpleAlertScrollableDialogForm
       onSubmit={(e) => {
@@ -170,7 +180,7 @@ export function ConnectStorageAccountForm({
             children={(field) => (
               <field.TextareaField
                 label="Credentials (JSON)"
-                placeholder='{"access_key_id": "…", "secret_access_key": "…"}'
+                placeholder={credentialsPlaceholder}
                 note="Stored encrypted. Shape depends on the provider's auth type."
                 rows={4}
                 asterisk
@@ -183,7 +193,7 @@ export function ConnectStorageAccountForm({
             children={(field) => (
               <field.TextareaField
                 label="Settings (JSON, optional)"
-                placeholder='{"region": "us-east-1"}'
+                placeholder={settingsPlaceholder}
                 rows={3}
               />
             )}

@@ -77,6 +77,16 @@ const PROVIDERS: Models.Provider[] = [
     created_at: NOW,
     updated_at: NOW,
   },
+  {
+    id: 'prv-preview-smb',
+    slug: 'smb',
+    name: 'SMB / Network Share',
+    protocol: 'smb',
+    auth_type: 'password',
+    is_active: true,
+    created_at: NOW,
+    updated_at: NOW,
+  },
 ]
 
 const ACCOUNTS: Models.StorageAccount[] = [
@@ -102,6 +112,18 @@ const ACCOUNTS: Models.StorageAccount[] = [
     display_name: 'Dropbox — Ruben',
     account_email: MOCK_USER.email,
     external_account_id: 'dropbox-1',
+    status: 'active',
+    created_at: NOW,
+    updated_at: NOW,
+  },
+  {
+    id: 'acc-preview-smb',
+    organization_id: ORG.id,
+    workspace_id: WORKSPACES[0].id,
+    provider_id: PROVIDERS[2].id,
+    owner_user_id: 'user_preview',
+    display_name: 'NAS — Media Share',
+    external_account_id: 'nas.local/media',
     status: 'active',
     created_at: NOW,
     updated_at: NOW,
@@ -147,6 +169,10 @@ function buildSeeds(): Array<[readonly unknown[], unknown]> {
     [
       ['storage/accounts/quota', ACCOUNTS[1].id],
       { total_bytes: 324 * GIB, used_bytes: 99.3 * GIB },
+    ],
+    [
+      ['storage/accounts/quota', ACCOUNTS[2].id],
+      { total_bytes: 2 * 1024 * GIB, used_bytes: 1.4 * 1024 * GIB },
     ],
   ]
 }

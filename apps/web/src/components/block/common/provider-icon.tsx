@@ -4,6 +4,7 @@ import {
   IconBrandOnedrive,
   IconBucket,
   IconCloud,
+  IconNetwork,
 } from '@tabler/icons-react'
 
 import { cn } from '@/lib/utils'
@@ -22,6 +23,9 @@ const BRANDS: Record<string, { Icon: typeof IconCloud; className: string }> = {
   google_drive: { Icon: IconBrandGoogleDrive, className: 'text-[#34A853]' },
   dropbox: { Icon: IconBrandDropbox, className: 'text-[#0061FF]' },
   onedrive: { Icon: IconBrandOnedrive, className: 'text-[#0364B8]' },
+  // SMB/NAS shares have no brand to borrow a glyph from; a network share
+  // icon in the neutral color reads like the bucket treatment below.
+  smb: { Icon: IconNetwork, className: 'text-muted-foreground' },
 }
 
 export default function ProviderIcon({ slug, protocol, className }: ProviderIconProps) {
